@@ -98,7 +98,18 @@ export function SheetChoices({
   onPick,
   label,
 }: {
-  items: Array<{ id: string; label: string; icon?: string }>;
+  items: Array<{
+    id: string;
+    label: string;
+    icon?: string;
+    /**
+     * Quantos itens há lá dentro. Vai em expoente, miúdo: é uma nota de
+     * rodapé do nome, não um segundo dado disputando com ele — e diz antes do
+     * toque se vale a pena entrar. Só onde a opção ABRE uma lista; opção que
+     * é só uma escolha (os modos) não tem o que contar.
+     */
+    count?: number;
+  }>;
   value: string;
   onPick: (id: string) => void;
   label: string;
@@ -111,10 +122,20 @@ export function SheetChoices({
           type="button"
           className={it.id === value ? "axxa-choice is-on" : "axxa-choice"}
           aria-pressed={it.id === value}
+          /* O nome inteiro vai no rótulo acessível: lido em voz alta, "Work 21"
+             não diz o que é o 21 — "Work, 21 icons" diz. */
+          aria-label={
+            it.count === undefined ? undefined : `${it.label}, ${it.count} icons`
+          }
           onClick={() => onPick(it.id)}
         >
           {it.icon && <Icon name={it.icon} size={16} />}
           <span>{it.label}</span>
+          {it.count !== undefined && (
+            <sup className="axxa-choice-count" aria-hidden="true">
+              {it.count}
+            </sup>
+          )}
         </button>
       ))}
     </div>
@@ -285,6 +306,7 @@ export function SheetIconCatalog({
           id: c.id,
           label: c.label,
           icon: c.icon,
+          count: c.icons.length,
         }))}
       />
       <div className="axxa-icongrid" role="group" aria-label={atual.label}>

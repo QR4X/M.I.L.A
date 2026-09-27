@@ -5313,6 +5313,30 @@ body.is-mobile .axxa-root .axxa-history-more {
   color: var(--text-on-accent);
 }
 
+/* Quantos itens há lá dentro, em expoente — nota de rodapé do nome, não um
+   segundo dado disputando com ele.
+   O `sup` sozinho não bastava: dentro da pílula ele vira item de FLEX, e
+   `vertical-align` não vale pra item de flex — o número pousava na mesma
+   linha do nome, do mesmo tamanho. Aqui ele sobe por `transform`, que não
+   mexe no layout: a pílula não muda de altura nem de largura, e a fileira
+   continua justificada como estava. */
+.axxa-root .axxa-choice-count {
+  top: 0;
+  margin-left: -1px;
+  font-size: 0.72em;
+  line-height: 1;
+  transform: translateY(-0.42em);
+  color: var(--text-muted);
+}
+
+.axxa-root button.axxa-choice.is-on .axxa-choice-count {
+  /* Na pílula escolhida quem manda é o fundo em accent: o número acompanha a
+     cor do nome e recua um pouco, senão dois brancos do mesmo peso na mesma
+     pílula brigam. */
+  color: var(--text-on-accent);
+  opacity: 0.72;
+}
+
 /* A grade de ícones cabe INTEIRA na folha: grade que rola dentro de folha que
    rola é um lugar onde o dedo nunca sabe o que vai acontecer. */
 .axxa-root .axxa-icongrid {
