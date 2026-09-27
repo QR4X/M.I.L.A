@@ -5831,9 +5831,17 @@ body.is-mobile .axxa-root .axxa-history-more {
   color: var(--text-error);
 }
 
+/* Todos os ícones do menu ocupam a MESMA caixa, com ou sem plaquinha: é ela
+   que faz os nomes começarem na mesma coluna. Sem isso, a linha de um projeto
+   (brasão de 26px) empurrava o nome pra direita e "New project…" ficava numa
+   coluna própria — a lista parecia duas listas. */
 .axxa-root .axxa-pop-ico {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
   color: var(--text-muted);
 }
 
