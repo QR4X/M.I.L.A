@@ -5306,16 +5306,26 @@ body.is-mobile .axxa-root .axxa-history-more {
 
 /* O escolhido usa a cor do app, não um cinza um tico mais claro: com o
    `:hover` bem ao lado (mouse) os dois ficavam quase iguais, e "qual está
-   marcado" virava adivinhação. */
-/* O escolhido usa a cor do app, não um cinza um tico mais claro: com o
-   `:hover` bem ao lado (mouse) os dois ficavam quase iguais, e "qual está
    marcado" virava adivinhação.
    Sem anel: a máscara do squircle APAGA pixels, e um `box-shadow` (mesmo
    inset) é desenhado no retângulo — apareceria comido nos cantos. Quem
-   carrega a marcação é o fundo cheio (ver docs/SQUIRCLE.md). */
+   carrega a marcação é o fundo cheio (ver docs/SQUIRCLE.md).
+   Este é o caso SEM cor escolhida — as skills, que não têm paleta. */
 .axxa-root button.axxa-icontile.is-on {
   background-color: var(--interactive-accent);
   color: var(--text-on-accent);
+}
+
+/* Com cor escolhida, o azulejo marcado é a MESMA plaquinha do brasão: fundo
+   tirado da própria cor a 16%, ícone na cor cheia — a fórmula de
+   `.axxa-thing-mark`, a mesma que o menu de "Add to project" usa.
+   O accent roxo dizia "selecionado" e mais nada: escolher laranja deixava um
+   azulejo ROXO logo abaixo de um cartão de projeto laranja, e a grade parava
+   de ser uma prévia da escolha pra virar um controle falando de si mesmo.
+   `currentColor` é a cor que vem inline no botão, então o fundo se ajusta
+   sozinho a cada toque numa cor. */
+.axxa-root button.axxa-icontile.is-on.is-tinted {
+  background-color: color-mix(in srgb, currentColor 16%, transparent);
 }
 
 /* As cores são azulejos, do mesmo tamanho e da mesma forma dos ícones logo

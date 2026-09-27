@@ -130,7 +130,12 @@ export function SheetIconGrid({
   icons,
   value,
   onPick,
-  /** Pinta o selecionado com a cor do projeto, quando há uma. */
+  /**
+   * A cor escolhida logo acima. Quando existe, o azulejo marcado vira a
+   * MESMA plaquinha do brasão do projeto — cor cheia no ícone, fundo tirado
+   * dela (ver `.axxa-icontile.is-on.is-tinted`). Sem ela — o caso das skills,
+   * que não têm cor — o marcado continua no accent do app.
+   */
   tint,
 }: {
   icons: readonly string[];
@@ -140,19 +145,26 @@ export function SheetIconGrid({
 }) {
   return (
     <div className="axxa-icongrid" role="group" aria-label="Icon">
-      {icons.map((ic) => (
-        <button
-          key={ic}
-          type="button"
-          className={ic === value ? "axxa-icontile is-on" : "axxa-icontile"}
-          aria-label={ic}
-          aria-pressed={ic === value}
-          style={ic === value && tint ? { color: tint } : undefined}
-          onClick={() => onPick(ic)}
-        >
-          <Icon name={ic} size={20} />
-        </button>
-      ))}
+      {icons.map((ic) => {
+        const on = ic === value;
+        return (
+          <button
+            key={ic}
+            type="button"
+            className={
+              "axxa-icontile" + (on ? " is-on" : "") + (on && tint ? " is-tinted" : "")
+            }
+            aria-label={ic}
+            aria-pressed={on}
+            /* `color`, e não um fundo direto: o fundo do azulejo sai daqui
+               por `currentColor`, igual ao brasão. Uma fonte só pra cor. */
+            style={on && tint ? { color: tint } : undefined}
+            onClick={() => onPick(ic)}
+          >
+            <Icon name={ic} size={20} />
+          </button>
+        );
+      })}
     </div>
   );
 }
