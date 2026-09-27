@@ -32,30 +32,59 @@ export class PromptModal extends Modal {
   }
 
   onOpen(): void {
+    // Markup NOSSO, não dois `Setting` empilhados: a linha do Setting põe o
+    // rótulo à esquerda e o controle à direita, e num celular isso vira um
+    // campo de duas polegadas do lado de uma palavra. Aqui é a mesma anatomia
+    // das folhas — rótulo em cima, campo largo embaixo, ações no fim.
+    //
+    // `axxa-modal-keyboard-aware` é a classe que a casca 0.2.37 já lia: com o
+    // teclado aberto, o CSS levanta o cartão acima dele com folga, em vez de
+    // deixá-lo encostado na primeira fileira de teclas.
+    this.modalEl.addClass("axxa-prompt-modal");
+    this.modalEl.addClass("axxa-modal-keyboard-aware");
     this.titleEl.setText(this.opts.title);
-    new Setting(this.contentEl).setName(this.opts.label ?? "").addText((t) => {
-      t.setValue(this.value)
-        .setPlaceholder(this.opts.placeholder ?? "")
-        .onChange((v) => {
-          this.value = v;
-        });
-      t.inputEl.style.width = "100%";
-      t.inputEl.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          this.submit();
-        }
+
+    const campo = this.contentEl.createDiv({ cls: "axxa-prompt-field" });
+    if (this.opts.label) {
+      campo.createEl("label", {
+        cls: "axxa-prompt-label",
+        text: this.opts.label,
       });
-      window.setTimeout(() => t.inputEl.focus(), 0);
+    }
+    const input = campo.createEl("input", { cls: "axxa-prompt-input" });
+    input.type = "text";
+    input.value = this.value;
+    if (this.opts.placeholder) input.placeholder = this.opts.placeholder;
+    input.addEventListener("input", () => {
+      this.value = input.value;
     });
-    new Setting(this.contentEl)
-      .addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()))
-      .addButton((b) =>
-        b
-          .setButtonText(this.opts.submitLabel ?? "OK")
-          .setCta()
-          .onClick(() => this.submit())
-      );
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.submit();
+      }
+    });
+    // Foco no fim do texto, não selecionando tudo: renomear quase sempre é
+    // ajustar o que já está lá, e seleção total transforma a primeira tecla
+    // num apagão.
+    window.setTimeout(() => {
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    }, 0);
+
+    const acoes = this.contentEl.createDiv({ cls: "axxa-prompt-actions" });
+    const cancelar = acoes.createEl("button", {
+      cls: "axxa-prompt-btn",
+      text: "Cancel",
+    });
+    cancelar.type = "button";
+    cancelar.onclick = () => this.close();
+    const ok = acoes.createEl("button", {
+      cls: "axxa-prompt-btn is-cta",
+      text: this.opts.submitLabel ?? "OK",
+    });
+    ok.type = "button";
+    ok.onclick = () => this.submit();
   }
 
   private submit(): void {

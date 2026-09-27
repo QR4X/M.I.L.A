@@ -5760,3 +5760,183 @@ body.is-mobile .axxa-root .axxa-history-more {
 .axxa-root button.axxa-sheet-action:hover {
   background-color: var(--interactive-accent-hover);
 }
+
+/* ── o menu de ações ───────────────────────────────────────────────────
+   Balão ancorado no botão que o abriu (ver menu.ts). Ele substituiu o `Menu`
+   do Obsidian, que no celular sobe colado na base da tela: o menu de um item
+   do topo da lista aparecia a quinze centímetros dele, e nada dizia de qual
+   item ele era. */
+
+.axxa-root .axxa-pop-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+}
+
+.axxa-root .axxa-pop {
+  position: absolute;
+  min-width: 168px;
+  max-width: 260px;
+  padding: var(--axxa-1);
+  border-radius: var(--axxa-r);
+  border: 1px solid var(--axxa-hairline);
+  /* Um degrau acima de tudo que ele cobre: ele é a camada de cima, e uma
+     camada de cima com a cor de baixo vira mancha. */
+  background-color: color-mix(in srgb, var(--text-normal) 9%, var(--axxa-canvas));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36);
+  /* Cresce do canto que foi tocado (o `transform-origin` vem do JS). */
+  transform: scale(0.94);
+  opacity: 0;
+  transition:
+    transform 120ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    opacity 120ms linear;
+}
+
+.axxa-root .axxa-pop-layer.is-open .axxa-pop {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.axxa-root button.axxa-pop-item {
+  display: flex;
+  align-items: center;
+  /* O `button` do app.css centraliza o conteúdo; menu é lista, e lista se lê
+     pela margem esquerda. */
+  justify-content: flex-start;
+  gap: var(--axxa-3);
+  width: 100%;
+  min-height: 42px;
+  padding: 0 var(--axxa-3);
+  border-radius: var(--axxa-r-sm);
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  text-align: left;
+}
+
+.axxa-root button.axxa-pop-item:hover {
+  background-color: var(--axxa-s1);
+}
+
+.axxa-root button.axxa-pop-item.is-danger {
+  color: var(--text-error);
+}
+
+.axxa-root .axxa-pop-ico {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+.axxa-root .axxa-pop-item.is-danger .axxa-pop-ico {
+  color: var(--text-error);
+}
+
+.axxa-root .axxa-pop-ico svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* A marca de "é esta a opção de agora" (o filtro de período do Agent). */
+.axxa-root .axxa-pop-check {
+  margin-left: auto;
+  color: var(--text-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .axxa-root .axxa-pop {
+    transition: none;
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* ── o cartão de renomear ──────────────────────────────────────────────
+   Ele vive FORA da `.axxa-root` (é um Modal do Obsidian), então tudo ancora
+   em `.axxa-prompt-modal`, e os botões levam a classe junto pra passar na
+   frente do `button:not(.clickable-icon)` do app.css.
+
+   No celular ele é uma FOLHA: encosta na base, canto só em cima, largura
+   inteira — a mesma gramática do resto do app. E fica ACIMA do teclado com
+   folga: o Obsidian publica `--keyboard-height` no `<html>`, então a margem
+   de baixo é a altura do teclado mais um respiro. Sem isso o cartão nascia
+   encostado na primeira fileira de teclas, e o botão de confirmar ficava a um
+   milímetro do "espaço". */
+
+.axxa-prompt-modal .axxa-prompt-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-4);
+}
+
+.axxa-prompt-modal .axxa-prompt-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+}
+
+.axxa-prompt-modal input.axxa-prompt-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 14px;
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+}
+
+.axxa-prompt-modal input.axxa-prompt-input:focus {
+  border-color: var(--interactive-accent);
+  box-shadow: none;
+  outline: none;
+}
+
+.axxa-prompt-modal .axxa-prompt-actions {
+  display: flex;
+  gap: var(--size-4-2);
+}
+
+/* Os dois botões dividem a linha: o de confirmar é o que tem cor, e o de
+   cancelar não é menor — desfazer não pode ser mais difícil de acertar que
+   fazer. */
+.axxa-prompt-modal button.axxa-prompt-btn {
+  flex: 1 1 0;
+  min-height: 46px;
+  border-radius: 999px;
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+  box-shadow: none;
+}
+
+.axxa-prompt-modal button.axxa-prompt-btn.is-cta {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.axxa-prompt-modal button.axxa-prompt-btn.is-cta:hover {
+  background-color: var(--interactive-accent-hover);
+}
+
+@supports selector(body:has(*)) {
+  body.is-mobile .modal-container:has(.axxa-prompt-modal) {
+    align-items: flex-end;
+  }
+
+  body.is-mobile .modal-container:has(.axxa-prompt-modal) .modal {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: var(--axxa-r-lg) var(--axxa-r-lg) 0 0;
+    /* A folga acima do teclado. Fechado, `--keyboard-height` é 0 e sobra o
+       respiro da safe-area. */
+    margin-bottom: calc(
+      var(--keyboard-height, 0px) + max(var(--safe-area-inset-bottom, 0px), 12px)
+    );
+    padding-bottom: var(--size-4-4);
+  }
+}
