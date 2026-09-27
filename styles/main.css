@@ -407,11 +407,29 @@ body {
      tema, no escuro é um cinza acima do trilho. Um valor só deixaria o thumb
      mais escuro que o trilho em um dos dois. */
   --axxa-thumb: var(--background-primary);
+  /* ── ELEVAÇÃO: o que PROJETA ────────────────────────────────────────────
+     Os degraus de superfície (s1/s2) dizem quanto uma coisa é CLARA. Não
+     dizem que ela está EM CIMA de outra — e sem isso o app inteiro lia como
+     recortes de papel colados no mesmo plano: o cartão de uso e a página
+     separados por um degrau de tom e mais nada.
+
+     Duas alturas, e só duas, porque o app só tem dois tipos de coisa:
+       e1 = pousou (cartão, linha, grupo, azulejo grande). Sombra curta e
+            fechada — apoiada, não voando.
+       e2 = está por cima e pode ser dispensada (menu, gaveta, balão).
+
+     Os valores mudam com o tema porque sombra não é a mesma coisa nos dois:
+     preto sobre um cinza escuro quase não aparece, então no escuro ela
+     precisa ser bem mais forte; o mesmo valor no claro viraria uma mancha. */
+  --axxa-e1: 0 1px 2px rgba(0, 0, 0, 0.07), 0 2px 6px rgba(0, 0, 0, 0.05);
+  --axxa-e2: 0 4px 12px rgba(0, 0, 0, 0.12), 0 12px 32px rgba(0, 0, 0, 0.1);
 }
 
 body.theme-dark {
   --axxa-canvas: var(--background-secondary);
   --axxa-thumb: color-mix(in srgb, var(--text-normal) 18%, var(--axxa-canvas));
+  --axxa-e1: 0 1px 2px rgba(0, 0, 0, 0.34), 0 2px 8px rgba(0, 0, 0, 0.22);
+  --axxa-e2: 0 4px 12px rgba(0, 0, 0, 0.42), 0 12px 32px rgba(0, 0, 0, 0.36);
 }
 
 .axxa-root {
@@ -913,6 +931,7 @@ body.theme-dark {
      não serve aqui: em tema onde o canvas já é o `--background-primary` ele
      resolve pra mesma cor e o cartão some. */
   background-color: var(--axxa-s1);
+  box-shadow: var(--axxa-e1);
 }
 
 /* ── a lista CHAPADA (só o Chat) ───────────────────────────────────────
@@ -933,6 +952,9 @@ body.theme-dark {
      grande: é a linha INTEIRA que abre a conversa, não um texto de 21px. */
   padding: var(--axxa-1) 0;
   background-color: transparent;
+  /* Sem sombra, porque sem cartão: uma linha que projeta sem ter fundo é uma
+     sombra no ar. O que separa uma fala da outra aqui é o espaço. */
+  box-shadow: none;
 }
 
 /* O `button` do Obsidian vem com fundo e canto arredondado próprios (é o que
@@ -1008,6 +1030,9 @@ body.theme-dark {
   border-radius: var(--axxa-r);
   background-color: var(--axxa-s1);
   border: 1px solid var(--axxa-hairline);
+  /* Pousado (ver --axxa-e1): é o primeiro cartão da home e era ele que dava o
+     tom chapado do resto — degrau de cor, e nada embaixo. */
+  box-shadow: var(--axxa-e1);
 }
 
 /* ── o calendário do mês ───────────────────────────────────────────────
@@ -1658,7 +1683,7 @@ body.theme-dark {
   padding: var(--axxa-2);
   border-radius: var(--axxa-r);
   background-color: var(--axxa-s1);
-  box-shadow: none;
+  box-shadow: var(--axxa-e1);
   color: var(--text-normal);
 }
 
@@ -3351,6 +3376,7 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-composer {
   flex-direction: column;
   border-radius: var(--axxa-r-lg);
   background-color: var(--axxa-hover);
+  box-shadow: var(--axxa-e1);
   overflow: hidden;
 }
 
@@ -3634,7 +3660,7 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet {
   padding: var(--axxa-3);
   background-color: var(--axxa-canvas);
   border-right: 1px solid var(--axxa-line);
-  box-shadow: 0 0 24px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--axxa-e2);
   transform: translateX(-100%);
   will-change: transform;
   transition: transform var(--axxa-sheet-ms) ease-in-out;
@@ -5354,6 +5380,16 @@ body.is-mobile .axxa-root .axxa-history-more {
   align-items: center;
 }
 
+/* O fio entre os ícones e o resto da tela. Acima dele fica o que CONTROLA
+   (voltar, cor, categoria); abaixo, o que se escolhe. Sem ele, a grade era só
+   mais uma fileira de coisas redondas embaixo de outra fileira de coisas
+   redondas — as pílulas e os azulejos têm o mesmo tamanho e a mesma forma, e
+   o olho lia tudo como um bloco só. */
+.axxa-root .axxa-iconcat .axxa-icongrid {
+  padding-top: var(--axxa-4);
+  border-top: 1px solid var(--axxa-hairline);
+}
+
 /* Com cor escolhida, o azulejo marcado é a MESMA plaquinha do brasão: fundo
    tirado da própria cor a 16%, ícone na cor cheia — a fórmula de
    `.axxa-thing-mark`, a mesma que o menu de "Add to project" usa.
@@ -5423,6 +5459,7 @@ body.is-mobile .axxa-root .axxa-history-more {
   padding: var(--axxa-3);
   border-radius: var(--axxa-r);
   background-color: var(--axxa-hover);
+  box-shadow: var(--axxa-e1);
 }
 
 .axxa-root .axxa-form-foot {
@@ -5856,7 +5893,7 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   /* Um degrau acima de tudo que ele cobre: ele é a camada de cima, e uma
      camada de cima com a cor de baixo vira mancha. */
   background-color: color-mix(in srgb, var(--text-normal) 9%, var(--axxa-canvas));
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36);
+  box-shadow: var(--axxa-e2);
   /* Cresce do canto que foi tocado (o `transform-origin` vem do JS). */
   transform: scale(0.94);
   opacity: 0;
