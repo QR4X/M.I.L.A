@@ -32,8 +32,20 @@ export function limparMarcas(texto: string): string {
     .trim();
 }
 
-/** Nome de arquivo a partir do título — o que o Obsidian não aceita, sai. */
-export function exportFileName(titulo: string, quando: Date): string {
+/**
+ * Nome de arquivo a partir do título — o que o Obsidian não aceita, sai.
+ *
+ * A EXTENSÃO é escolha de quem chama, e não é detalhe: no Android é ela que
+ * decide o tipo do arquivo, e o tipo decide QUEM aparece na folha de
+ * compartilhar. `.md` vira `text/markdown`, que o WhatsApp não aceita — ele
+ * declara `text/plain`. Por isso a cópia que vai pro vault é `.md` (é uma nota)
+ * e a que sai pelo compartilhamento é `.txt` (é um anexo).
+ */
+export function exportFileName(
+  titulo: string,
+  quando: Date,
+  extensao = "md"
+): string {
   const base =
     titulo
       .replace(/[\\/:*?"<>|#^[\]]/g, "-")
@@ -42,7 +54,7 @@ export function exportFileName(titulo: string, quando: Date): string {
       .trim()
       .slice(0, 60) || "chat";
   const dia = quando.toISOString().slice(0, 10);
-  return `${base} (${dia}).md`;
+  return `${base} (${dia}).${extensao}`;
 }
 
 /**
@@ -78,10 +90,15 @@ export function exportChatMarkdown(chat: ChatData, quando: Date): string {
 export async function exportChatToVault(
   app: App,
   chat: ChatData,
-  quando: Date = new Date()
+  quando: Date = new Date(),
+  extensao = "md"
 ): Promise<string> {
   await ensureFolder(app.vault.adapter, EXPORTS_FOLDER);
-  let caminho = `${EXPORTS_FOLDER}/${exportFileName(chat.title, quando)}`;
+  let caminho = `${EXPORTS_FOLDER}/${exportFileName(
+    chat.title,
+    quando,
+    extensao
+  )}`;
   // Dois exports da mesma conversa no mesmo dia não se sobrescrevem: a
   // segunda cópia pode ter mais conversa que a primeira.
   // Teto de tentativas: `exists` é uma resposta de fora, e um laço que só sai
@@ -91,7 +108,8 @@ export async function exportChatToVault(
   for (let n = 2; n <= 50 && (await app.vault.adapter.exists(caminho)); n++) {
     caminho = `${EXPORTS_FOLDER}/${exportFileName(
       `${chat.title} ${n}`,
-      quando
+      quando,
+      extensao
     )}`;
   }
   await app.vault.adapter.write(caminho, exportChatMarkdown(chat, quando));

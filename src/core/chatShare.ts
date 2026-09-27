@@ -148,9 +148,17 @@ export async function compartilharChat(
   chat: ChatData,
   quando: Date = new Date()
 ): Promise<ShareMode | null> {
-  const nome = exportFileName(chat.title, quando);
+  // `.txt`, e não `.md`, e o motivo é o Android: a folha de compartilhar é
+  // filtrada pelo TIPO do arquivo, e o tipo sai da extensão. `.md` vira
+  // `text/markdown`, que casa com editor de texto e app de IA — mas não com o
+  // WhatsApp, que declara `text/plain` e some da lista. O conteúdo continua
+  // markdown; o que muda é quem consegue receber.
+  //
+  // A cópia que fica no vault continua `.md`: lá ela é uma NOTA, e quem lê é o
+  // Obsidian.
+  const nome = exportFileName(chat.title, quando, "txt");
   const markdown = exportChatMarkdown(chat, quando);
-  const arquivo = new File([markdown], nome, { type: "text/markdown" });
+  const arquivo = new File([markdown], nome, { type: "text/plain" });
   const caps = medirCaps(app, arquivo);
   const modo = escolherModo(caps);
 
@@ -168,7 +176,7 @@ export async function compartilharChat(
     if (modo === "capacitor" || modo === "open-with") {
       // Estes dois precisam do arquivo em disco: a folha nativa recebe um
       // caminho, não um blob de JavaScript.
-      const relativo = await exportChatToVault(app, chat, quando);
+      const relativo = await exportChatToVault(app, chat, quando, "txt");
       if (modo === "capacitor") {
         const abs = caminhoAbsoluto(app, relativo);
         await janela.Capacitor?.Plugins?.Share?.share?.({

@@ -64,6 +64,15 @@ describe("exportFileName", () => {
   it("título vazio ainda dá um arquivo", () => {
     expect(exportFileName("   ", dia)).toBe("chat (2026-09-20).md");
   });
+
+  it("a extensão é de quem chama — e ela decide quem recebe", () => {
+    // No Android o tipo do arquivo sai da extensão, e o tipo decide quem
+    // aparece na folha: `.md` é `text/markdown` (editores, apps de IA) e
+    // `.txt` é `text/plain` (o WhatsApp entra).
+    expect(exportFileName("Weekly review", dia, "txt")).toBe(
+      "Weekly review (2026-09-20).txt"
+    );
+  });
 });
 
 describe("exportChatMarkdown", () => {
