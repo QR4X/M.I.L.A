@@ -3861,7 +3861,10 @@ body.is-mobile .axxa-root .axxa-history-more {
      versão ficava boiando logo abaixo de Settings. */
   margin-top: auto;
   padding-top: var(--axxa-1);
-  border-top: 1px solid var(--axxa-line);
+  /* Sem filete, pela mesma razão do rodapé da folha: risco atravessando o
+     fundo de uma camada é uma barra, e o que mora aqui é só o número da
+     versão — ele já está longe de tudo pelo `margin-top: auto`, e apagado
+     pelo `--text-faint`. Não precisava de uma régua pra se apresentar. */
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
   text-align: center;
@@ -5519,7 +5522,11 @@ body.is-mobile .axxa-root .axxa-history-more {
   margin: 0 calc(-1 * var(--axxa-3));
   padding: var(--axxa-3) var(--axxa-3)
     max(var(--safe-area-inset-bottom, 0px), var(--axxa-2));
-  border-top: 1px solid var(--axxa-hairline);
+  /* SEM filete. Ele entrou na 0.6.88 pra "amarrar" a barra na folha, e fez o
+     contrário: com a mesma cor dos dois lados, a única coisa que restava do
+     antigo bloco solto era o risco — e um risco atravessando a folha é uma
+     barra, mesmo quando não há barra nenhuma. O rodapé não precisa se anunciar:
+     ele está no fim, que é onde se olha quando se terminou. */
   /* A MESMA superfície da folha, não `--axxa-canvas`: a folha é canvas + 5%
      (ver .axxa-sheet), e a barra ficava um degrau mais ESCURA que o conteúdo
      logo acima dela. `inherit` pega a cor computada do pai — se a folha mudar
@@ -5556,7 +5563,11 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   margin-top: var(--axxa-5);
   padding-top: var(--axxa-3);
   padding-bottom: var(--axxa-1);
-  background-color: var(--axxa-canvas);
+  /* Sem cor própria: quem pinta o fim da folha é a folha. Isto já era
+     sobrescrito dentro da `.axxa-sheet-actions`, mas um `--axxa-canvas` aqui
+     é uma faixa de outro tom esperando a primeira vez que este pé for usado
+     fora dela. */
+  background-color: transparent;
 }
 
 /* O secundário fica na esquerda, em texto: ele explica o que faz sem disputar
