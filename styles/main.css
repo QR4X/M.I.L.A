@@ -5651,3 +5651,27 @@ body.is-mobile .axxa-root .axxa-history-more {
 .axxa-root .axxa-sheet-stack > .axxa-sheet-foot {
   margin-top: var(--axxa-1);
 }
+
+/* A ação da barra da folha: pílula na cor do app, com a palavra do lado do
+   sinal. Como ícone puro ela era um "+" na ponta de uma barra que começa com
+   um "X" — o mesmo desenho girado 45°, no mesmo tamanho e no mesmo tom. Quem
+   olha de relance vê dois fechares. Cor e palavra resolvem os dois enganos de
+   uma vez: no app, accent é o que cria. */
+.axxa-root button.axxa-sheet-action {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--axxa-1);
+  min-height: 34px;
+  padding: 0 var(--axxa-3);
+  border-radius: 999px;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  box-shadow: none;
+}
+
+.axxa-root button.axxa-sheet-action:hover {
+  background-color: var(--interactive-accent-hover);
+}

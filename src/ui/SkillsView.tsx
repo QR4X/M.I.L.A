@@ -202,7 +202,7 @@ export function SkillsView({
       action={
         noFormulario
           ? undefined
-          : { icon: "plus", label: "New skill", onClick: criar }
+          : { icon: "plus", label: "New skill", text: "New", onClick: criar }
       }
       title={
         noFormulario ? (editandoPath ? "Edit skill" : "New skill") : "Skills"

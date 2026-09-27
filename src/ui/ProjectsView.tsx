@@ -286,7 +286,7 @@ export function ProjectsView({
       // a conversa de um projeto aberto).
       action={
         nivel === "lista"
-          ? { icon: "plus", label: "New project", onClick: criar }
+          ? { icon: "plus", label: "New project", text: "New", onClick: criar }
           : undefined
       }
       mark={

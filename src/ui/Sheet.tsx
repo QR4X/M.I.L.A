@@ -60,7 +60,16 @@ export function Sheet({
    * rodapé é de quem termina alguma coisa (salvar, começar a conversa deste
    * projeto), e um "criar" ali embaixo disputava o lugar com o fim do assunto.
    */
-  action?: { icon: string; label: string; onClick: () => void };
+  action?: {
+    icon: string;
+    /** O nome inteiro, pro leitor de tela e pro toque longo. */
+    label: string;
+    /** O que aparece ESCRITO ao lado do ícone ("New"). Sem ele, um "+" na
+     *  ponta de uma barra que começa com um "X" é o mesmo desenho girado 45° —
+     *  e a pessoa fecha a folha achando que está criando. */
+    text?: string;
+    onClick: () => void;
+  };
   open: boolean;
   onClose: () => void;
   /** Quando existe, a folha está num nível interno: o X vira seta de voltar
@@ -356,12 +365,13 @@ export function Sheet({
           {action && (
             <button
               type="button"
-              className="axxa-icon-btn"
+              className="axxa-sheet-action"
               aria-label={action.label}
               title={action.label}
               onClick={action.onClick}
             >
-              <Icon name={action.icon} />
+              <Icon name={action.icon} size={18} />
+              {action.text && <span>{action.text}</span>}
             </button>
           )}
           {onBack ? (
