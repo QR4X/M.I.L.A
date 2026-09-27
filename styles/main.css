@@ -1537,8 +1537,15 @@ body.theme-dark {
   /* Um respiro FIXO entre o cartão e as abas — fixo, e não `auto`, que é o
      que as fazia andar de aba pra aba. Ele separa duas coisas de naturezas
      diferentes: em cima o que já aconteceu (é pra olhar), embaixo o que se
-     escolhe (é pra tocar). Colados, viravam um bloco só. */
-  margin-top: var(--axxa-5);
+     escolhe (é pra tocar). Colados, viravam um bloco só.
+
+     O respiro é o MESMO dos dois lados, e por isso ele é margem em cima E
+     embaixo: eram 36 acima e 12 abaixo (o `gap` da coluna somava só de um
+     lado), então o trilho encostava na lista e boiava longe do cartão —
+     parecia pertencer a ela. Centrado, ele é o que é: a divisa entre as
+     duas. Cada margem soma ao `gap` de 12, e os dois lados fecham em 24. */
+  margin-top: var(--axxa-3);
+  margin-bottom: var(--axxa-3);
 }
 
 .axxa-root .axxa-dash .axxa-history {
