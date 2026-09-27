@@ -5390,9 +5390,29 @@ body.is-mobile .axxa-root .axxa-history-more {
    botão pousava, por cima dos campos. */
 .axxa-root .axxa-sheet-actions {
   flex: 0 0 auto;
-  padding: var(--axxa-3) 0 max(var(--safe-area-inset-bottom, 0px), var(--axxa-2));
-  border-top: 1px solid var(--axxa-line);
-  background-color: var(--axxa-canvas);
+  /* SANGRA até a borda da folha e devolve o recuo no padding. A folha tem
+     `padding: … var(--axxa-3)`, então sem isto a barra nascia 12px encolhida
+     dos dois lados: um retângulo de outra cor, com um filete que morria antes
+     de chegar nos cantos e um vão da cor da folha em volta. Era isso que fazia
+     o rodapé parecer uma caixa colada POR CIMA da folha em vez do fim dela. */
+  margin: 0 calc(-1 * var(--axxa-3));
+  padding: var(--axxa-3) var(--axxa-3)
+    max(var(--safe-area-inset-bottom, 0px), var(--axxa-2));
+  border-top: 1px solid var(--axxa-hairline);
+  /* A MESMA superfície da folha, não `--axxa-canvas`: a folha é canvas + 5%
+     (ver .axxa-sheet), e a barra ficava um degrau mais ESCURA que o conteúdo
+     logo acima dela. `inherit` pega a cor computada do pai — se a folha mudar
+     de tom, a barra vai junto e não é preciso lembrar de dois lugares. */
+  background-color: inherit;
+}
+
+/* Teclado aberto: a gaveta já desconta `--keyboard-height` da própria altura
+   (bloco do teclado, lá em cima), então o fim da folha JÁ está encostado no
+   teclado — e a barra de gestos do Android está atrás dele. Continuar
+   reservando o safe-area ali não protege nada: vira uma faixa vazia de ~24px
+   entre o botão e o teclado, que é o que dava à barra o ar de bloco solto. */
+body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
+  padding-bottom: var(--axxa-2);
 }
 
 .axxa-root .axxa-sheet-actions .axxa-form-foot,
