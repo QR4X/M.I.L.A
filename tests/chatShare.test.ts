@@ -14,6 +14,7 @@ const caps = (
     share: boolean;
     files: boolean;
     capacitor: boolean;
+    obsidian: boolean;
     openWith: boolean;
     clipboard: boolean;
   }> = {}
@@ -21,6 +22,7 @@ const caps = (
   share: false,
   files: false,
   capacitor: false,
+  obsidian: false,
   openWith: false,
   clipboard: false,
   ...over,
@@ -39,9 +41,16 @@ describe("escolherModo", () => {
     );
   });
 
-  it("sem Capacitor, cai no 'abrir com' do sistema", () => {
-    // Não é a folha de compartilhar, mas tira o arquivo do app — e é melhor
-    // que mandar a conversa como parede de texto.
+  it("sem Capacitor, o menu do PRÓPRIO Obsidian vem antes do 'abrir com'", () => {
+    // Medido no aparelho: o Capacitor do Obsidian não embute Share nenhum. Mas
+    // o app tem o compartilhar dele, no menu de arquivo — e "abrir com" só
+    // lista quem sabe ABRIR, onde o WhatsApp nunca aparece.
+    expect(
+      escolherModo(caps({ obsidian: true, openWith: true, clipboard: true }))
+    ).toBe("obsidian");
+  });
+
+  it("sem os dois, cai no 'abrir com' do sistema", () => {
     expect(escolherModo(caps({ openWith: true, clipboard: true }))).toBe(
       "open-with"
     );
@@ -75,6 +84,7 @@ describe("mensagemDoModo", () => {
     expect(mensagemDoModo("file", "a.md")).toContain("a.md");
     expect(mensagemDoModo("capacitor", "a.md")).toContain("a.md");
     // "Abrir com" salva antes: a frase avisa das duas coisas.
+    expect(mensagemDoModo("obsidian", "a.md")).toMatch(/share/i);
     expect(mensagemDoModo("open-with", "a.md")).toMatch(/saved/i);
     expect(mensagemDoModo("text", "a.md")).toMatch(/text/i);
     expect(mensagemDoModo("clipboard", "a.md")).toMatch(/clipboard/i);

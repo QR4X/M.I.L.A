@@ -13,7 +13,11 @@ import type AxxaPlugin from "../main";
 import type { ChatSession } from "../core/session";
 import type { ChatSummary } from "../core/chatPersistence";
 import { loadChat, setChatStarred } from "../core/chatPersistence";
-import { exportChatToVault, exportFileName } from "../core/chatExport";
+import {
+  exportChatToVault,
+  exportFileName,
+  shareFileName,
+} from "../core/chatExport";
 import {
   compartilharChat,
   mensagemDoModo,
@@ -187,7 +191,7 @@ export function ChatList({
   /** Mandar a conversa pra FORA do aparelho (WhatsApp, e-mail, o que houver).
    *  Ver core/chatShare: arquivo primeiro, texto se o aparelho não deixar,
    *  área de transferência no desktop — e a tela diz qual foi. */
-  const compartilhar = async (c: ChatSummary) => {
+  const compartilhar = async (c: ChatSummary, ancora?: { x: number; y: number }) => {
     try {
       const chat = await loadChat(
         plugin.app,
@@ -196,8 +200,14 @@ export function ChatList({
         c.id
       );
       const agora = new Date();
-      const nome = exportFileName(chat.title, agora);
-      const modo = await compartilharChat(plugin.app, chat, agora);
+      // O nome do AVISO tem que ser o do arquivo que saiu de verdade — cada
+      // degrau grava um: o menu do Obsidian leva a nota `.md`, o resto leva o
+      // `.txt` de nome curto (ver core/chatShare).
+      const modo = await compartilharChat(plugin.app, chat, agora, ancora);
+      const nome =
+        modo === "obsidian"
+          ? exportFileName(chat.title, agora)
+          : shareFileName(chat.title, agora, "txt");
       // `null` é você fechando a folha do sistema: cancelar não é erro e não
       // merece aviso nenhum. Nos degraus que ABREM a folha, ela mesma é a
       // resposta — o aviso só aparece quando o app fez outra coisa.
@@ -402,7 +412,11 @@ export function ChatList({
                   {
                     label: "Share…",
                     icon: "share-2",
-                    run: () => void compartilhar(c),
+                    run: () =>
+                      void compartilhar(c, {
+                        x: (e as unknown as MouseEvent).clientX,
+                        y: (e as unknown as MouseEvent).clientY,
+                      }),
                   },
                   {
                     label: "Export to vault",

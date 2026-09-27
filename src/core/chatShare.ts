@@ -30,7 +30,7 @@
 // sei se saiu" — foi exatamente assim que a versão anterior copiou pra área de
 // transferência sem ninguém entender por quê.
 
-import type { App } from "obsidian";
+import { Menu, TFile, type App } from "obsidian";
 import type { ChatData } from "./chatPersistence";
 import {
   exportChatMarkdown,
@@ -48,6 +48,9 @@ export interface ShareCaps {
   capacitor: boolean;
   /** O Obsidian expõe "abrir com o app padrão" (API interna, só mobile). */
   openWith: boolean;
+  /** Dá pra pedir ao Obsidian o menu DELE pra um arquivo — é lá que mora o
+   *  compartilhar nativo do app, o mesmo do explorador de arquivos. */
+  obsidian: boolean;
   /** `navigator.clipboard.writeText` existe. */
   clipboard: boolean;
 }
@@ -55,6 +58,8 @@ export interface ShareCaps {
 export type ShareMode =
   | "file"
   | "capacitor"
+  /** O menu de arquivo do PRÓPRIO Obsidian, onde mora o share nativo dele. */
+  | "obsidian"
   | "open-with"
   | "text"
   | "clipboard"
@@ -67,6 +72,10 @@ export type ShareMode =
 export function escolherModo(caps: ShareCaps): ShareMode {
   if (caps.share && caps.files) return "file";
   if (caps.capacitor) return "capacitor";
+  // Antes do "abrir com": o menu do Obsidian LEVA ao share nativo dele, e
+  // "abrir com" só lista quem sabe abrir o arquivo — nele o WhatsApp não
+  // aparece nunca, porque ele não abre nada, recebe.
+  if (caps.obsidian) return "obsidian";
   if (caps.openWith) return "open-with";
   if (caps.share) return "text";
   if (caps.clipboard) return "clipboard";
@@ -79,6 +88,8 @@ export function mensagemDoModo(modo: ShareMode, nome: string): string {
     case "file":
     case "capacitor":
       return `Sharing ${nome}…`;
+    case "obsidian":
+      return `Saved ${nome} — pick Share in the menu.`;
     case "open-with":
       return `Saved and opening ${nome} — pick where to send it.`;
     case "text":
@@ -169,8 +180,36 @@ export function medirCaps(app: App, arquivo: File): ShareCaps {
     capacitor: acharShareNativo() !== null,
     openWith:
       typeof (app as AppComAbrir).openWithDefaultApp === "function",
+    obsidian: typeof app.workspace?.trigger === "function",
     clipboard: typeof navigator?.clipboard?.writeText === "function",
   };
+}
+
+/**
+ * Pede ao Obsidian o MENU DELE pro arquivo, ancorado onde a pessoa tocou.
+ *
+ * É a rota que sobrou, e ela veio do próprio aparelho: o diagnóstico mostrou
+ * que o Capacitor do Obsidian embute App, Keyboard, Clipboard, Haptics… e
+ * NENHUM Share. Ou seja, não existe ponte nativa de envio pra chamar do
+ * WebView. Mas o Obsidian tem o compartilhar dele — o mesmo do explorador de
+ * arquivos —, e ele mora neste menu. Em vez de reinventar a ponte, a gente
+ * abre a porta que já existe, com o arquivo certo já selecionado.
+ *
+ * Devolve false quando o menu volta vazio: aí não há o que mostrar, e o
+ * chamador desce pro degrau seguinte.
+ */
+function menuDoObsidian(
+  app: App,
+  arquivo: TFile,
+  x: number,
+  y: number
+): boolean {
+  const menu = new Menu();
+  app.workspace.trigger("file-menu", menu, arquivo, "more-options");
+  const itens = (menu as unknown as { items?: unknown[] }).items ?? [];
+  if (itens.length === 0) return false;
+  menu.showAtPosition({ x, y });
+  return true;
 }
 
 /** Caminho absoluto de um arquivo do vault, quando o adapter souber dizer. */
@@ -188,7 +227,9 @@ function caminhoAbsoluto(app: App, relativo: string): string | null {
 export async function compartilharChat(
   app: App,
   chat: ChatData,
-  quando: Date = new Date()
+  quando: Date = new Date(),
+  /** Onde o dedo tocou — o menu do Obsidian precisa de um ponto pra abrir. */
+  ancora?: { x: number; y: number }
 ): Promise<ShareMode | null> {
   // `.txt`, e não `.md`, e o motivo é o Android: a folha de compartilhar é
   // filtrada pelo TIPO do arquivo, e o tipo sai da extensão. `.md` vira
@@ -211,6 +252,30 @@ export async function compartilharChat(
     if (modo === "file") {
       await nav.share?.({ files: [arquivo], title: chat.title || "Chat" });
       return modo;
+    }
+
+    if (modo === "obsidian") {
+      // Aqui a cópia é `.md`: quem vai abrir o menu é o Obsidian, e pra ele
+      // isso é uma NOTA. O tipo só importa quando somos nós montando o
+      // intent — e neste caminho não somos.
+      const relativo = await exportChatToVault(app, chat, quando);
+      const arquivo = app.vault.getAbstractFileByPath(relativo);
+      if (
+        arquivo instanceof TFile &&
+        menuDoObsidian(
+          app,
+          arquivo,
+          ancora?.x ?? 0,
+          ancora?.y ?? 0
+        )
+      ) {
+        return modo;
+      }
+      // O menu veio vazio: cai pro próximo degrau em vez de fingir que abriu.
+      if (typeof (app as AppComAbrir).openWithDefaultApp === "function") {
+        (app as AppComAbrir).openWithDefaultApp?.(relativo);
+        return "open-with";
+      }
     }
 
     if (modo === "capacitor" || modo === "open-with") {
