@@ -90,12 +90,58 @@ export function mensagemDoModo(modo: ShareMode, nome: string): string {
   }
 }
 
+type PluginShare = { share?: (opts: unknown) => Promise<unknown> };
+
 interface JanelaComCapacitor {
   Capacitor?: {
-    Plugins?: {
-      Share?: { share?: (opts: unknown) => Promise<unknown> };
-    };
+    Plugins?: Record<string, unknown> & { Share?: PluginShare };
+    Share?: PluginShare;
+    isPluginAvailable?: (nome: string) => boolean;
+    registerPlugin?: (nome: string) => PluginShare;
   };
+}
+
+/**
+ * Acha o Share do Capacitor onde quer que ele esteja.
+ *
+ * O Obsidian mobile É um app Capacitor, mas a lista de plugins embutidos é
+ * dele — e o objeto muda de forma entre versões: às vezes `Capacitor.Plugins.
+ * Share`, às vezes `Capacitor.Share`, às vezes só registrado sob demanda por
+ * `registerPlugin`. Procurar em um lugar só foi o que fez a versão anterior
+ * concluir "não tem" e cair no "abrir com" — que abre um seletor de quem SABE
+ * ABRIR o arquivo (editor, navegador, visualizador), e não de quem sabe
+ * ENVIAR. Por isso a folha vinha cheia de abridores e sem o WhatsApp.
+ */
+export function acharShareNativo(): PluginShare | null {
+  const janela = (typeof window === "undefined"
+    ? {}
+    : window) as unknown as JanelaComCapacitor;
+  const cap = janela.Capacitor;
+  if (!cap) return null;
+  const direto = cap.Plugins?.Share ?? cap.Share;
+  if (typeof direto?.share === "function") return direto;
+  try {
+    if (cap.isPluginAvailable?.("Share") && cap.registerPlugin) {
+      const p = cap.registerPlugin("Share");
+      if (typeof p?.share === "function") return p;
+    }
+  } catch {
+    /* registrar falhou — segue sem */
+  }
+  return null;
+}
+
+/** O que o Capacitor tem embutido — entra no aviso quando nada funciona, pra
+ *  o diagnóstico vir do APARELHO em vez de palpite. */
+export function pluginsDoCapacitor(): string[] {
+  const janela = (typeof window === "undefined"
+    ? {}
+    : window) as unknown as JanelaComCapacitor;
+  try {
+    return Object.keys(janela.Capacitor?.Plugins ?? {});
+  } catch {
+    return [];
+  }
 }
 
 interface AppComAbrir extends App {
@@ -117,14 +163,10 @@ export function medirCaps(app: App, arquivo: File): ShareCaps {
   } catch {
     files = false;
   }
-  const janela = (typeof window === "undefined"
-    ? {}
-    : window) as unknown as JanelaComCapacitor;
   return {
     share: typeof nav?.share === "function",
     files,
-    capacitor:
-      typeof janela.Capacitor?.Plugins?.Share?.share === "function",
+    capacitor: acharShareNativo() !== null,
     openWith:
       typeof (app as AppComAbrir).openWithDefaultApp === "function",
     clipboard: typeof navigator?.clipboard?.writeText === "function",
@@ -165,8 +207,6 @@ export async function compartilharChat(
   const nav = navigator as Navigator & {
     share?: (d: unknown) => Promise<void>;
   };
-  const janela = window as unknown as JanelaComCapacitor;
-
   try {
     if (modo === "file") {
       await nav.share?.({ files: [arquivo], title: chat.title || "Chat" });
@@ -179,9 +219,14 @@ export async function compartilharChat(
       const relativo = await exportChatToVault(app, chat, quando, "txt", nome);
       if (modo === "capacitor") {
         const abs = caminhoAbsoluto(app, relativo);
-        await janela.Capacitor?.Plugins?.Share?.share?.({
+        const uri = abs ? `file://${abs}` : relativo;
+        // `files` é o que manda o ARQUIVO. `url` vai junto porque versões
+        // antigas do plugin só olhavam pra ele — as duas chaves descrevem a
+        // mesma coisa, e a que o plugin não conhecer ele ignora.
+        await acharShareNativo()?.share?.({
           title: chat.title || "Chat",
-          files: [abs ? `file://${abs}` : relativo],
+          files: [uri],
+          url: uri,
         });
         return modo;
       }

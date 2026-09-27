@@ -14,7 +14,11 @@ import type { ChatSession } from "../core/session";
 import type { ChatSummary } from "../core/chatPersistence";
 import { loadChat, setChatStarred } from "../core/chatPersistence";
 import { exportChatToVault, exportFileName } from "../core/chatExport";
-import { compartilharChat, mensagemDoModo } from "../core/chatShare";
+import {
+  compartilharChat,
+  mensagemDoModo,
+  pluginsDoCapacitor,
+} from "../core/chatShare";
 import { usePainel } from "./painel";
 import { useChatStore } from "../store/chat";
 import { PROVIDERS } from "../core/providersMeta";
@@ -198,7 +202,19 @@ export function ChatList({
       // merece aviso nenhum. Nos degraus que ABREM a folha, ela mesma é a
       // resposta — o aviso só aparece quando o app fez outra coisa.
       if (modo && modo !== "file" && modo !== "capacitor") {
-        new Notice(mensagemDoModo(modo, nome));
+        // Quando NÃO foi a folha de verdade, o aviso leva o diagnóstico do
+        // aparelho junto: sem isso, "não apareceu o WhatsApp" vira palpite de
+        // quem está longe do telefone. A lista é o que o Capacitor embute
+        // aqui — é ela que diz se existe caminho nativo pra procurar.
+        const plugins = pluginsDoCapacitor();
+        new Notice(
+          `${mensagemDoModo(modo, nome)}${
+            plugins.length > 0
+              ? `\n(native: ${plugins.slice(0, 12).join(", ")})`
+              : "\n(no native bridge found)"
+          }`,
+          8000
+        );
       }
     } catch (err) {
       new Notice(
