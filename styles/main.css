@@ -1782,7 +1782,16 @@ body.theme-dark {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
+  /* Vão NEGATIVO de propósito: entre o desenho dos três pontos e o texto
+     sobravam 7px, porque o botão é 28px em volta de um ícone de 18 — cinco
+     deles são a área de toque, não espaço. O alvo continua com os 28; quem
+     encosta é o que se vê. */
+  gap: 0;
+}
+
+.axxa-root .axxa-card-end .axxa-card-age {
+  /* `gap` não aceita negativo — quem sobe é o texto. */
+  margin-top: -3px;
 }
 
 .axxa-root .axxa-card-age {
