@@ -5143,7 +5143,12 @@ body.is-mobile .axxa-root .axxa-history-more {
   width: 36px;
   height: 36px;
   border-radius: var(--axxa-r-sm);
-  background-color: var(--axxa-s1);
+  /* O fundo sai da PRÓPRIA cor: `currentColor` aqui é a cor do projeto (vem
+     inline na linha), então a plaquinha inteira fica no tom dele em vez de um
+     ícone colorido dentro de um cinza. Onde não há cor escolhida — skills,
+     notas —, `currentColor` é o texto de apoio e o fundo volta a ser neutro,
+     sem uma segunda regra. */
+  background-color: color-mix(in srgb, currentColor 16%, transparent);
   color: var(--text-muted);
 }
 

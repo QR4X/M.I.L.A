@@ -325,6 +325,15 @@ export function ChatList({
                     // porta pra criar um. Sem projeto nenhum, a lista é só a
                     // porta — e aí ela se explica sozinha.
                     children: [
+                      // Criar vem PRIMEIRO, sempre: é a única entrada que não
+                      // depende do que já existe, e um item que muda de lugar
+                      // conforme a quantidade de projetos obriga a ler a lista
+                      // toda pra achar o que não é projeto nenhum.
+                      {
+                        label: "New project…",
+                        icon: "plus",
+                        run: () => painel.novoProjetoCom(c.id),
+                      },
                       ...projetosRecentes.map((p) => ({
                         label: p.name,
                         icon: p.icon,
@@ -344,11 +353,6 @@ export function ChatList({
                             },
                           ]
                         : []),
-                      {
-                        label: "New project…",
-                        icon: "plus",
-                        run: () => painel.novoProjetoCom(c.id),
-                      },
                     ],
                   },
                   {
