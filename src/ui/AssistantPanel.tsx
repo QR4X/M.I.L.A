@@ -145,15 +145,46 @@ export function AssistantPanel({
           campo deixa de ser "descreva" e passa a ser "responda". */}
       {pergunta && <p className="axxa-assist-ask">{pergunta}</p>}
 
-      <textarea
-        className="axxa-textarea axxa-assist-campo"
-        value={texto}
-        rows={3}
-        placeholder={pergunta ? "Your answer…" : EXEMPLO[para]}
-        aria-label={pergunta || CONVITE[para]}
-        disabled={ocupado}
-        onChange={(e) => setTexto(e.currentTarget.value)}
-      />
+      {/* Os botões moram DENTRO da caixa de texto, como no composer do chat:
+          fora dela eles viravam uma terceira fileira de coisas soltas num
+          formulário que já tem campos e rótulos empilhados — e um "Write it"
+          solto no meio da pilha não se lê como o fim daquela caixa. */}
+      <div className="axxa-assist-box">
+        <textarea
+          className="axxa-assist-campo"
+          value={texto}
+          rows={3}
+          placeholder={pergunta ? "Your answer…" : EXEMPLO[para]}
+          aria-label={pergunta || CONVITE[para]}
+          disabled={ocupado}
+          onChange={(e) => setTexto(e.currentTarget.value)}
+        />
+        <div className="axxa-assist-acoes">
+          {/* O guiado some depois da primeira pergunta: a conversa já está
+              acontecendo, e dois botões ali só ofereceriam sair dela pelo
+              meio. */}
+          {!pergunta && !partirDoVazio && (
+            <button
+              type="button"
+              className="axxa-assist-guiado"
+              disabled={ocupado || !texto.trim()}
+              onClick={() => void pedir("guiado")}
+            >
+              <Icon name="message-circle-question" size={15} />
+              <span>Ask me questions</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className="axxa-assist-cta"
+            disabled={ocupado || (!texto.trim() && !partirDoVazio)}
+            onClick={() => void pedir(pergunta ? "guiado" : "direto")}
+          >
+            <Icon name={ocupado ? "loader" : "sparkles"} size={16} />
+            <span>{ocupado ? "Writing…" : pergunta ? "Send" : "Write it"}</span>
+          </button>
+        </div>
+      </div>
 
       {erro && (
         <p className="axxa-assist-erro" role="status">
@@ -161,31 +192,6 @@ export function AssistantPanel({
           <span>{erro}</span>
         </p>
       )}
-
-      <div className="axxa-assist-acoes">
-        {/* O guiado some depois da primeira pergunta: a conversa já está
-            acontecendo, e dois botões ali só ofereceriam sair dela pelo meio. */}
-        {!pergunta && !partirDoVazio && (
-          <button
-            type="button"
-            className="axxa-home-filter"
-            disabled={ocupado || !texto.trim()}
-            onClick={() => void pedir("guiado")}
-          >
-            <Icon name="message-circle-question" size={15} />
-            <span>Ask me questions</span>
-          </button>
-        )}
-        <button
-          type="button"
-          className="axxa-assist-cta"
-          disabled={ocupado || (!texto.trim() && !partirDoVazio)}
-          onClick={() => void pedir(pergunta ? "guiado" : "direto")}
-        >
-          <Icon name={ocupado ? "loader" : "sparkles"} size={16} />
-          <span>{ocupado ? "Writing…" : pergunta ? "Send" : "Write it"}</span>
-        </button>
-      </div>
     </div>
   );
 }
