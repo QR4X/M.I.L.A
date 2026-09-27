@@ -89,6 +89,9 @@ function acoes(c: ChatSummary): { texto: string; ativo: boolean } | null {
   return { texto: "No actions", ativo: false };
 }
 
+/** Quantos projetos cabem no submenu antes de virar "ver todos". */
+const MAX_PROJETOS = 5;
+
 export function ChatList({
   plugin,
   session,
@@ -109,6 +112,12 @@ export function ChatList({
   const esperandoId = useChatStore((s) => s.waitingChatId);
   const naoLidas = useUnreadChats(plugin);
   const painel = usePainel();
+  // Os cinco mais RECENTES, que é o que cabe num balão sem ele virar coluna.
+  // Recente = criado por último; é a data que o projeto tem, e é a ordem em
+  // que a lista de projetos já se apresenta.
+  const projetosRecentes = [...(plugin.settings.projects ?? [])]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, MAX_PROJETOS);
 
   const abrir = (c: ChatSummary) => {
     void session.load(c);
@@ -316,12 +325,25 @@ export function ChatList({
                     // porta pra criar um. Sem projeto nenhum, a lista é só a
                     // porta — e aí ela se explica sozinha.
                     children: [
-                      ...(plugin.settings.projects ?? []).map((p) => ({
+                      ...projetosRecentes.map((p) => ({
                         label: p.name,
                         icon: p.icon,
                         checked: p.chatIds.includes(c.id),
                         run: () => void paraProjeto(c, p.id),
                       })),
+                      // Passou de cinco, o resto vai pra folha: balão não é
+                      // lugar de rolar, e cinco é o que cabe sem virar coluna.
+                      ...((plugin.settings.projects ?? []).length > MAX_PROJETOS
+                        ? [
+                            {
+                              label: `See all ${
+                                (plugin.settings.projects ?? []).length
+                              }`,
+                              icon: "list",
+                              run: () => painel.escolherProjetoPara(c.id),
+                            },
+                          ]
+                        : []),
                       {
                         label: "New project…",
                         icon: "plus",

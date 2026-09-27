@@ -61,6 +61,9 @@ export function App({
   /** Conversa que vai entrar no PRÓXIMO projeto criado (o "New project…" do
    *  menu de uma conversa). Some assim que o projeto nasce. */
   const [chatParaProjeto, setChatParaProjeto] = useState<string | null>(null);
+  /** Conversa esperando que você ESCOLHA um projeto na folha (o "See all" do
+   *  menu). Enquanto vale, a lista de projetos escolhe em vez de abrir. */
+  const [escolhaPara, setEscolhaPara] = useState<string | null>(null);
   /** O recorte da lista, compartilhado pela home e pelo histórico: filtrar
    *  numa e pedir "ver tudo" leva o filtro junto. */
   const [aba, setAba] = useState(SEGMENT_ALL);
@@ -105,6 +108,13 @@ export function App({
     <PainelCtx.Provider
       value={{
         novoProjetoCom: (chatId: string) => {
+          setChatParaProjeto(chatId);
+          setEscolhaPara(null);
+          setProjetoAberto(null);
+          setPainel("projects");
+        },
+        escolherProjetoPara: (chatId: string) => {
+          setEscolhaPara(chatId);
           setChatParaProjeto(chatId);
           setProjetoAberto(null);
           setPainel("projects");
@@ -212,7 +222,17 @@ export function App({
         onAbrir={setProjetoAberto}
         chatPendente={chatParaProjeto}
         onChatPendente={setChatParaProjeto}
-        onClose={() => setPainel(null)}
+        escolhaPara={escolhaPara}
+        onEscolha={() => {
+          setEscolhaPara(null);
+          setChatParaProjeto(null);
+          setPainel(null);
+        }}
+        onClose={() => {
+          setPainel(null);
+          setEscolhaPara(null);
+          setChatParaProjeto(null);
+        }}
         onOpenChat={() => {
           // Entrar na conversa FECHA a folha — e a seta de voltar da conversa
           // reabre ela no mesmo projeto, que é o toque que trouxe você.

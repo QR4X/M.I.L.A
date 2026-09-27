@@ -5972,10 +5972,27 @@ body.is-mobile .axxa-root .axxa-history-more {
   color: var(--text-accent);
 }
 
-/* A volta do segundo nível: mesma linha, tom de apoio — ela não é uma ação
-   do objeto, é navegação dentro do menu. */
+/* A volta do segundo nível não é uma ação do objeto: é navegação DENTRO do
+   menu, e por isso ela se apresenta como cabeçalho — letra menor que a dos
+   itens e um fio separando as duas naturezas. Sem o fio, "Back" era só o
+   primeiro item de uma lista de projetos, e o dedo aprendia a pular a
+   primeira linha. */
 .axxa-root button.axxa-pop-item.is-back {
+  min-height: 32px;
+  margin-bottom: var(--axxa-1);
+  padding-bottom: var(--axxa-1);
+  border-bottom: 1px solid var(--axxa-hairline);
+  border-radius: 0;
   color: var(--text-muted);
-  font-size: var(--font-ui-small);
-  min-height: 34px;
+  font-size: var(--font-ui-smaller);
+}
+
+.axxa-root button.axxa-pop-item.is-back:hover {
+  background-color: transparent;
+  color: var(--text-normal);
+}
+
+.axxa-root .axxa-pop-item.is-back .axxa-pop-ico svg {
+  width: 15px;
+  height: 15px;
 }

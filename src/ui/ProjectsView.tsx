@@ -48,6 +48,8 @@ export function ProjectsView({
   onAbrir,
   chatPendente,
   onChatPendente,
+  escolhaPara,
+  onEscolha,
   onOpenChat,
   onClose,
 }: {
@@ -63,6 +65,11 @@ export function ProjectsView({
    *  "Add to project ▸ New project…". O projeto criado já nasce com ela. */
   chatPendente?: string | null;
   onChatPendente?: (id: string | null) => void;
+  /** A folha está aberta pra ESCOLHER um projeto pra esta conversa (o "See
+   *  all" do menu de uma conversa). Enquanto vale, tocar numa linha ADICIONA
+   *  em vez de abrir o projeto. */
+  escolhaPara?: string | null;
+  onEscolha?: () => void;
   onOpenChat: () => void;
   onClose: () => void;
 }) {
@@ -199,7 +206,7 @@ export function ProjectsView({
     escolher: "Add a note",
     notas: "Project notes",
     projeto: aberto?.name ?? "Project",
-    lista: "Projects",
+    lista: escolhaPara ? "Add to project" : "Projects",
   };
 
   /** A seta de voltar de cada nível — ela desfaz o toque que trouxe você. */
@@ -508,7 +515,24 @@ export function ProjectsView({
                   <button
                     type="button"
                     className="axxa-thing"
-                    onClick={() => setAbertoId(p.id)}
+                    onClick={() => {
+                      // No modo escolha a linha faz o que a pessoa veio
+                      // fazer: põe a conversa ali e fecha. Abrir o projeto
+                      // seria trocar o destino no meio do caminho.
+                      if (escolhaPara) {
+                        void update((prev) =>
+                          prev.map((x) =>
+                            x.id === p.id && !x.chatIds.includes(escolhaPara)
+                              ? { ...x, chatIds: [escolhaPara, ...x.chatIds] }
+                              : x
+                          )
+                        );
+                        new Notice(`Added to ${p.name}.`);
+                        onEscolha?.();
+                        return;
+                      }
+                      setAbertoId(p.id);
+                    }}
                   >
                     <span
                       className="axxa-thing-mark"
@@ -520,9 +544,13 @@ export function ProjectsView({
                     <span className="axxa-thing-text">
                       <span className="axxa-thing-name">{p.name}</span>
                       <span className="axxa-thing-note">
-                        {p.sources.length} note
-                        {p.sources.length === 1 ? "" : "s"} · {p.chatIds.length}{" "}
-                        chat{p.chatIds.length === 1 ? "" : "s"}
+                        {escolhaPara && p.chatIds.includes(escolhaPara)
+                          ? "Already here"
+                          : `${p.sources.length} note${
+                              p.sources.length === 1 ? "" : "s"
+                            } · ${p.chatIds.length} chat${
+                              p.chatIds.length === 1 ? "" : "s"
+                            }`}
                       </span>
                     </span>
                     <Icon
@@ -531,6 +559,7 @@ export function ProjectsView({
                       className="axxa-module-chev"
                     />
                   </button>
+                  {!escolhaPara && (
                   <button
                     type="button"
                     className="axxa-icon-btn axxa-history-more"
@@ -554,6 +583,7 @@ export function ProjectsView({
                   >
                     <Icon name="more-horizontal" size={18} />
                   </button>
+                  )}
                 </div>
               ))}
             </div>

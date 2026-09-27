@@ -20,10 +20,17 @@ export interface PainelApi {
    * uma conversa teria que voltar até ela e repetir o caminho.
    */
   novoProjetoCom: (chatId: string) => void;
+  /**
+   * Abre a folha de projetos pra ESCOLHER um pra esta conversa. É o "See all"
+   * do menu: cinco projetos cabem num balão, uma coleção não — e rolar dentro
+   * de um menu suspenso é o gesto mais frágil que existe num celular.
+   */
+  escolherProjetoPara: (chatId: string) => void;
 }
 
 export const PainelCtx = createContext<PainelApi>({
   novoProjetoCom: () => {},
+  escolherProjetoPara: () => {},
 });
 
 export function usePainel(): PainelApi {
