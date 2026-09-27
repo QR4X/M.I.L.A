@@ -1773,11 +1773,20 @@ body.theme-dark {
   flex: 1 1 auto;
 }
 
-/* A idade na ponta: alinhada ao topo porque o título é a âncora da linha, e
-   ela não pode empurrar nada — por isso `flex: 0 0 auto` e nada de quebra. */
+/* A coluna da ponta: o ⋯ em cima, a idade embaixo, as duas encostadas à
+   direita. Lado a lado elas disputavam a mesma faixa, e como a idade muda de
+   largura com o texto ("now", "2d", "2026-09-13"), o ⋯ de cada linha parava
+   numa coluna diferente — a lista tinha a borda direita serrilhada. */
+.axxa-root .axxa-card-end {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
 .axxa-root .axxa-card-age {
   flex: 0 0 auto;
-  align-self: flex-start;
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
   white-space: nowrap;

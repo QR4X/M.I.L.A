@@ -199,10 +199,6 @@ export function ChatList({
                   </span>
                 </span>
 
-                {/* Tempo desde a ÚLTIMA interação: `date` é reescrito a cada
-                  gravação da conversa, não é a data de criação. Fica na ponta,
-                  a coluna que se lê de cima a baixo pra achar "a de hoje". */}
-                <span className="axxa-card-age">{relativeShort(c.date)}</span>
               </span>
 
               {/* A última fala, no cartão da SESSÃO. Título e modelo dizem o
@@ -215,6 +211,16 @@ export function ChatList({
               )}
             </button>
 
+            {/* A COLUNA DA PONTA: o ⋯ em cima, a idade embaixo. Eles eram
+                vizinhos na horizontal e disputavam a mesma faixa — a idade
+                terminava em posições diferentes conforme o texto ("now", "2d",
+                "2026-09-13"), então o ⋯ da linha de baixo nunca ficava
+                debaixo do de cima. Empilhados e alinhados à direita, as duas
+                colunas ficam retas de cima a baixo.
+
+                Tempo desde a ÚLTIMA interação: `date` é reescrito a cada
+                gravação da conversa, não é a data de criação. */}
+            <span className="axxa-card-end">
             <button
               type="button"
               className="axxa-icon-btn axxa-history-more"
@@ -237,6 +243,8 @@ export function ChatList({
             >
               <Icon name="more-horizontal" />
             </button>
+              <span className="axxa-card-age">{relativeShort(c.date)}</span>
+            </span>
           </div>
         );
       })}
