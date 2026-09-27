@@ -274,7 +274,11 @@ export function SheetIconCatalog({
         label="Icon category"
         value={atual.id}
         onPick={setAba}
-        items={ICON_CATALOG.map((c) => ({ id: c.id, label: c.label }))}
+        items={ICON_CATALOG.map((c) => ({
+          id: c.id,
+          label: c.label,
+          icon: c.icon,
+        }))}
       />
       <div className="axxa-icongrid" role="group" aria-label={atual.label}>
         {atual.icons.map((ic) => (

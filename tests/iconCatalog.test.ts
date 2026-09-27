@@ -40,6 +40,16 @@ describe("ICON_CATALOG", () => {
     for (const cat of ICON_CATALOG) expect(cat.icons.length).toBeGreaterThan(0);
   });
 
+  it("toda categoria tem emblema, e emblema é um nome de ícone", () => {
+    // O emblema é o que se acha sem ler, numa fileira de dez nomes de uma
+    // palavra. Faltando um, a pílula fica com um buraco no lugar dele —
+    // `setIcon` não reclama de nome que não existe.
+    for (const cat of ICON_CATALOG) {
+      expect(cat.icon, cat.id).toMatch(KEBAB);
+      expect(cat.icon.length, cat.id).toBeGreaterThan(0);
+    }
+  });
+
   it("a contagem bate com o que está nas categorias", () => {
     // É o número que cada aba mostra antes do toque.
     const soma = ICON_CATALOG.reduce((n, c) => n + c.icons.length, 0);

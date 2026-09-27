@@ -5260,6 +5260,15 @@ body.is-mobile .axxa-root .axxa-history-more {
 .axxa-root button.axxa-choice {
   display: inline-flex;
   align-items: center;
+  /* JUSTIFICADAS: cada pílula estica pra preencher a linha dela. Com
+     `flex-wrap`, o crescimento é por LINHA — então nenhuma fileira termina
+     com um talho de fundo vazio na direita, nem a última. Sem isto, dez
+     categorias de nomes curtos deixavam a borda direita serrilhada, e o vão
+     que sobrava parecia um lugar onde faltava alguma coisa.
+     `justify-content: center` porque a pílula agora é maior que o conteúdo:
+     encostado à esquerda, o texto ficaria boiando numa cápsula larga. */
+  flex: 1 1 auto;
+  justify-content: center;
   gap: var(--axxa-1);
   height: 36px;
   padding: 0 var(--axxa-3);
@@ -5269,6 +5278,7 @@ body.is-mobile .axxa-root .axxa-history-more {
   box-shadow: none;
   color: var(--text-muted);
   font-size: var(--font-ui-small);
+  white-space: nowrap;
 }
 
 .axxa-root button.axxa-choice.is-on {

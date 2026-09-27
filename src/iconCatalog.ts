@@ -16,14 +16,24 @@
 
 export interface IconCategory {
   id: string;
-  /** O que aparece na aba. */
+  /** O que aparece na pílula. */
   label: string;
+  /**
+   * O emblema da categoria, na pílula, antes do nome.
+   *
+   * Não é enfeite: as pílulas são dez e o nome delas é uma palavra só, então
+   * de relance a fileira vira um bloco de texto uniforme. O desenho é o que
+   * se acha sem ler — e é o mesmo alfabeto da grade logo abaixo, que é toda
+   * feita de desenho.
+   */
+  icon: string;
   icons: string[];
 }
 
 export const ICON_CATALOG: IconCategory[] = [
   {
     id: "work",
+    icon: "briefcase",
     label: "Work",
     icons: [
       "briefcase", "target", "clipboard-list", "presentation", "handshake",
@@ -34,6 +44,7 @@ export const ICON_CATALOG: IconCategory[] = [
   },
   {
     id: "study",
+    icon: "graduation-cap",
     label: "Study",
     icons: [
       "graduation-cap", "book", "book-open", "library", "notebook-pen",
@@ -44,6 +55,7 @@ export const ICON_CATALOG: IconCategory[] = [
   },
   {
     id: "writing",
+    icon: "pencil",
     label: "Writing",
     icons: [
       "pencil", "pen-line", "feather", "type", "quote", "file-text",
@@ -53,44 +65,47 @@ export const ICON_CATALOG: IconCategory[] = [
   },
   {
     id: "code",
+    icon: "terminal",
     label: "Code",
     icons: [
       "terminal", "braces", "code", "git-branch", "database", "server", "bug",
       "cpu", "binary", "package", "cloud", "globe", "keyboard", "wifi",
-      "lock", "regex", "zap", "battery",
+      "lock", "regex", "battery",
     ],
   },
   {
     id: "creative",
+    icon: "palette",
     label: "Creative",
     icons: [
       "palette", "brush", "camera", "film", "music", "mic", "headphones",
       "image", "wand-2", "scissors", "shapes", "pen-tool", "sparkles",
       "drama", "guitar", "clapperboard", "paintbrush", "swatch-book",
-      "video", "circle-dot",
+      "video",
     ],
   },
   {
     id: "home",
+    icon: "home",
     label: "Home",
     icons: [
-      "home", "bed", "sofa", "lamp", "utensils", "coffee", "shopping-cart",
-      "shirt", "washing-machine", "hammer", "wrench", "plug", "key",
-      "door-open", "trash-2", "recycle", "axe", "paint-roller", "pizza",
-      "phone",
+      "home", "bed", "sofa", "lamp", "shopping-cart", "shirt",
+      "washing-machine", "hammer", "wrench", "plug", "key", "door-open",
+      "trash-2", "recycle", "axe", "paint-roller", "phone",
     ],
   },
   {
     id: "health",
+    icon: "heart-pulse",
     label: "Health",
     icons: [
       "heart", "heart-pulse", "stethoscope", "dumbbell", "activity", "pill",
-      "apple", "salad", "bike", "footprints", "moon", "sun", "bath",
-      "syringe", "carrot", "wheat",
+      "bike", "footprints", "moon", "sun", "bath", "syringe",
     ],
   },
   {
     id: "nature",
+    icon: "leaf",
     label: "Nature",
     icons: [
       "leaf", "sprout", "tree-pine", "trees", "flower", "droplet", "mountain",
@@ -101,6 +116,7 @@ export const ICON_CATALOG: IconCategory[] = [
   },
   {
     id: "travel",
+    icon: "plane",
     label: "Travel",
     icons: [
       "plane", "car", "train-front", "ship", "sailboat", "map", "map-pin",
@@ -110,11 +126,33 @@ export const ICON_CATALOG: IconCategory[] = [
   },
   {
     id: "life",
+    icon: "user",
     label: "Life",
     icons: [
-      "user", "baby", "heart-handshake", "gift", "party-popper", "cake",
-      "smile", "star", "flag", "shield", "bell", "hourglass", "dice-5",
-      "puzzle",
+      "user", "baby", "heart-handshake", "hand-heart", "gift",
+      "party-popper", "smile", "flag", "shield", "bell", "hourglass",
+      "dice-5", "puzzle",
+    ],
+  },
+  {
+    id: "food",
+    icon: "utensils",
+    label: "Food",
+    icons: [
+      "utensils", "utensils-crossed", "chef-hat", "cooking-pot", "soup",
+      "pizza", "sandwich", "egg", "salad", "apple", "carrot", "wheat",
+      "cake", "cookie", "croissant", "ice-cream-cone", "coffee", "cup-soda",
+      "wine", "beer", "milk",
+    ],
+  },
+  {
+    id: "symbols",
+    icon: "star",
+    label: "Symbols",
+    icons: [
+      "star", "crown", "gem", "award", "badge-check", "check", "x", "info",
+      "alert-triangle", "asterisk", "hash", "at-sign", "percent", "infinity",
+      "zap", "circle-dot", "sticker",
     ],
   },
 ];
