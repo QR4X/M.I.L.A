@@ -13,12 +13,8 @@ import type AxxaPlugin from "../main";
 import type { ChatSession } from "../core/session";
 import type { ChatSummary } from "../core/chatPersistence";
 import { loadChat, setChatStarred } from "../core/chatPersistence";
-import {
-  exportChatMarkdown,
-  exportChatToVault,
-  exportFileName,
-} from "../core/chatExport";
-import { compartilharMarkdown, mensagemDoModo } from "../core/chatShare";
+import { exportChatToVault, exportFileName } from "../core/chatExport";
+import { compartilharChat, mensagemDoModo } from "../core/chatShare";
 import { usePainel } from "./painel";
 import { useChatStore } from "../store/chat";
 import { PROVIDERS } from "../core/providersMeta";
@@ -197,15 +193,13 @@ export function ChatList({
       );
       const agora = new Date();
       const nome = exportFileName(chat.title, agora);
-      const modo = await compartilharMarkdown(
-        nome,
-        chat.title || "Chat",
-        exportChatMarkdown(chat, agora)
-      );
+      const modo = await compartilharChat(plugin.app, chat, agora);
       // `null` é você fechando a folha do sistema: cancelar não é erro e não
-      // merece aviso nenhum.
-      if (modo && modo !== "file") new Notice(mensagemDoModo(modo, nome));
-      if (modo === "none") new Notice(mensagemDoModo(modo, nome));
+      // merece aviso nenhum. Nos degraus que ABREM a folha, ela mesma é a
+      // resposta — o aviso só aparece quando o app fez outra coisa.
+      if (modo && modo !== "file" && modo !== "capacitor") {
+        new Notice(mensagemDoModo(modo, nome));
+      }
     } catch (err) {
       new Notice(
         `Could not share: ${err instanceof Error ? err.message : String(err)}`
