@@ -29,6 +29,7 @@ import { formatCompact } from "../usage/format";
 import { aggregateFromSummaries } from "../usage/aggregate";
 import { Icon } from "./Icon";
 import { providerIcon } from "./ChatList";
+import { RagLine } from "./RagLine";
 import { heatmapDoMes, inicioDoMes, type Celula } from "./heatmap";
 import {
   diasAtivos,
@@ -67,7 +68,11 @@ export function UsageCard({
 
   // Sai de cena quando não há o que contar. Zero repetido ensina a não olhar
   // pro lugar — e um calendário todo apagado é só um retângulo cinza.
-  if (agg.total.chats === 0) return null;
+  //
+  // O ÍNDICE não sai junto: ele não fala do mês, fala do vault, e some do mês
+  // que você não usou o app é justamente quando ele mais precisa ser
+  // lembrado. Sem o cartão, ele fica sozinho na linha que já era dele.
+  if (agg.total.chats === 0) return <RagLine plugin={plugin} />;
 
   return (
     // O cartão INTEIRO abre a página: ele já é um resumo, e todo resumo
@@ -158,6 +163,22 @@ export function UsageCard({
             unidade="sent"
           />
         )}
+      </div>
+
+      {/* O índice entra COMO RODAPÉ do cartão, e não como uma linha solta
+          embaixo dele. Os dois falam da mesma coisa por dois lados: o cartão
+          conta o que SAIU daqui pros modelos, o índice conta o que FICA aqui.
+          Separados, o de baixo parecia legenda do de cima.
+
+          A propagação para nesta faixa: ela tem os toques dela (o texto abre
+          as settings do índice, o ↻ reindexa), e herdar o "abrir o uso" do
+          cartão faria dois destinos no mesmo lugar. */}
+      <div
+        className="axxa-usage-foot"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <RagLine plugin={plugin} />
       </div>
     </section>
   );

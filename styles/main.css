@@ -1386,8 +1386,19 @@ body.theme-dark {
   gap: var(--axxa-2);
   min-width: 0;
   padding: 0 var(--axxa-1);
-  color: var(--text-faint);
+  /* Dentro do cartão ele pousa num degrau: faint ali mede 2,3:1 (ver a
+     regra junto dos tokens de superfície). */
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+}
+
+/* O rodapé do cartão de uso: um fio separando o que saiu (tokens) do que
+   ficou (índice). Ele sangra até as beiradas do cartão porque um fio com
+   margem lê como sublinhado de parágrafo; até a borda, lê como divisória. */
+.axxa-root .axxa-usage-foot {
+  margin: var(--axxa-1) calc(var(--axxa-3) * -1) calc(var(--axxa-3) * -1);
+  padding: var(--axxa-2) var(--axxa-3);
+  border-top: 1px solid var(--axxa-hairline);
 }
 
 /* Com índice, o ícone acende: é o único sinal de que ele existe. */
