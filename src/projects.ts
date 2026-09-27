@@ -85,3 +85,33 @@ export function projectProblema(
   if (colide) return "There is already a project with that name.";
   return null;
 }
+
+/**
+ * O nome de uma cópia — "Tese", "Tese copy", "Tese copy 2"…
+ *
+ * Existe porque nome repetido é barrado (ver `projectProblema`, logo acima):
+ * uma cópia que nascesse com o nome do original deixaria a lista com dois
+ * "Tese" — exatamente o que aquela regra impede na mão. E o número só aparece
+ * a partir da segunda cópia: "Tese copy 1" conta uma história que ninguém
+ * pediu.
+ *
+ * Teto de tentativas pelo mesmo motivo de sempre: laço que só sai quando uma
+ * condição ceder é laço que depende dela ceder. Na 51ª cópia do mesmo projeto,
+ * o nome repete e a folha diz o que está errado — que é melhor que travar.
+ */
+export function nomeDaCopia(
+  original: string,
+  existentes: readonly Project[]
+): string {
+  const usados = new Set(
+    existentes.map((p) => p.name.trim().toLowerCase())
+  );
+  const base = original.trim() || "Project";
+  const livre = (nome: string) => !usados.has(nome.toLowerCase());
+  if (livre(`${base} copy`)) return `${base} copy`;
+  for (let n = 2; n <= 50; n++) {
+    const tentativa = `${base} copy ${n}`;
+    if (livre(tentativa)) return tentativa;
+  }
+  return `${base} copy`;
+}

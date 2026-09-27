@@ -25,6 +25,7 @@ import type AxxaPlugin from "../main";
 import type { ChatSession } from "../core/session";
 import {
   makeProjectId,
+  nomeDaCopia,
   projectColor,
   projectProblema,
   PROJECT_DRAFT_VAZIO,
@@ -39,6 +40,8 @@ import { ProjectForm } from "./ProjectSheet";
 import { SheetField, SheetSubmit, SheetTextarea } from "./SheetForm";
 import { openActions } from "./menu";
 import { rankNotes, vaultNotes } from "./notePicker";
+import { exportProjectToVault } from "../core/projectExport";
+import type { MenuAction } from "./menu";
 
 export function ProjectsView({
   plugin,
@@ -154,6 +157,90 @@ export function ProjectsView({
     if (abertoId === p.id) setAbertoId(null);
   };
 
+  /**
+   * Duplicar: um projeto é quase um MOLDE — a identidade, as notas de origem
+   * e as instruções são o que custou a montar, e refazer isso à mão pra uma
+   * variante ("Tese · capítulo 3") é repetir o trabalho inteiro.
+   *
+   * As conversas NÃO vêm junto: elas são o que aconteceu no projeto velho, e
+   * a cópia existe pra começar de novo. Vir com elas faria a cópia mentir
+   * sobre a própria idade.
+   */
+  const duplicar = async (p: Project) => {
+    const copia: Project = {
+      ...p,
+      id: makeProjectId(),
+      name: nomeDaCopia(p.name, projects),
+      chatIds: [],
+      createdAt: new Date().toISOString(),
+    };
+    await update((prev) => [copia, ...prev]);
+    new Notice(`Duplicated as "${copia.name}"`);
+  };
+
+  /** Exporta o índice do projeto e diz onde ele caiu. */
+  const exportar = async (p: Project) => {
+    try {
+      const caminho = await exportProjectToVault(
+        plugin.app,
+        p,
+        chats,
+        new Date()
+      );
+      new Notice(`Exported to ${caminho}`);
+    } catch (e) {
+      new Notice(`Could not export: ${(e as Error).message}`);
+    }
+  };
+
+  /**
+   * O ⋯ de um projeto — o mesmo de dentro dele e o da linha da lista.
+   *
+   * Um menu só, porque é o mesmo objeto: dois menus com itens diferentes pro
+   * mesmo projeto ensinariam que uma ação existe "só de um lado", e aí toda
+   * ação vira uma busca.
+   *
+   * A ordem é: o que se VEM fazer (conversar), o que o projeto TEM (as
+   * instruções e as notas — as duas coisas que ele de fato guarda, e que hoje
+   * só se alcança entrando nele), e por fim lidar com ele. Apagar por último e
+   * marcado, como em toda parte do app.
+   */
+  const acoesDoProjeto = (p: Project): MenuAction[] => [
+    {
+      label: "New chat here",
+      icon: "message-circle-plus",
+      run: () => {
+        void session.newChatInProject(p);
+        onOpenChat();
+      },
+    },
+    {
+      label: "Instructions",
+      icon: "scroll-text",
+      run: () => {
+        setAbertoId(p.id);
+        setInstrucoes(p.instructions ?? "");
+      },
+    },
+    {
+      label: "Notes",
+      icon: "library",
+      run: () => {
+        setAbertoId(p.id);
+        setVendoNotas(true);
+      },
+    },
+    { label: "Edit", icon: "pencil", run: () => editar(p) },
+    { label: "Duplicate", icon: "copy", run: () => void duplicar(p) },
+    { label: "Export to vault", icon: "download", run: () => void exportar(p) },
+    {
+      label: "Delete",
+      icon: "trash-2",
+      danger: true,
+      run: () => void apagar(p),
+    },
+  ];
+
   const anexarNota = (p: Project, path: string) =>
     update((prev) =>
       prev.map((x) =>
@@ -265,15 +352,7 @@ export function ProjectsView({
           type="button"
           className="axxa-home-filter"
           onClick={(e) =>
-            openActions(e as unknown as MouseEvent, [
-              { label: "Edit", icon: "pencil", run: () => editar(aberto) },
-              {
-                label: "Delete",
-                icon: "trash-2",
-                danger: true,
-                run: () => void apagar(aberto),
-              },
-            ])
+            openActions(e as unknown as MouseEvent, acoesDoProjeto(aberto))
           }
         >
           <Icon name="settings-2" size={16} />
@@ -571,20 +650,11 @@ export function ProjectsView({
                     className="axxa-icon-btn axxa-history-more"
                     aria-label={`Actions for ${p.name}`}
                     onClick={(e) =>
-                      openActions(e as unknown as MouseEvent, [
-                        {
-                          label: "Open",
-                          icon: "folder-open",
-                          run: () => setAbertoId(p.id),
-                        },
-                        { label: "Edit", icon: "pencil", run: () => editar(p) },
-                        {
-                          label: "Delete",
-                          icon: "trash-2",
-                          danger: true,
-                          run: () => void apagar(p),
-                        },
-                      ])
+                      /* Sem "Open": tocar na linha já abre o projeto, e
+                         gastar a primeira posição do menu repetindo o gesto
+                         mais óbvio da tela é desperdiçar o lugar que o polegar
+                         alcança primeiro. */
+                      openActions(e as unknown as MouseEvent, acoesDoProjeto(p))
                     }
                   >
                     <Icon name="more-horizontal" size={18} />

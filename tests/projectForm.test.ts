@@ -5,6 +5,7 @@ import {
   PROJECT_ICONS,
   projectColor,
   projectProblema,
+  nomeDaCopia,
   type Project,
 } from "../src/projects";
 
@@ -56,5 +57,41 @@ describe("o rascunho vazio", () => {
     // pessoa seria desfazer um estado que ninguém escolheu.
     expect(PROJECT_ICONS).toContain(PROJECT_DRAFT_VAZIO.icon);
     expect(PROJECT_COLORS).toContain(PROJECT_DRAFT_VAZIO.color);
+  });
+});
+
+describe("nomeDaCopia", () => {
+  // Nome repetido é barrado na folha (ver projectProblema, acima): uma cópia
+  // que nascesse com o nome do original deixaria dois "Thesis" na lista —
+  // exatamente o que aquela regra impede na mão.
+  it("a primeira cópia não leva número", () => {
+    expect(nomeDaCopia("Thesis", [proj()])).toBe("Thesis copy");
+  });
+
+  it("a segunda leva, e pula o que já existe", () => {
+    const tem = [proj(), proj({ id: "p2", name: "Thesis copy" })];
+    expect(nomeDaCopia("Thesis", tem)).toBe("Thesis copy 2");
+  });
+
+  it("não colide por causa de maiúscula", () => {
+    const tem = [proj({ name: "THESIS COPY" })];
+    expect(nomeDaCopia("Thesis", tem)).toBe("Thesis copy 2");
+  });
+
+  it("o nome que sai nunca colide com os que estão lá", () => {
+    const tem = [
+      proj({ id: "a", name: "Casa" }),
+      proj({ id: "b", name: "Casa copy" }),
+      proj({ id: "c", name: "Casa copy 2" }),
+      proj({ id: "d", name: "Casa copy 3" }),
+    ];
+    const novo = nomeDaCopia("Casa", tem);
+    expect(tem.some((p) => p.name.toLowerCase() === novo.toLowerCase())).toBe(
+      false
+    );
+  });
+
+  it("projeto sem nome ainda gera um", () => {
+    expect(nomeDaCopia("   ", [])).toBe("Project copy");
   });
 });
