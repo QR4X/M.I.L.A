@@ -438,6 +438,23 @@ body.theme-dark {
 
   --axxa-line: var(--background-modifier-border);
   --axxa-hover: var(--background-modifier-hover);
+  /* ── os DEGRAUS de superfície ───────────────────────────────────────────
+     O app estava chapado: cartão e página tinham 11 pontos de luminância de
+     diferença no tema escuro (30 → 41), que a olho nu é "o mesmo fundo com
+     um contorno". Pior, havia degrau INVERTIDO — a miniatura de um cartão de
+     skill era mais escura que o cartão em que ela mora.
+
+     Agora são três, e todos misturados com `--text-normal` em vez de uma cor
+     fixa: no tema escuro o texto é claro e o degrau sobe; no claro ele é
+     escuro e o degrau desce. É a mesma regra funcionando de cabeça pra baixo,
+     que é o que faz o app não ter tema próprio — ele tem o SEU.
+
+       s1 = o que pousa na página (cartão, linha, azulejo)
+       s2 = o que pousa DENTRO de um s1 (campo, miniatura, brasão)
+       hairline = a beirada, pra forma existir antes da cor */
+  --axxa-s1: color-mix(in srgb, var(--text-normal) 10%, transparent);
+  --axxa-s2: color-mix(in srgb, var(--text-normal) 16%, transparent);
+  --axxa-hairline: color-mix(in srgb, var(--text-normal) 11%, transparent);
   /* Tempo das camadas que entram e saem (folha, véu, menu) — um valor só pra
      elas nunca desencontrarem. */
   --axxa-sheet-ms: 260ms;
@@ -877,7 +894,7 @@ body.theme-dark {
   /* Um passo ACIMA do fundo da página, seja ele qual for. `--axxa-raised`
      não serve aqui: em tema onde o canvas já é o `--background-primary` ele
      resolve pra mesma cor e o cartão some. */
-  background-color: color-mix(in srgb, var(--text-normal) 6%, transparent);
+  background-color: var(--axxa-s1);
 }
 
 /* ── a lista CHAPADA (só o Chat) ───────────────────────────────────────
@@ -967,7 +984,8 @@ body.theme-dark {
   gap: var(--axxa-2);
   padding: var(--axxa-3);
   border-radius: var(--axxa-r);
-  background-color: color-mix(in srgb, var(--text-normal) 6%, transparent);
+  background-color: var(--axxa-s1);
+  border: 1px solid var(--axxa-hairline);
 }
 
 /* ── o calendário do mês ───────────────────────────────────────────────
@@ -1123,7 +1141,7 @@ body.theme-dark {
   border-radius: var(--axxa-r-sm);
   /* Um degrau ACIMA do cartão, que já é um degrau acima da página: sem isso a
      fileira vira um bloco só. */
-  background-color: color-mix(in srgb, var(--text-normal) 5%, transparent);
+  background-color: var(--axxa-s1);
 }
 
 .axxa-root .axxa-mod-title {
@@ -1257,14 +1275,14 @@ body.theme-dark {
   gap: 6px;
   padding: 6px var(--axxa-3);
   border-radius: var(--axxa-r-pill);
-  background-color: color-mix(in srgb, var(--text-normal) 6%, transparent);
+  background-color: var(--axxa-s1);
   box-shadow: none;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
 .axxa-root button.axxa-filter-chip:hover {
-  background-color: color-mix(in srgb, var(--text-normal) 10%, transparent);
+  background-color: var(--axxa-s2);
 }
 
 .axxa-root button.axxa-filter-chip.is-on {
@@ -1599,13 +1617,13 @@ body.theme-dark {
   min-height: var(--axxa-start-card);
   padding: var(--axxa-2);
   border-radius: var(--axxa-r);
-  background-color: color-mix(in srgb, var(--text-normal) 6%, transparent);
+  background-color: var(--axxa-s1);
   box-shadow: none;
   color: var(--text-normal);
 }
 
 .axxa-root button.axxa-start-card:hover {
-  background-color: color-mix(in srgb, var(--text-normal) 10%, transparent);
+  background-color: var(--axxa-s2);
 }
 
 .axxa-root button.axxa-start-card .axxa-icon {
@@ -1803,7 +1821,7 @@ body.theme-dark {
 @keyframes axxa-respira {
   0%,
   100% {
-    background-color: color-mix(in srgb, var(--text-normal) 6%, transparent);
+    background-color: var(--axxa-s1);
     box-shadow: 0 0 0 0 transparent;
   }
   50% {
@@ -2506,7 +2524,7 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-composer {
   border-radius: var(--axxa-r-lg);
   /* O vidro continua vidro: a cor é fraca e quem sustenta a legibilidade é o
      desfoque. O saturate compensa o cinza que o blur traz. */
-  background-color: color-mix(in srgb, var(--text-normal) 5%, transparent);
+  background-color: var(--axxa-s1);
   backdrop-filter: blur(28px) saturate(1.7);
   -webkit-backdrop-filter: blur(28px) saturate(1.7);
   /* A sombra fica só pelo tema claro, onde escuro sobre claro aparece de
@@ -3048,8 +3066,12 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-composer {
      `--mobile-sidebar-background`), então a folha continua a mesma
      superfície do app. Quem destaca é o scrim, a borda e a sombra — e os
      cartões de dentro, que sobem um passo com `--axxa-hover`. */
-  background-color: var(--axxa-canvas);
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.28);
+  /* Um degrau ACIMA da página: elas tinham exatamente o mesmo fundo, e o que
+     separava a folha do que está atrás era só o véu e a sombra. Numa foto de
+     tela — e no olho, de relance — as duas viravam a mesma superfície com uma
+     linha no meio. */
+  background-color: color-mix(in srgb, var(--text-normal) 5%, var(--axxa-canvas));
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.34);
   transform: translateY(100%);
   /* Camada própria ANTES de começar: sem isto o WebView promove a folha no
      meio do movimento, e o primeiro quadro sai torto (a sombra de 32px é
@@ -5063,7 +5085,7 @@ body.is-mobile .axxa-root .axxa-history-more {
   width: 36px;
   height: 36px;
   border-radius: var(--axxa-r-sm);
-  background-color: color-mix(in srgb, var(--text-normal) 6%, transparent);
+  background-color: var(--axxa-s1);
   color: var(--text-muted);
 }
 
@@ -5210,13 +5232,13 @@ body.is-mobile .axxa-root .axxa-history-more {
   justify-content: center;
   aspect-ratio: 1;
   border-radius: var(--axxa-r-sm);
-  background-color: color-mix(in srgb, var(--text-normal) 6%, transparent);
+  background-color: var(--axxa-s1);
   box-shadow: none;
   color: var(--text-muted);
 }
 
 .axxa-root button.axxa-icontile:hover {
-  background-color: color-mix(in srgb, var(--text-normal) 12%, transparent);
+  background-color: var(--axxa-s2);
 }
 
 /* O escolhido usa a cor do app, não um cinza um tico mais claro: com o
@@ -5416,7 +5438,7 @@ body.is-mobile .axxa-root .axxa-history-more {
   min-height: 28px;
   padding: var(--axxa-1) var(--axxa-3);
   border-radius: 999px;
-  background-color: color-mix(in srgb, var(--text-normal) 5%, transparent);
+  background-color: var(--axxa-s1);
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
   cursor: default;
@@ -5451,9 +5473,10 @@ body.is-mobile .axxa-root .axxa-history-more {
   min-height: 118px;
   padding: var(--axxa-3);
   border-radius: var(--axxa-r-lg);
-  background-color: color-mix(in srgb, var(--text-normal) 6%, transparent);
+  background-color: var(--axxa-s1);
   box-shadow: none;
   text-align: left;
+  border: 1px solid var(--axxa-hairline);
 }
 
 .axxa-root button.axxa-duo-card:hover {
@@ -5546,10 +5569,11 @@ body.is-mobile .axxa-root .axxa-history-more {
   width: 100%;
   padding: 0 0 var(--axxa-3);
   border-radius: var(--axxa-r-lg);
-  background-color: color-mix(in srgb, var(--text-normal) 6%, transparent);
+  background-color: var(--axxa-s1);
   box-shadow: none;
   overflow: hidden;
   text-align: left;
+  border: 1px solid var(--axxa-hairline);
 }
 
 .axxa-root button.axxa-tile:hover {
@@ -5568,7 +5592,10 @@ body.is-mobile .axxa-root .axxa-history-more {
   max-height: 132px;
   padding: var(--axxa-3);
   overflow: hidden;
-  background-color: var(--axxa-canvas);
+  /* Um degrau ACIMA do cartão. Era o fundo da PÁGINA — ou seja, um degrau
+     abaixo do cartão em que ela mora: a folha de papel afundada dentro da
+     mesa. */
+  background-color: var(--axxa-s2);
   -webkit-mask-image: linear-gradient(
     to bottom,
     #000 60%,

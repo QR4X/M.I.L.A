@@ -146,6 +146,23 @@ export function Sheet({
     return () => el.removeEventListener("focusin", aoFocar);
   }, [open]);
 
+  // ROLOU pra ver o que está embaixo: a folha cresce. Se há mais conteúdo do
+  // que cabe, o tamanho de agora é pequeno demais pro que a pessoa está
+  // fazendo — e ela já disse isso com o dedo. Crescer é responder ao gesto
+  // que ela fez, em vez de exigir um segundo (arrastar o puxador).
+  //
+  // Só na descida e uma vez por abertura: crescer e encolher conforme a
+  // rolagem faria a folha respirar debaixo do dedo.
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!open || !el) return;
+    const aoRolar = () => {
+      if (el.scrollTop > 8) setSize("full");
+    };
+    el.addEventListener("scroll", aoRolar, { passive: true });
+    return () => el.removeEventListener("scroll", aoRolar);
+  }, [open]);
+
   // Fechou: volta pro tamanho de nascença, senão a próxima abre do tamanho
   // que a anterior ficou depois do arrasto.
   useEffect(() => {
