@@ -297,10 +297,23 @@
     </script>
     <script src="bundle.js"></script>
     <script>
-      setTimeout(
-        () => window.lucide?.createIcons({ nameAttr: "data-lucide" }),
-        60
-      );
+      // Hidrata os ícones que JÁ estão na árvore e os que aparecerem depois.
+      // Era uma chamada só, 60ms após o boot: tudo que o app cria por JS mais
+      // tarde — o menu suspenso do ⋯, por exemplo — ficava sem ícone NO
+      // PREVIEW, e só no preview. No aparelho o `setIcon` do Obsidian insere o
+      // SVG na hora; aqui a ausência era do harness, não do app. Preview que
+      // some com o ícone é preview mentindo sobre desenho.
+      const hidratar = () =>
+        window.lucide?.createIcons({ nameAttr: "data-lucide" });
+      setTimeout(hidratar, 60);
+      let agendado = null;
+      new MutationObserver(() => {
+        if (agendado !== null) return;
+        agendado = requestAnimationFrame(() => {
+          agendado = null;
+          hidratar();
+        });
+      }).observe(document.body, { childList: true, subtree: true });
     </script>
   </body>
 </html>

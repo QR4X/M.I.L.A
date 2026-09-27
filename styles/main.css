@@ -5805,8 +5805,11 @@ body.is-mobile .axxa-root .axxa-history-more {
   justify-content: flex-start;
   gap: var(--axxa-3);
   width: 100%;
-  min-height: 42px;
-  padding: 0 var(--axxa-3);
+  /* 40px: alvo confortável sem virar botão de formulário. Com 42 e o texto
+     centralizado, cada opção parecia um bloco; o que dá ritmo de lista é o
+     ícone à esquerda ancorando a linha, não a altura. */
+  min-height: 40px;
+  padding: 0 var(--axxa-2) 0 var(--axxa-3);
   border-radius: var(--axxa-r-sm);
   background-color: transparent;
   box-shadow: none;
