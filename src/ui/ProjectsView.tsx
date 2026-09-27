@@ -46,6 +46,8 @@ export function ProjectsView({
   open,
   abertoId,
   onAbrir,
+  chatPendente,
+  onChatPendente,
   onOpenChat,
   onClose,
 }: {
@@ -57,6 +59,10 @@ export function ProjectsView({
    *  no projeto de onde se saiu. */
   abertoId: string | null;
   onAbrir: (id: string | null) => void;
+  /** Conversa esperando um projeto: veio do ⋯ de uma conversa, por
+   *  "Add to project ▸ New project…". O projeto criado já nasce com ela. */
+  chatPendente?: string | null;
+  onChatPendente?: (id: string | null) => void;
   onOpenChat: () => void;
   onClose: () => void;
 }) {
@@ -113,7 +119,9 @@ export function ProjectsView({
         icon: draft.icon,
         color: draft.color,
         sources: [],
-        chatIds: [],
+        // A conversa que pediu o projeto entra junto: quem criou o projeto a
+        // partir do menu dela não devia ter que voltar lá e repetir o caminho.
+        chatIds: chatPendente ? [chatPendente] : [],
         createdAt: new Date().toISOString(),
       };
       await update((prev) => [p, ...prev]);
@@ -121,6 +129,7 @@ export function ProjectsView({
       // Quem acabou de nomear um projeto vai querer pôr as notas dele — e
       // voltar pra lista obrigaria a um toque só pra desfazer o nosso.
       setAbertoId(p.id);
+      onChatPendente?.(null);
     }
     setDraft(null);
     setEditandoId(null);

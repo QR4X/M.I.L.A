@@ -19,6 +19,7 @@ import { ModuleHome } from "./ModuleHome";
 import { ProjectsView } from "./ProjectsView";
 import { SkillsView } from "./SkillsView";
 import { Drawer, type ViewId } from "./Drawer";
+import { PainelCtx } from "./painel";
 
 export interface ComposerInject {
   text: string;
@@ -57,6 +58,9 @@ export function App({
    *  você está fazendo, entregam o que você foi buscar e descem. Por isso
    *  moram aqui, e não em `view` — a tela debaixo não se perde. */
   const [painel, setPainel] = useState<"projects" | "skills" | null>(null);
+  /** Conversa que vai entrar no PRÓXIMO projeto criado (o "New project…" do
+   *  menu de uma conversa). Some assim que o projeto nasce. */
+  const [chatParaProjeto, setChatParaProjeto] = useState<string | null>(null);
   /** O recorte da lista, compartilhado pela home e pelo histórico: filtrar
    *  numa e pedir "ver tudo" leva o filtro junto. */
   const [aba, setAba] = useState(SEGMENT_ALL);
@@ -98,6 +102,15 @@ export function App({
   };
 
   return (
+    <PainelCtx.Provider
+      value={{
+        novoProjetoCom: (chatId: string) => {
+          setChatParaProjeto(chatId);
+          setProjetoAberto(null);
+          setPainel("projects");
+        },
+      }}
+    >
     <div className="axxa-root">
       {view === "home" ? (
         <Dashboard
@@ -197,6 +210,8 @@ export function App({
         open={painel === "projects"}
         abertoId={projetoAberto}
         onAbrir={setProjetoAberto}
+        chatPendente={chatParaProjeto}
+        onChatPendente={setChatParaProjeto}
         onClose={() => setPainel(null)}
         onOpenChat={() => {
           // Entrar na conversa FECHA a folha — e a seta de voltar da conversa
@@ -228,5 +243,6 @@ export function App({
         onClose={closeMenu}
       />
     </div>
+    </PainelCtx.Provider>
   );
 }

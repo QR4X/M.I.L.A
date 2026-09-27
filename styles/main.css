@@ -5943,3 +5943,39 @@ body.is-mobile .axxa-root .axxa-history-more {
     padding-bottom: var(--size-4-4);
   }
 }
+
+/* Chevron do item que abre o segundo nível, e o rótulo que empurra os dois
+   marcadores pra direita. */
+.axxa-root .axxa-pop-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.axxa-root .axxa-pop-chev {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-faint);
+}
+
+.axxa-root .axxa-pop-chev svg,
+.axxa-root .axxa-pop-check svg {
+  width: 16px;
+  height: 16px;
+}
+
+.axxa-root .axxa-pop-check {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-accent);
+}
+
+/* A volta do segundo nível: mesma linha, tom de apoio — ela não é uma ação
+   do objeto, é navegação dentro do menu. */
+.axxa-root button.axxa-pop-item.is-back {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  min-height: 34px;
+}

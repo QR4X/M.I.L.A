@@ -1,0 +1,103 @@
+import { describe, it, expect } from "vitest";
+import {
+  exportChatMarkdown,
+  exportFileName,
+  limparMarcas,
+} from "../src/core/chatExport";
+import type { ChatData } from "../src/core/chatPersistence";
+
+// Exportar é a ÚNICA porta entre a conversa e o vault: o arquivo de verdade
+// mora em `.axxa/chats`, pasta que o Obsidian ignora (não indexa, não abre).
+// Por isso a cópia precisa ser uma nota COMUM — nada de recado do app pro app
+// no meio do texto.
+
+const chat = (over: Partial<ChatData> = {}): ChatData => ({
+  id: "abc",
+  title: "Weekly review",
+  date: "2026-09-20T10:00:00.000Z",
+  mode: "chat",
+  provider: "openai",
+  model: "gpt-5",
+  effort: "med",
+  tokensIn: 10,
+  tokensOut: 20,
+  messages: [
+    { type: "user", content: "oi" },
+    { type: "ai-response", content: "olá" },
+  ],
+  ...over,
+});
+
+describe("limparMarcas", () => {
+  it("tira o comentário de metadados e mantém o texto", () => {
+    const r = limparMarcas("<!-- axxa: ts=123 reaction=like -->\nbom dia");
+    expect(r).toBe("bom dia");
+  });
+
+  it("tira o paredão de base64 dos passos do agente", () => {
+    // Invisível no preview, mas não no editor: uma nota que abre com base64
+    // não é nota, é despejo.
+    const r = limparMarcas("fiz isso\n\n<!-- axxa-steps: QUJDREVGRw== -->");
+    expect(r).toBe("fiz isso");
+    expect(r).not.toMatch(/axxa-steps/);
+  });
+
+  it("não come o markdown de verdade", () => {
+    const md = "# Título\n\n- um\n- dois\n\n`code`";
+    expect(limparMarcas(md)).toBe(md);
+  });
+});
+
+describe("exportFileName", () => {
+  const dia = new Date("2026-09-20T10:00:00.000Z");
+
+  it("leva o título e a data", () => {
+    expect(exportFileName("Weekly review", dia)).toBe(
+      "Weekly review (2026-09-20).md"
+    );
+  });
+
+  it("troca o que o Obsidian não aceita em nome de arquivo", () => {
+    expect(exportFileName("Resumo: a/b", dia)).toBe("Resumo- a-b (2026-09-20).md");
+  });
+
+  it("título vazio ainda dá um arquivo", () => {
+    expect(exportFileName("   ", dia)).toBe("chat (2026-09-20).md");
+  });
+});
+
+describe("exportChatMarkdown", () => {
+  const quando = new Date("2026-09-27T12:00:00.000Z");
+
+  it("abre com frontmatter que diz de onde veio", () => {
+    // Sem isso, daqui a três meses a cópia é um texto órfão.
+    const md = exportChatMarkdown(chat(), quando);
+    expect(md.startsWith("---\n")).toBe(true);
+    expect(md).toContain('model: "gpt-5"');
+    expect(md).toContain("source: AXXA");
+    expect(md).toContain('exported: "2026-09-27T12:00:00.000Z"');
+  });
+
+  it("o corpo é a conversa em seções legíveis", () => {
+    const md = exportChatMarkdown(chat(), quando);
+    expect(md).toContain("# Weekly review");
+    expect(md).toContain("## You\n\noi");
+    expect(md).toContain("## Assistant\n\nolá");
+  });
+
+  it("as marcas internas não vão junto", () => {
+    const md = exportChatMarkdown(
+      chat({
+        messages: [
+          {
+            type: "ai-response",
+            content: "<!-- axxa: ts=1 -->\nfeito\n\n<!-- axxa-steps: eyJ4IjoxfQ== -->",
+          },
+        ],
+      }),
+      quando
+    );
+    expect(md).toContain("feito");
+    expect(md).not.toMatch(/axxa-steps|axxa: ts=/);
+  });
+});

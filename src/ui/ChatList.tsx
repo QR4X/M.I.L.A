@@ -8,9 +8,13 @@
 // quando foi.
 
 import { useEffect, useState } from "react";
+import { Notice } from "obsidian";
 import type AxxaPlugin from "../main";
 import type { ChatSession } from "../core/session";
 import type { ChatSummary } from "../core/chatPersistence";
+import { loadChat, setChatStarred } from "../core/chatPersistence";
+import { exportChatToVault } from "../core/chatExport";
+import { usePainel } from "./painel";
 import { useChatStore } from "../store/chat";
 import { PROVIDERS } from "../core/providersMeta";
 import { Icon } from "./Icon";
@@ -104,6 +108,7 @@ export function ChatList({
   const turnChatId = useChatStore((s) => s.turnChatId);
   const esperandoId = useChatStore((s) => s.waitingChatId);
   const naoLidas = useUnreadChats(plugin);
+  const painel = usePainel();
 
   const abrir = (c: ChatSummary) => {
     void session.load(c);
@@ -118,6 +123,66 @@ export function ChatList({
       submitLabel: "Rename",
     }).openAndWait();
     if (title && title !== c.title) await session.rename(c, title);
+  };
+
+  /** Favoritar: mexe só na linha `starred:` do frontmatter (a conversa pode
+   *  ter mil linhas de corpo). Depois recarrega a lista, que é quem exibe. */
+  const favoritar = async (c: ChatSummary) => {
+    try {
+      await setChatStarred(
+        plugin.app,
+        plugin.settings.chatsPath,
+        c.mode,
+        c.id,
+        !c.starred
+      );
+      await plugin.loadChatSummaries(true);
+    } catch (err) {
+      new Notice(
+        `Could not star: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  };
+
+  /** Deixar pra depois: a marca é a MESMA que uma resposta chegando sem você
+   *  ver cria (o ponto na aba). Aqui ela vira gesto voluntário. */
+  const deixarNaoLida = (c: ChatSummary) => {
+    plugin.markChatUnread(c.id);
+    new Notice("Marked as unread.");
+  };
+
+  /** Exportar: a conversa mora em `.axxa/chats`, pasta que o Obsidian ignora —
+   *  esta é a única ponte entre ela e o vault (ver core/chatExport.ts). */
+  const exportar = async (c: ChatSummary) => {
+    try {
+      const chat = await loadChat(
+        plugin.app,
+        plugin.settings.chatsPath,
+        c.mode,
+        c.id
+      );
+      const caminho = await exportChatToVault(plugin.app, chat);
+      new Notice(`Exported to ${caminho}`);
+    } catch (err) {
+      new Notice(
+        `Export failed: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  };
+
+  /** Pôr a conversa num projeto — o segundo nível do menu. */
+  const paraProjeto = async (c: ChatSummary, projectId: string) => {
+    await session.updateProjects((prev) =>
+      prev.map((p) =>
+        p.id === projectId && !p.chatIds.includes(c.id)
+          ? { ...p, chatIds: [c.id, ...p.chatIds] }
+          : p
+      )
+    );
+    const nome =
+      (plugin.settings.projects ?? []).find((p) => p.id === projectId)?.name ??
+      "project";
+    new Notice(`Added to ${nome}.`);
   };
 
   const apagar = async (c: ChatSummary) => {
@@ -227,6 +292,48 @@ export function ChatList({
               aria-label={`Actions for ${c.title || "Untitled"}`}
               onClick={(e) =>
                 openActions(e as unknown as MouseEvent, [
+                  {
+                    label: c.starred ? "Unstar" : "Star",
+                    icon: c.starred ? "star-off" : "star",
+                    run: () => void favoritar(c),
+                  },
+                  // Marcar como não lida só faz sentido na que NÃO está aberta
+                  // e ainda não está marcada — nos outros casos o item existiria
+                  // pra não fazer nada.
+                  ...(c.id !== currentChatId && !naoLidas.has(c.id)
+                    ? [
+                        {
+                          label: "Mark as unread",
+                          icon: "dot",
+                          run: () => deixarNaoLida(c),
+                        },
+                      ]
+                    : []),
+                  {
+                    label: "Add to project",
+                    icon: "folder-plus",
+                    // O segundo nível: os projetos que existem e, no fim, a
+                    // porta pra criar um. Sem projeto nenhum, a lista é só a
+                    // porta — e aí ela se explica sozinha.
+                    children: [
+                      ...(plugin.settings.projects ?? []).map((p) => ({
+                        label: p.name,
+                        icon: p.icon,
+                        checked: p.chatIds.includes(c.id),
+                        run: () => void paraProjeto(c, p.id),
+                      })),
+                      {
+                        label: "New project…",
+                        icon: "plus",
+                        run: () => painel.novoProjetoCom(c.id),
+                      },
+                    ],
+                  },
+                  {
+                    label: "Export to vault",
+                    icon: "file-down",
+                    run: () => void exportar(c),
+                  },
                   {
                     label: "Rename",
                     icon: "pencil",
