@@ -231,16 +231,6 @@ export function SkillsView({
         /* Pilha com respiro: na folha os blocos são irmãos soltos, e irmão
            solto não tem vão nenhum. */
         <div className="axxa-sheet-stack">
-          {/* A busca fica no TOPO da folha, que é onde ela funciona: o campo
-              encosta na borda de cima e a lista cresce contra o teclado. É a
-              mesma peça (SheetSearch) da folha de notas e da de modelos. */}
-          <SheetSearch
-            value={query}
-            placeholder="Search skills"
-            found={visiveis.length}
-            onChange={setQuery}
-          />
-
           {/* O MESMO segmented do resto do app (a home, o trilho de providers
               nas settings): trilho, thumb que desliza, colunas iguais. Abas
               sublinhadas eram um terceiro jeito de dizer "escolha uma", e o
@@ -259,6 +249,20 @@ export function SkillsView({
               options={ABAS.map((a) => ({ id: a.id, label: a.label }))}
             />
           )}
+
+          {/* A busca vem DEPOIS do segmented, e essa ordem é a ordem do que
+              acontece: o segmented escolhe o conjunto, a busca procura DENTRO
+              dele (ver `visiveis`: modo primeiro, texto depois). Em cima, ela
+              parecia a busca de tudo, e trocar de modo com um texto digitado
+              era uma surpresa em vez de um refinamento.
+              É a mesma peça (SheetSearch) da folha de notas e da de modelos, e
+              a mesma ordem dos providers nas settings. */}
+          <SheetSearch
+            value={query}
+            placeholder="Search skills"
+            found={visiveis.length}
+            onChange={setQuery}
+          />
 
           {visiveis.length > 0 && (
             <div className="axxa-tiles">
