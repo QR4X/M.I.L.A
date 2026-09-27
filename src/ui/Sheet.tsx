@@ -28,6 +28,7 @@ const PULL_THRESHOLD = 72;
 
 export function Sheet({
   title,
+  mark,
   open,
   onClose,
   onBack,
@@ -36,6 +37,9 @@ export function Sheet({
   children,
 }: {
   title: string;
+  /** Brasão ao lado do título (o ícone e a cor de um projeto). Só onde a coisa
+   *  TEM identidade própria — folha de modelo não tem. */
+  mark?: { icon: string; color?: string };
   open: boolean;
   onClose: () => void;
   /** Quando existe, a folha está num nível interno: o X vira seta de voltar
@@ -309,7 +313,23 @@ export function Sheet({
           >
             <Icon name={onBack ? "chevron-left" : "x"} />
           </button>
-          <h3 className="axxa-sheet-title">{title}</h3>
+          <h3 className="axxa-sheet-title">
+            {/* A marca vive COM o nome, que é o único lugar onde ela não vira
+                um segundo objeto na tela. Antes ela era uma pílula logo
+                abaixo, repetindo o nome que já estava aqui — e com cara de
+                botão, porque pílula com contorno, neste app, é coisa que se
+                toca. */}
+            {mark && (
+              <span
+                className="axxa-sheet-mark"
+                style={mark.color ? { color: mark.color } : undefined}
+                aria-hidden="true"
+              >
+                <Icon name={mark.icon} size={16} />
+              </span>
+            )}
+            <span className="axxa-sheet-title-text">{title}</span>
+          </h3>
           {/* Espelha a largura do botão pra manter o título no centro óptico —
               e no nível interno esse lugar é do X. */}
           {onBack ? (

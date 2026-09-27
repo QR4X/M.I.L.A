@@ -219,6 +219,11 @@ export function ProjectsView({
   return (
     <Sheet
       title={TITULOS[nivel]}
+      mark={
+        aberto && nivel !== "lista"
+          ? { icon: aberto.icon, color: projectColor(aberto.color) }
+          : undefined
+      }
       open={open}
       onClose={fecharTudo}
       onBack={voltar[nivel]}
@@ -355,17 +360,13 @@ export function ProjectsView({
               dizem "privado": as notas daqui vão como contexto pro modelo
               quando você conversa, e uma pílula que promete o contrário
               mentiria. */}
+          {/* Uma etiqueta só, e ela INFORMA: sem contorno e sem superfície de
+              botão, porque não há nada pra tocar aqui. A do nome saiu — ele já
+              está na barra da folha, com a cor e o ícone do projeto. */}
           <div className="axxa-pills">
-            <span
-              className="axxa-pill is-mark"
-              style={{ color: projectColor(aberto.color) }}
-            >
-              <Icon name={aberto.icon} size={14} />
-              <span>{aberto.name}</span>
-            </span>
             <span className="axxa-pill">
               <Icon name="hard-drive" size={14} />
-              <span>Lives in this vault</span>
+              <span>Lives in this vault · since {aberto.createdAt.slice(0, 10)}</span>
             </span>
           </div>
 

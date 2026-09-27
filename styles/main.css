@@ -3125,9 +3125,22 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-composer {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
+  /* Flex por causa do brasão: ele e o nome andam juntos e centrados, e o nome
+     corta com reticências em vez de empurrar os botões da barra. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--axxa-2);
   font-size: var(--font-ui-medium);
   font-weight: var(--font-semibold);
   text-align: center;
+}
+
+.axxa-root .axxa-sheet-title-text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .axxa-root .axxa-sheet-head-spacer {
@@ -5388,18 +5401,21 @@ body.is-mobile .axxa-root .axxa-history-more {
   gap: var(--axxa-2);
 }
 
-/* Pílula de informação: ela não faz nada, e por isso não tem cara de botão —
-   contorno, tom de apoio, sem fundo. */
+/* Etiqueta de INFORMAÇÃO. O contorno saiu: neste app pílula contornada é
+   escolha (as de "Opens in", os chips do uso), e quem vê uma tenta tocar. O
+   que sobra é superfície baixa, ícone e texto de apoio — a mesma pele de um
+   recado, não a de um alvo. O cursor também diz isso no desktop. */
 .axxa-root .axxa-pill {
   display: inline-flex;
   align-items: center;
-  gap: var(--axxa-1);
-  height: 30px;
-  padding: 0 var(--axxa-3);
+  gap: var(--axxa-2);
+  min-height: 28px;
+  padding: var(--axxa-1) var(--axxa-3);
   border-radius: 999px;
-  border: 1px solid var(--axxa-line);
-  color: var(--text-muted);
+  background-color: color-mix(in srgb, var(--text-normal) 5%, transparent);
+  color: var(--text-faint);
   font-size: var(--font-ui-smaller);
+  cursor: default;
 }
 
 /* A caixa da frase: contorno e nada de fundo. Ela é recado, não superfície —
@@ -5607,10 +5623,12 @@ body.is-mobile .axxa-root .axxa-history-more {
   padding-right: 38px;
 }
 
-/* A pílula do projeto aberto leva a COR dele — é a identidade que a pessoa
-   escolheu, e numa folha não há barra de título onde ela possa morar. */
-.axxa-root .axxa-pill.is-mark {
-  border-color: currentColor;
+/* O brasão do projeto na barra da folha: a cor vem por `style`, e o tamanho
+   é o do texto ao lado — ele acompanha o nome, não compete com ele. */
+.axxa-root .axxa-sheet-mark {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
 }
 
 /* Pilha de blocos dentro da folha. O corpo dela é um bloco comum, sem gap:
