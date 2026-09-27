@@ -31,6 +31,7 @@ import { ensureFolder } from "../core/chatPersistence";
 import { ConfirmModal } from "./modals";
 import { Icon } from "./Icon";
 import { Sheet, SheetSearch, SheetTabs } from "./Sheet";
+import { SheetSubmit } from "./SheetForm";
 import { SkillForm } from "./SkillSheet";
 import { openActions } from "./menu";
 import { MODULES, relativeShort } from "./modules";
@@ -192,8 +193,27 @@ export function SkillsView({
 
   const noFormulario = draft !== null;
 
+  /** A barra de baixo é da FOLHA, fora do que rola (ver `footer` em
+   *  Sheet.tsx): grudada no fim do conteúdo com sticky, ela subia pro meio do
+   *  formulário quando o teclado encolhia a área visível. */
+  const rodape = noFormulario ? (
+    <SheetSubmit
+      label={editandoPath ? "Save skill" : "Create skill"}
+      problema={problema}
+      onSubmit={() => void salvar()}
+    />
+  ) : (
+    <div className="axxa-sheet-foot">
+      <button type="button" className="axxa-sheet-cta" onClick={criar}>
+        <Icon name="plus" size={20} />
+        <span>New skill</span>
+      </button>
+    </div>
+  );
+
   return (
     <Sheet
+      footer={rodape}
       title={
         noFormulario ? (editandoPath ? "Edit skill" : "New skill") : "Skills"
       }
@@ -213,12 +233,9 @@ export function SkillsView({
     >
       {noFormulario ? (
         <SkillForm
-          editando={editandoPath !== null}
           draft={draft ?? SKILL_DRAFT_VAZIO}
-          problema={problema}
           focar={noFormulario}
           onDraft={setDraft}
-          onSubmit={() => void salvar()}
         />
       ) : (
         /* Pilha com respiro: na folha os blocos são irmãos soltos, e irmão
@@ -338,14 +355,6 @@ export function SkillsView({
             </div>
           )}
 
-          {/* Criar é a ação da folha: pílula na direita, grudada na base —
-              a mesma forma que criar tem na home e na tela de cada módulo. */}
-          <div className="axxa-sheet-foot">
-            <button type="button" className="axxa-sheet-cta" onClick={criar}>
-              <Icon name="plus" size={20} />
-              <span>New skill</span>
-            </button>
-          </div>
         </div>
       )}
     </Sheet>

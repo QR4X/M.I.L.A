@@ -5299,16 +5299,23 @@ body.is-mobile .axxa-root .axxa-history-more {
   padding-bottom: var(--axxa-3);
 }
 
-/* O botão de CONCLUIR um formulário (salvar) gruda na base da folha: num
-   formulário longo ele ficava lá embaixo, e salvar virava uma rolagem.
-   O fundo é o da folha porque o conteúdo passa POR BAIXO dele. */
-.axxa-root .axxa-sheet-body .axxa-form-foot {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  margin-top: var(--axxa-5);
-  padding-top: var(--axxa-3);
+/* A barra de ação da folha vive FORA da área que rola (ver Sheet.tsx: prop
+   `footer`). Sticky não servia: `bottom: 0` prende na base da área VISÍVEL, e
+   com o teclado aberto essa base sobe pro meio do formulário — era ali que o
+   botão pousava, por cima dos campos. */
+.axxa-root .axxa-sheet-actions {
+  flex: 0 0 auto;
+  padding: var(--axxa-3) 0 max(var(--safe-area-inset-bottom, 0px), var(--axxa-2));
+  border-top: 1px solid var(--axxa-line);
   background-color: var(--axxa-canvas);
+}
+
+.axxa-root .axxa-sheet-actions .axxa-form-foot,
+.axxa-root .axxa-sheet-actions .axxa-sheet-foot {
+  position: static;
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
 }
 
 /* A barra de ação de uma LISTA dentro da folha. Aqui o botão não é o fim de um
@@ -5317,9 +5324,6 @@ body.is-mobile .axxa-root .axxa-history-more {
    Barra larga e roxa atravessando a folha tinha o peso de uma conclusão, que
    é o oposto do que "New skill" é: um começo. */
 .axxa-root .axxa-sheet-foot {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
   display: flex;
   align-items: center;
   gap: var(--axxa-3);

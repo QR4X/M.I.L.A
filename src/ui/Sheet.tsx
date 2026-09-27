@@ -29,6 +29,7 @@ const PULL_THRESHOLD = 72;
 export function Sheet({
   title,
   mark,
+  footer,
   open,
   onClose,
   onBack,
@@ -40,6 +41,17 @@ export function Sheet({
   /** Brasão ao lado do título (o ícone e a cor de um projeto). Só onde a coisa
    *  TEM identidade própria — folha de modelo não tem. */
   mark?: { icon: string; color?: string };
+  /**
+   * A barra de ação da folha, FORA da área que rola.
+   *
+   * Ela já morou dentro do conteúdo, grudada com `position: sticky`. Sticky
+   * com `bottom: 0` não prende o elemento no fim da lista: prende na base da
+   * ÁREA VISÍVEL — e quando o teclado abre, a área visível encolhe pra um
+   * terço, então o botão era puxado pra cima e pousava no meio do formulário,
+   * por cima dos campos. Aqui ele é um irmão do scroller: não tem como
+   * cobrir nada, e não depende do tamanho que sobrou.
+   */
+  footer?: ReactNode;
   open: boolean;
   onClose: () => void;
   /** Quando existe, a folha está num nível interno: o X vira seta de voltar
@@ -348,6 +360,7 @@ export function Sheet({
         <div ref={bodyRef} className="axxa-sheet-body">
           {children}
         </div>
+        {footer && <div className="axxa-sheet-actions">{footer}</div>}
       </div>
     </div>
   );

@@ -8,6 +8,10 @@
 // assunto. Agora ele é um NÍVEL da folha de Skills, como "escolher nota" é um
 // nível da folha de projetos.
 //
+// O botão de concluir NÃO está aqui: ele é da folha (prop `footer`),
+// fora da área que rola — sticky no fim do conteúdo pousava no meio do
+// formulário quando o teclado encolhia a área visível.
+//
 // A ordem das perguntas é a ordem da cabeça de quem cria: primeiro COMO SE
 // CHAMA e O QUE ELE ESCREVE — que é o skill inteiro —, e só depois os
 // enfeites. Quem parar de responder no meio já tem um skill que funciona.
@@ -21,26 +25,18 @@ import {
   SheetField,
   SheetIconGrid,
   SheetInput,
-  SheetSubmit,
   SheetTextarea,
 } from "./SheetForm";
 
 export function SkillForm({
-  editando,
   draft,
-  problema,
   focar,
   onDraft,
-  onSubmit,
 }: {
-  /** Editando um skill que já existe (muda o botão). */
-  editando: boolean;
   draft: SkillDraft;
-  problema: string | null;
   /** O campo do nome toma o foco (a folha acabou de abrir neste nível). */
   focar: boolean;
   onDraft: (d: SkillDraft) => void;
-  onSubmit: () => void;
 }) {
   const set = (campo: Partial<SkillDraft>) => onDraft({ ...draft, ...campo });
 
@@ -129,11 +125,6 @@ export function SkillForm({
         />
       </SheetField>
 
-      <SheetSubmit
-        label={editando ? "Save skill" : "Create skill"}
-        problema={problema}
-        onSubmit={onSubmit}
-      />
     </>
   );
 }

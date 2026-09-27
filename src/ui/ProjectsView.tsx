@@ -216,9 +216,78 @@ export function ProjectsView({
     onClose();
   };
 
+  const salvarInstrucoes = () => {
+    const alvo = aberto;
+    const texto = (instrucoes ?? "").trim();
+    if (alvo) {
+      void update((prev) =>
+        prev.map((x) =>
+          x.id === alvo.id ? { ...x, instructions: texto || undefined } : x
+        )
+      );
+    }
+    setInstrucoes(null);
+  };
+
+  /** A barra de baixo, por nível. Ela é da FOLHA (fora do que rola), não do
+   *  conteúdo — ver a prop `footer` em Sheet.tsx. */
+  const rodape =
+    nivel === "form" ? (
+      <SheetSubmit
+        label={editandoId ? "Save project" : "Create project"}
+        problema={problema}
+        onSubmit={() => void salvar()}
+      />
+    ) : nivel === "instrucoes" ? (
+      <SheetSubmit label="Save instructions" onSubmit={salvarInstrucoes} />
+    ) : nivel === "projeto" && aberto ? (
+      <div className="axxa-sheet-foot">
+        {/* Editar e apagar ficam à esquerda e em texto, e não num ⋯ da barra
+            de cima: lá o canto direito já é do X, e um menu escondido ao lado
+            do fechar é convite pra fechar sem querer. */}
+        <button
+          type="button"
+          className="axxa-home-filter"
+          onClick={(e) =>
+            openActions(e as unknown as MouseEvent, [
+              { label: "Edit", icon: "pencil", run: () => editar(aberto) },
+              {
+                label: "Delete",
+                icon: "trash-2",
+                danger: true,
+                run: () => void apagar(aberto),
+              },
+            ])
+          }
+        >
+          <Icon name="settings-2" size={16} />
+          <span>Project settings</span>
+        </button>
+        <button
+          type="button"
+          className="axxa-sheet-cta"
+          onClick={() => {
+            void session.newChatInProject(aberto);
+            onOpenChat();
+          }}
+        >
+          <Icon name="plus" size={20} />
+          <span>New chat here</span>
+        </button>
+      </div>
+    ) : nivel === "lista" ? (
+      <div className="axxa-sheet-foot">
+        <button type="button" className="axxa-sheet-cta" onClick={criar}>
+          <Icon name="plus" size={20} />
+          <span>New project</span>
+        </button>
+      </div>
+    ) : undefined;
+
   return (
     <Sheet
       title={TITULOS[nivel]}
+      footer={rodape}
       mark={
         aberto && nivel !== "lista"
           ? { icon: aberto.icon, color: projectColor(aberto.color) }
@@ -234,12 +303,9 @@ export function ProjectsView({
     >
       {nivel === "form" && (
         <ProjectForm
-          editando={editandoId !== null}
           draft={draft ?? PROJECT_DRAFT_VAZIO}
-          problema={problema}
           focar={nivel === "form"}
           onDraft={setDraft}
-          onSubmit={() => void salvar()}
         />
       )}
 
@@ -258,23 +324,6 @@ export function ProjectsView({
               onChange={setInstrucoes}
             />
           </SheetField>
-          <SheetSubmit
-            label="Save instructions"
-            onSubmit={() => {
-              const alvo = aberto;
-              const texto = (instrucoes ?? "").trim();
-              if (alvo) {
-                void update((prev) =>
-                  prev.map((x) =>
-                    x.id === alvo.id
-                      ? { ...x, instructions: texto || undefined }
-                      : x
-                  )
-                );
-              }
-              setInstrucoes(null);
-            }}
-          />
         </>
       )}
 
@@ -437,41 +486,6 @@ export function ProjectsView({
             </div>
           )}
 
-          <div className="axxa-sheet-foot">
-            {/* Editar e apagar ficam AQUI, à esquerda e em texto, e não num ⋯
-                da barra: a folha já usa o canto direito da barra pro X, e um
-                menu escondido atrás de um ícone que divide espaço com o de
-                fechar é convite pra fechar sem querer. */}
-            <button
-              type="button"
-              className="axxa-home-filter"
-              onClick={(e) =>
-                openActions(e as unknown as MouseEvent, [
-                  { label: "Edit", icon: "pencil", run: () => editar(aberto) },
-                  {
-                    label: "Delete",
-                    icon: "trash-2",
-                    danger: true,
-                    run: () => void apagar(aberto),
-                  },
-                ])
-              }
-            >
-              <Icon name="settings-2" size={16} />
-              <span>Project settings</span>
-            </button>
-            <button
-              type="button"
-              className="axxa-sheet-cta"
-              onClick={() => {
-                void session.newChatInProject(aberto);
-                onOpenChat();
-              }}
-            >
-              <Icon name="plus" size={20} />
-              <span>New chat here</span>
-            </button>
-          </div>
         </div>
       )}
 
@@ -543,12 +557,6 @@ export function ProjectsView({
             </div>
           )}
 
-          <div className="axxa-sheet-foot">
-            <button type="button" className="axxa-sheet-cta" onClick={criar}>
-              <Icon name="plus" size={20} />
-              <span>New project</span>
-            </button>
-          </div>
         </div>
       )}
     </Sheet>

@@ -8,6 +8,8 @@
 // de seis projetos idênticos, o nome vira a única pista — e a lista inteira
 // passa a exigir leitura.
 //
+// O botão de concluir é da FOLHA (prop `footer`), não daqui.
+//
 // Aqui o projeto se apresenta enquanto é feito: o cartão em cima muda conforme
 // se escolhe, e é ele que vai aparecer na lista depois.
 
@@ -22,24 +24,17 @@ import {
   SheetField,
   SheetIconGrid,
   SheetInput,
-  SheetSubmit,
   SheetSwatches,
 } from "./SheetForm";
 
 export function ProjectForm({
-  editando,
   draft,
-  problema,
   focar,
   onDraft,
-  onSubmit,
 }: {
-  editando: boolean;
   draft: ProjectDraft;
-  problema: string | null;
   focar: boolean;
   onDraft: (d: ProjectDraft) => void;
-  onSubmit: () => void;
 }) {
   const set = (campo: Partial<ProjectDraft>) => onDraft({ ...draft, ...campo });
   const cor = projectColor(draft.color);
@@ -89,11 +84,6 @@ export function ProjectForm({
         />
       </SheetField>
 
-      <SheetSubmit
-        label={editando ? "Save project" : "Create project"}
-        problema={problema}
-        onSubmit={onSubmit}
-      />
     </>
   );
 }
