@@ -275,19 +275,20 @@ export function ProjectsView({
           <span>New chat here</span>
         </button>
       </div>
-    ) : nivel === "lista" ? (
-      <div className="axxa-sheet-foot">
-        <button type="button" className="axxa-sheet-cta" onClick={criar}>
-          <Icon name="plus" size={20} />
-          <span>New project</span>
-        </button>
-      </div>
     ) : undefined;
 
   return (
     <Sheet
       title={TITULOS[nivel]}
       footer={rodape}
+      // Criar mora na barra, como na folha de skills: é o que esta lista
+      // oferece. O rodapé continua sendo de quem CONCLUI (salvar, ou começar
+      // a conversa de um projeto aberto).
+      action={
+        nivel === "lista"
+          ? { icon: "plus", label: "New project", onClick: criar }
+          : undefined
+      }
       mark={
         aberto && nivel !== "lista"
           ? { icon: aberto.icon, color: projectColor(aberto.color) }

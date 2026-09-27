@@ -30,7 +30,8 @@ import {
 import { ensureFolder } from "../core/chatPersistence";
 import { ConfirmModal } from "./modals";
 import { Icon } from "./Icon";
-import { Sheet, SheetSearch, SheetTabs } from "./Sheet";
+import { Sheet, SheetSearch } from "./Sheet";
+import { Segmented } from "./Segmented";
 import { SheetSubmit } from "./SheetForm";
 import { SkillForm } from "./SkillSheet";
 import { openActions } from "./menu";
@@ -70,17 +71,6 @@ export function SkillsView({
 
   const skills = plugin.skills;
   const folder = plugin.settings.skillsPath || "axxa-ai/skills";
-
-  /** Quantos skills cada aba tem — a contagem aparece na própria aba, que é
-   *  o que evita tocar numa pra descobrir que está vazia. */
-  const porModo = useMemo(() => {
-    const m = new Map<string, number>([["all", skills.length]]);
-    for (const s of skills) {
-      const k = s.mode ?? "";
-      m.set(k, (m.get(k) ?? 0) + 1);
-    }
-    return m;
-  }, [skills]);
 
   const visiveis = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -202,18 +192,18 @@ export function SkillsView({
       problema={problema}
       onSubmit={() => void salvar()}
     />
-  ) : (
-    <div className="axxa-sheet-foot">
-      <button type="button" className="axxa-sheet-cta" onClick={criar}>
-        <Icon name="plus" size={20} />
-        <span>New skill</span>
-      </button>
-    </div>
-  );
+  ) : undefined;
 
   return (
     <Sheet
       footer={rodape}
+      // Criar mora na BARRA: é o que a folha oferece, não o que ela conclui.
+      // Embaixo, a pílula disputava o fim da lista com o fim do assunto.
+      action={
+        noFormulario
+          ? undefined
+          : { icon: "plus", label: "New skill", onClick: criar }
+      }
       title={
         noFormulario ? (editandoPath ? "Edit skill" : "New skill") : "Skills"
       }
@@ -251,16 +241,22 @@ export function SkillsView({
             onChange={setQuery}
           />
 
+          {/* O MESMO segmented do resto do app (a home, o trilho de providers
+              nas settings): trilho, thumb que desliza, colunas iguais. Abas
+              sublinhadas eram um terceiro jeito de dizer "escolha uma", e o
+              app já tinha dois demais.
+              A contagem saiu junto: ela cabia na aba, mas não cabe numa
+              coluna de segmented sem espremer o nome — e quem está filtrando
+              vê a lista mudar de tamanho, que é a mesma informação. */}
           {skills.length > 0 && (
-            <SheetTabs
+            <Segmented
               label="Filter skills by mode"
-              activeId={aba}
-              onPick={setAba}
-              items={ABAS.map((a) => ({
-                id: a.id,
-                label: a.label,
-                count: porModo.get(a.id === "all" ? "all" : a.id) ?? 0,
-              }))}
+              value={aba}
+              onChange={setAba}
+              // Sem ponto: na home ele quer dizer "tem coisa te esperando
+              // aqui", e usar a mesma marca pra dizer "tem item" ensinaria
+              // que ela não significa nada.
+              options={ABAS.map((a) => ({ id: a.id, label: a.label }))}
             />
           )}
 

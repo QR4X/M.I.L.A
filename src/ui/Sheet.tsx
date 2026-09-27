@@ -30,6 +30,7 @@ export function Sheet({
   title,
   mark,
   footer,
+  action,
   open,
   onClose,
   onBack,
@@ -52,6 +53,14 @@ export function Sheet({
    * cobrir nada, e não depende do tamanho que sobrou.
    */
   footer?: ReactNode;
+  /**
+   * A ação da BARRA — o "+" que cria mais um do que a folha lista.
+   *
+   * Ela mora em cima porque é o que a folha OFERECE, não o que ela conclui: o
+   * rodapé é de quem termina alguma coisa (salvar, começar a conversa deste
+   * projeto), e um "criar" ali embaixo disputava o lugar com o fim do assunto.
+   */
+  action?: { icon: string; label: string; onClick: () => void };
   open: boolean;
   onClose: () => void;
   /** Quando existe, a folha está num nível interno: o X vira seta de voltar
@@ -344,6 +353,17 @@ export function Sheet({
           </h3>
           {/* Espelha a largura do botão pra manter o título no centro óptico —
               e no nível interno esse lugar é do X. */}
+          {action && (
+            <button
+              type="button"
+              className="axxa-icon-btn"
+              aria-label={action.label}
+              title={action.label}
+              onClick={action.onClick}
+            >
+              <Icon name={action.icon} />
+            </button>
+          )}
           {onBack ? (
             <button
               type="button"
@@ -354,7 +374,9 @@ export function Sheet({
               <Icon name="x" />
             </button>
           ) : (
-            <span className="axxa-sheet-head-spacer" aria-hidden="true" />
+            !action && (
+              <span className="axxa-sheet-head-spacer" aria-hidden="true" />
+            )
           )}
         </header>
         <div ref={bodyRef} className="axxa-sheet-body">
