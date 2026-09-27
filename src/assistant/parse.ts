@@ -149,6 +149,17 @@ export function lerProjeto(
   };
 }
 
+/**
+ * UM campo de texto, quando a assistente escreve só ele (a descrição de um
+ * skill, as instruções de um projeto). Vazio = não veio nada aproveitável.
+ */
+export function lerTexto(
+  obj: Record<string, unknown> | null,
+  teto: number
+): string {
+  return obj ? texto(obj.text, teto) : "";
+}
+
 /** A pergunta do modo guiado, se houver. Uma linha, com teto. */
 export function lerPergunta(obj: Record<string, unknown> | null): string {
   return obj ? texto(obj.ask, 200) : "";

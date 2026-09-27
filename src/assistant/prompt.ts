@@ -129,3 +129,62 @@ export function promptProjeto(
  * sair, melhor, e a sugestão fica boa com as mais recentes.
  */
 export const TETO_NOTAS = 300;
+
+// ── Um campo só ────────────────────────────────────────────────────────────
+// A diferença destes pros de cima é de onde vem a matéria-prima. Lá, a pessoa
+// descreve o que quer e a assistente inventa a partir disso. Aqui o formulário
+// JÁ tem o assunto — o prompt do skill, o nome e as notas do projeto —, e o que
+// falta é uma frase que se escreve OLHANDO pra isso. Por isso estes funcionam
+// com o campo de entrada vazio: o contexto É a entrada.
+
+const UM_CAMPO = `Return: {"text": "..."} with the field's content and nothing
+else. You may return {"ask": "..."} instead if one thing genuinely needs
+clarifying first — but only if the answer would really change what you write.`;
+
+/** A descrição de um skill: a linha que aparece na lista, sob o nome. */
+export function promptDescricao(ctx: { name: string; body: string }): string {
+  return [
+    BASE,
+    `Write the one-line DESCRIPTION of a skill — the line shown under its name
+in the list. It says what the skill gives you, in the fewest words that still
+mean something. Under 80 characters. Do not repeat the name. Do not start with
+"This skill".`,
+    `Skill name: ${ctx.name || "(not named yet)"}`,
+    `Its prompt:\n${ctx.body || "(empty)"}`,
+    UM_CAMPO,
+  ].join("\n\n");
+}
+
+/** As instruções de um projeto — o que vai junto em toda conversa dali. */
+export function promptInstrucoes(ctx: {
+  name: string;
+  notes: readonly string[];
+  atual: string;
+}): string {
+  const partes = [
+    BASE,
+    `Write the CUSTOM INSTRUCTIONS of a project: what the model should know in
+every chat started inside it.
+
+They ADD to how the app already works — they never replace it. So do not write
+"you are a helpful assistant", do not restate general behaviour, and do not
+explain what Obsidian is. Write only what is true about THIS subject: its
+vocabulary, its constraints, what the person is trying to get done, how they
+want to be answered. A few plain sentences, not a bulleted spec.`,
+    `Project: ${ctx.name || "(not named yet)"}`,
+  ];
+  if (ctx.notes.length)
+    partes.push(
+      `Notes already attached as its sources:\n${ctx.notes
+        .map((n) => `- ${n}`)
+        .join("\n")}`
+    );
+  // O que já está escrito vai junto: pedir ajuda num campo COM texto quase
+  // sempre quer dizer "melhora isto", não "joga fora e começa de novo".
+  if (ctx.atual.trim())
+    partes.push(
+      `What is written there now — improve on it, keep what is worth keeping:\n${ctx.atual}`
+    );
+  partes.push(UM_CAMPO);
+  return partes.join("\n\n");
+}

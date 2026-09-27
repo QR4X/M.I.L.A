@@ -17,10 +17,13 @@ import {
 import {
   lerProjeto,
   lerSkill,
+  lerTexto,
   type ProjetoSugerido,
   type SkillSugerido,
 } from "../assistant/parse";
 import {
+  promptDescricao,
+  promptInstrucoes,
   promptProjeto,
   promptSkill,
   TETO_NOTAS,
@@ -136,5 +139,55 @@ export function useAssistant(plugin: AxxaPlugin) {
     [rodar, plugin, s.assistantSeesVault]
   );
 
-  return { indisponivel, pedirSkill, pedirProjeto, veOVault: s.assistantSeesVault };
+  /**
+   * UM campo, escrito a partir do que o formulário já tem.
+   *
+   * Sem modo guiado: o contexto já está na tela, e uma pergunta antes de
+   * escrever uma linha custaria mais que a linha. O modelo ainda pode pedir
+   * um esclarecimento se precisar — o painel mostra e a pessoa responde.
+   */
+  const pedirCampo = useCallback(
+    async (
+      sistema: string,
+      turnos: TurnoAssistente[],
+      teto: number
+    ): Promise<RodadaAssistente<string>> => {
+      // Campo vazio e nada dito: o pedido é o próprio contexto. Sem um turno
+      // de usuário, alguns modelos não respondem nada.
+      const comAlgo = turnos.length
+        ? turnos
+        : [{ quem: "pessoa" as const, texto: "Write it." }];
+      const r = await rodar(sistema, comAlgo);
+      if (r.erro) return { erro: r.erro };
+      if (r.pergunta) return { pergunta: r.pergunta };
+      const texto = lerTexto(r.bruto ?? null, teto);
+      return texto
+        ? { draft: texto }
+        : { erro: "The assistant came back empty. Try again, or say more." };
+    },
+    [rodar]
+  );
+
+  const pedirDescricao = useCallback(
+    (ctx: { name: string; body: string }, turnos: TurnoAssistente[]) =>
+      pedirCampo(promptDescricao(ctx), turnos, 140),
+    [pedirCampo]
+  );
+
+  const pedirInstrucoes = useCallback(
+    (
+      ctx: { name: string; notes: readonly string[]; atual: string },
+      turnos: TurnoAssistente[]
+    ) => pedirCampo(promptInstrucoes(ctx), turnos, 2000),
+    [pedirCampo]
+  );
+
+  return {
+    indisponivel,
+    pedirSkill,
+    pedirProjeto,
+    pedirDescricao,
+    pedirInstrucoes,
+    veOVault: s.assistantSeesVault,
+  };
 }

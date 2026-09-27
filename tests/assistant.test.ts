@@ -9,9 +9,15 @@ import {
   lerProjeto,
   lerSkill,
   lerPergunta,
+  lerTexto,
   recortarJson,
 } from "../src/assistant/parse";
-import { promptProjeto, promptSkill } from "../src/assistant/prompt";
+import {
+  promptDescricao,
+  promptInstrucoes,
+  promptProjeto,
+  promptSkill,
+} from "../src/assistant/prompt";
 
 // A assistente é um convidado, não um autor. Nada do que ela diz vira dado sem
 // passar por uma lista nossa — e é aqui que isso é garantido. Um nome de ícone
@@ -242,5 +248,53 @@ describe("os prompts", () => {
   it("com notas, elas vão exatas", () => {
     const p = promptProjeto("direto", ICONES, CORES, ["A/b.md"]);
     expect(p).toContain("- A/b.md");
+  });
+});
+
+describe("um campo só", () => {
+  it("a descrição leva o prompt como matéria-prima", () => {
+    // É o que faz ela poder escrever sem a pessoa digitar nada: o contexto já
+    // está na tela.
+    const p = promptDescricao({ name: "Weekly review", body: "Go through…" });
+    expect(p).toContain("Weekly review");
+    expect(p).toContain("Go through…");
+    expect(p).toContain('{"text": "..."}');
+  });
+
+  it("as instruções levam o projeto e as notas anexadas", () => {
+    const p = promptInstrucoes({
+      name: "Tese",
+      notes: ["Refs/Kuhn.md"],
+      atual: "",
+    });
+    expect(p).toContain("Project: Tese");
+    expect(p).toContain("- Refs/Kuhn.md");
+    // A regra que mais importa: elas SOMAM ao app, não substituem.
+    expect(p).toMatch(/ADD to how the app already works/);
+  });
+
+  it("o que já está escrito vai junto pra ser MELHORADO", () => {
+    // Pedir ajuda num campo com texto quer dizer "melhora isto", não "joga
+    // fora e começa de novo".
+    const p = promptInstrucoes({
+      name: "Tese",
+      notes: [],
+      atual: "Sempre citar a fonte.",
+    });
+    expect(p).toContain("Sempre citar a fonte.");
+    expect(p).toMatch(/improve on it/i);
+  });
+
+  it("campo vazio não manda uma seção vazia", () => {
+    const p = promptInstrucoes({ name: "Tese", notes: [], atual: "   " });
+    expect(p).not.toMatch(/improve on it/i);
+    expect(p).not.toContain("Notes already attached");
+  });
+
+  it("lerTexto respeita o teto e limpa a cerca", () => {
+    expect(lerTexto({ text: "```\noi\n```" }, 140)).toBe("oi");
+    expect(lerTexto({ text: "a".repeat(500) }, 140).length).toBe(140);
+    expect(lerTexto({ text: 42 }, 140)).toBe("");
+    expect(lerTexto(null, 140)).toBe("");
   });
 });

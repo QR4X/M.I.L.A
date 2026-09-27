@@ -47,8 +47,10 @@ export function SkillForm({
 }) {
   const set = (campo: Partial<SkillDraft>) => onDraft({ ...draft, ...campo });
   const [procurando, setProcurando] = useState(false);
-  const [ajudando, setAjudando] = useState(false);
-  const { indisponivel, pedirSkill } = useAssistant(plugin);
+  /** Qual campo está com a assistente aberta. Um de cada vez: dois painéis no
+   *  mesmo formulário seriam duas conversas disputando os mesmos campos. */
+  const [ajudando, setAjudando] = useState<"" | "body" | "desc">("");
+  const { indisponivel, pedirSkill, pedirDescricao } = useAssistant(plugin);
 
   // Procurar ícone toma a tela, como nos projetos. Aqui nem a cor sobra: skill
   // não tem paleta, então fica o voltar e os ícones. Sair de cima de um
@@ -104,13 +106,13 @@ export function SkillForm({
         {/* A assistente mora DENTRO deste campo: é ele que ela escreve, e é
             olhando pra ele vazio que a pessoa percebe que não sabe começar. */}
         <ComAssistente
-          aberto={ajudando}
-          onAbrir={() => setAjudando(true)}
+          aberto={ajudando === "body"}
+          onAbrir={() => setAjudando("body")}
           painel={
             <AssistantPanel
               para="skill"
               indisponivel={indisponivel}
-              onFechar={() => setAjudando(false)}
+              onFechar={() => setAjudando("")}
               onPedir={async (modo, turnos) => {
                 const r = await pedirSkill(modo, turnos);
                 if (r.draft) {
@@ -137,11 +139,38 @@ export function SkillForm({
       </SheetField>
 
       <SheetField label="Description" hint="One line, shown in the list.">
-        <SheetInput
-          value={draft.description}
-          placeholder="Optional"
-          onChange={(description) => set({ description })}
-        />
+        {/* Aqui ela escreve A PARTIR do que já está na tela: o prompt acima é
+            a matéria-prima, então o botão nasce ligado e o campo de entrada
+            vira ajuste fino em vez de requisito. */}
+        <ComAssistente
+          aberto={ajudando === "desc"}
+          onAbrir={() => setAjudando("desc")}
+          painel={
+            <AssistantPanel
+              para="description"
+              indisponivel={indisponivel}
+              onFechar={() => setAjudando("")}
+              onPedir={async (modo, turnos) => {
+                const r = await pedirDescricao(
+                  { name: draft.name, body: draft.body },
+                  turnos
+                );
+                if (r.draft) {
+                  set({ description: r.draft });
+                  return { pronto: true };
+                }
+                return { pergunta: r.pergunta, erro: r.erro };
+              }}
+            />
+          }
+        >
+          <SheetInput
+            comSpark
+            value={draft.description}
+            placeholder="Optional"
+            onChange={(description) => set({ description })}
+          />
+        </ComAssistente>
       </SheetField>
 
       {/* "Opens in" e não "Mode": o que a pessoa escolhe aqui é ONDE o skill

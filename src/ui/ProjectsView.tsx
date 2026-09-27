@@ -41,6 +41,8 @@ import { SheetField, SheetSubmit, SheetTextarea } from "./SheetForm";
 import { openActions } from "./menu";
 import { rankNotes, vaultNotes } from "./notePicker";
 import { exportProjectToVault } from "../core/projectExport";
+import { AssistantPanel, ComAssistente } from "./AssistantPanel";
+import { useAssistant } from "./useAssistant";
 import type { MenuAction } from "./menu";
 
 export function ProjectsView({
@@ -87,6 +89,9 @@ export function ProjectsView({
   const [noteQuery, setNoteQuery] = useState("");
   /** O texto das instruções em edição (null = fora desse nível; "" é válido). */
   const [instrucoes, setInstrucoes] = useState<string | null>(null);
+  /** A assistente aberta no campo de instruções. */
+  const [ajudandoInstrucoes, setAjudandoInstrucoes] = useState(false);
+  const { indisponivel, pedirInstrucoes } = useAssistant(plugin);
 
   const chats = useChatSummaries(plugin);
   const projects = plugin.settings.projects ?? [];
@@ -330,7 +335,10 @@ export function ProjectsView({
       setEditandoId(null);
       setSugerido(null);
     },
-    instrucoes: () => setInstrucoes(null),
+    instrucoes: () => {
+      setInstrucoes(null);
+      setAjudandoInstrucoes(false);
+    },
     escolher: () => setEscolhendo(false),
     notas: () => setVendoNotas(false),
     projeto: () => setAbertoId(null),
@@ -447,14 +455,45 @@ export function ProjectsView({
             label="Instructions"
             hint="Sent with every new chat in this project — it adds to how the app already works, it does not replace it."
           >
-            <SheetTextarea
-              value={instrucoes ?? ""}
-              rows={9}
-              placeholder={
-                "Answer in Portuguese.\nCite the note you took it from.\nShort paragraphs, no bullet lists."
+            {/* Ela escreve A PARTIR do projeto: o nome e as notas já
+                anexadas são a matéria-prima, e o que estiver escrito vai
+                junto pra ser melhorado em vez de jogado fora. */}
+            <ComAssistente
+              aberto={ajudandoInstrucoes}
+              onAbrir={() => setAjudandoInstrucoes(true)}
+              painel={
+                <AssistantPanel
+                  para="instructions"
+                  indisponivel={indisponivel}
+                  onFechar={() => setAjudandoInstrucoes(false)}
+                  onPedir={async (modo, turnos) => {
+                    const r = await pedirInstrucoes(
+                      {
+                        name: aberto?.name ?? "",
+                        notes: aberto?.sources ?? [],
+                        atual: instrucoes ?? "",
+                      },
+                      turnos
+                    );
+                    if (r.draft) {
+                      setInstrucoes(r.draft);
+                      return { pronto: true };
+                    }
+                    return { pergunta: r.pergunta, erro: r.erro };
+                  }}
+                />
               }
-              onChange={setInstrucoes}
-            />
+            >
+              <SheetTextarea
+                comSpark
+                value={instrucoes ?? ""}
+                rows={9}
+                placeholder={
+                  "Answer in Portuguese.\nCite the note you took it from.\nShort paragraphs, no bullet lists."
+                }
+                onChange={setInstrucoes}
+              />
+            </ComAssistente>
           </SheetField>
         </>
       )}

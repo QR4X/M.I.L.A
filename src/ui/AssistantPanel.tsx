@@ -15,12 +15,13 @@
 
 import { useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
+import { useSheetFull } from "./Sheet";
 import type { ModoAssistente } from "../assistant/prompt";
 import type { TurnoAssistente } from "../assistant/run";
 
 export interface AssistantPanelProps {
-  /** O que a assistente vai montar — muda só o texto de convite. */
-  para: "skill" | "project";
+  /** O que a assistente vai montar — muda o convite e o exemplo. */
+  para: "skill" | "project" | "description" | "instructions";
   /** null = pronta. Com texto, o painel só explica o que falta. */
   indisponivel: string | null;
   /**
@@ -38,11 +39,25 @@ export interface AssistantPanelProps {
 const CONVITE = {
   skill: "Describe the skill you want, in a line.",
   project: "What is this project about?",
+  description: "Anything to steer it? (optional)",
+  instructions: "Anything to steer it? (optional)",
 };
 
 const EXEMPLO = {
   skill: "A weekly review that reads my notes and tells me what stalled",
   project: "My master's thesis on Kuhn and scientific revolutions",
+  description: "Optional — it writes from the prompt above",
+  instructions: "Optional — it writes from the project and its notes",
+};
+
+/**
+ * Onde o contexto JÁ está na tela, escrever não depende de digitar nada: o
+ * prompt do skill e as notas do projeto são a entrada. Nestes o botão nasce
+ * ligado, e o campo vira ajuste fino em vez de requisito.
+ */
+const PARTE_DO_VAZIO: Record<string, boolean> = {
+  description: true,
+  instructions: true,
 };
 
 export function AssistantPanel({
@@ -51,6 +66,11 @@ export function AssistantPanel({
   onPedir,
   onFechar,
 }: AssistantPanelProps) {
+  // A folha vai pro tamanho grande: o painel abre ABAIXO do campo, e num campo
+  // que já estava no meio da tela ele nasce atrás do rodapé — a pessoa toca no
+  // botão e o que aparece é meia caixa cortada.
+  useSheetFull();
+
   const [texto, setTexto] = useState("");
   const [turnos, setTurnos] = useState<TurnoAssistente[]>([]);
   /** A pergunta na tela, no modo guiado. */
@@ -58,17 +78,18 @@ export function AssistantPanel({
   const [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false);
 
+  const partirDoVazio = !!PARTE_DO_VAZIO[para];
+
   const pedir = async (modo: ModoAssistente) => {
     const dito = texto.trim();
-    if (!dito || ocupado) return;
+    if ((!dito && !partirDoVazio) || ocupado) return;
     setOcupado(true);
     setErro("");
     // O que a pessoa acabou de dizer entra na conversa ANTES da chamada: no
     // modo guiado, a resposta dela à pergunta anterior é o turno novo.
-    const proximos: TurnoAssistente[] = [
-      ...turnos,
-      { quem: "pessoa", texto: dito },
-    ];
+    const proximos: TurnoAssistente[] = dito
+      ? [...turnos, { quem: "pessoa", texto: dito }]
+      : turnos;
     const r = await onPedir(modo, proximos);
     setOcupado(false);
     if (r.erro) {
@@ -144,7 +165,7 @@ export function AssistantPanel({
       <div className="axxa-assist-acoes">
         {/* O guiado some depois da primeira pergunta: a conversa já está
             acontecendo, e dois botões ali só ofereceriam sair dela pelo meio. */}
-        {!pergunta && (
+        {!pergunta && !partirDoVazio && (
           <button
             type="button"
             className="axxa-home-filter"
@@ -158,7 +179,7 @@ export function AssistantPanel({
         <button
           type="button"
           className="axxa-assist-cta"
-          disabled={ocupado || !texto.trim()}
+          disabled={ocupado || (!texto.trim() && !partirDoVazio)}
           onClick={() => void pedir(pergunta ? "guiado" : "direto")}
         >
           <Icon name={ocupado ? "loader" : "sparkles"} size={16} />
