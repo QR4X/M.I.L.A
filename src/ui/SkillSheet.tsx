@@ -23,10 +23,12 @@ import { MODULES } from "./modules";
 import {
   SheetChoices,
   SheetField,
+  SheetIconCatalog,
   SheetIconGrid,
   SheetInput,
   SheetTextarea,
 } from "./SheetForm";
+import { useState } from "react";
 
 export function SkillForm({
   draft,
@@ -39,6 +41,20 @@ export function SkillForm({
   onDraft: (d: SkillDraft) => void;
 }) {
   const set = (campo: Partial<SkillDraft>) => onDraft({ ...draft, ...campo });
+  const [procurando, setProcurando] = useState(false);
+
+  // Procurar ícone toma a tela, como nos projetos. Aqui nem a cor sobra: skill
+  // não tem paleta, então fica o voltar e os ícones. Sair de cima de um
+  // textarea de sete linhas também evita o pior esbarrão possível — o que
+  // apaga o prompt inteiro.
+  if (procurando)
+    return (
+      <SheetIconCatalog
+        value={draft.icon}
+        onBack={() => setProcurando(false)}
+        onPick={(icon) => set({ icon })}
+      />
+    );
 
   return (
     <>
@@ -121,6 +137,7 @@ export function SkillForm({
         <SheetIconGrid
           icons={SKILL_ICONS}
           value={draft.icon}
+          onBrowse={() => setProcurando(true)}
           onPick={(icon) => set({ icon })}
         />
       </SheetField>

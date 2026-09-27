@@ -29,7 +29,7 @@ export const ICON_CATALOG: IconCategory[] = [
       "briefcase", "target", "clipboard-list", "presentation", "handshake",
       "building-2", "users", "calendar", "clock", "check-check", "trending-up",
       "dollar-sign", "receipt", "wallet", "scale", "stamp", "piggy-bank",
-      "landmark", "trophy", "rocket",
+      "landmark", "trophy", "rocket", "archive",
     ],
   },
   {
@@ -113,8 +113,8 @@ export const ICON_CATALOG: IconCategory[] = [
     label: "Life",
     icons: [
       "user", "baby", "heart-handshake", "gift", "party-popper", "cake",
-      "smile", "star", "flag", "shield", "folder", "archive", "bell",
-      "hourglass", "dice-5", "puzzle",
+      "smile", "star", "flag", "shield", "bell", "hourglass", "dice-5",
+      "puzzle",
     ],
   },
 ];

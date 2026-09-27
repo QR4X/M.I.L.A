@@ -5329,14 +5329,19 @@ body.is-mobile .axxa-root .axxa-history-more {
   background-color: var(--axxa-hover);
 }
 
-/* O catálogo ocupa o LUGAR da grade curta, dentro do mesmo campo "Icon": o
-   cartão de prévia e as cores continuam à vista logo acima, que é o que
-   responde "ficou bom?" enquanto se procura. As abas já trazem a própria
-   margem de baixo (.axxa-sheet-tabs), então aqui só o cabeçalho respira. */
+/* O catálogo substitui o FORMULÁRIO inteiro enquanto está aberto: procurar
+   ícone é outra tarefa, e um campo de texto no meio dela só serve pra ser
+   esbarrado. Sobram o voltar, a cor (quando há) e os ícones — nesta ordem,
+   com o mesmo respiro entre eles que o resto da folha usa. */
+.axxa-root .axxa-iconcat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--axxa-4);
+}
+
 .axxa-root .axxa-iconcat-head {
   display: flex;
   align-items: center;
-  margin-bottom: var(--axxa-2);
 }
 
 /* Com cor escolhida, o azulejo marcado é a MESMA plaquinha do brasão: fundo

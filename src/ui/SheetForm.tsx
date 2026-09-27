@@ -14,7 +14,6 @@
 
 import { useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
-import { SheetTabs } from "./Sheet";
 import { ICON_CATALOG, iconCategoryOf } from "../iconCatalog";
 
 /** Rótulo + explicação + o campo. A unidade do formulário. */
@@ -164,16 +163,15 @@ function IconTile({
  * dentro de folha que também rola é um lugar onde o dedo nunca sabe o que vai
  * acontecer. Ela é a primeira resposta e resolve o caso comum.
  *
- * O "+" é pra quando nenhum daqueles é O ícone. Aí a pergunta deixa de ser
- * "qual destes 28" e vira "onde eu procuro" — por isso o catálogo abre por
- * CATEGORIA, uma de cada vez, em vez de despejar as 180 de uma vez só: cada
- * categoria ocupa a mesma altura da grade curta, e escolher continua sendo
- * olhar em vez de rolar.
+ * O "+" é a porta pro resto. Quem abre não está mais preenchendo um
+ * formulário: está PROCURANDO — e é o formulário que sai da frente (ver
+ * `SheetIconCatalog` e quem o usa).
  */
 export function SheetIconGrid({
   icons,
   value,
   onPick,
+  onBrowse,
   /**
    * A cor escolhida logo acima. Quando existe, o azulejo marcado vira a
    * MESMA plaquinha do brasão do projeto — cor cheia no ícone, fundo tirado
@@ -185,64 +183,15 @@ export function SheetIconGrid({
   icons: readonly string[];
   value: string;
   onPick: (icon: string) => void;
+  /** Tocou no "+". Quem manda é o formulário: é ele que troca de tela. */
+  onBrowse: () => void;
   tint?: string;
 }) {
-  const [catalogo, setCatalogo] = useState(false);
-  /** A aba aberta. Começa na categoria do ícone de agora — quem veio trocar
-   *  um avião provavelmente quer outro de viagem, não a primeira aba. */
-  const [aba, setAba] = useState(() => iconCategoryOf(value) ?? ICON_CATALOG[0].id);
-
   // Um ícone escolhido no catálogo não está na grade curta. Sem isto ele
-  // sumia da vista ao fechar o catálogo — a grade voltava sem NENHUM marcado,
-  // e a única pista do que foi escolhido era o cartão de prévia lá em cima.
-  // Ele entra na frente, que é onde o olho volta.
+  // sumia da vista ao voltar — a grade voltava sem NENHUM marcado, e a única
+  // pista do que foi escolhido era o cartão de prévia lá em cima. Ele entra na
+  // frente, que é onde o olho volta.
   const curtos = icons.includes(value) ? [...icons] : [value, ...icons];
-
-  if (catalogo) {
-    const atual = ICON_CATALOG.find((c) => c.id === aba) ?? ICON_CATALOG[0];
-    return (
-      <div className="axxa-iconcat">
-        <div className="axxa-iconcat-head">
-          <button
-            type="button"
-            className="axxa-home-filter"
-            onClick={() => setCatalogo(false)}
-          >
-            <Icon name="chevron-left" size={16} />
-            <span>Basics</span>
-          </button>
-        </div>
-        <SheetTabs
-          items={ICON_CATALOG.map((c) => ({
-            id: c.id,
-            label: c.label,
-            count: c.icons.length,
-          }))}
-          activeId={atual.id}
-          onPick={setAba}
-          label="Icon category"
-        />
-        <div className="axxa-icongrid" role="group" aria-label={atual.label}>
-          {atual.icons.map((ic) => (
-            <IconTile
-              key={ic}
-              icon={ic}
-              on={ic === value}
-              tint={tint}
-              onPick={(escolhido) => {
-                onPick(escolhido);
-                // Fecha ao escolher: a prévia do projeto está LÁ EM CIMA, e
-                // deixar o catálogo aberto por cima dela esconderia justamente
-                // o que responde "ficou bom?". Voltar é um toque no "+" — e
-                // ele reabre nesta mesma aba.
-                setCatalogo(false);
-              }}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="axxa-icongrid" role="group" aria-label="Icon">
@@ -263,13 +212,81 @@ export function SheetIconGrid({
         className="axxa-icontile is-more"
         aria-label="More icons"
         title="More icons"
-        onClick={() => {
-          setAba(iconCategoryOf(value) ?? ICON_CATALOG[0].id);
-          setCatalogo(true);
-        }}
+        onClick={onBrowse}
       >
         <Icon name="plus" size={20} />
       </button>
+    </div>
+  );
+}
+
+/**
+ * O CATÁLOGO: a tela de procurar ícone.
+ *
+ * Ela substitui o formulário inteiro enquanto está aberta — nome, prompt,
+ * descrição, tudo sai. Não é economia de espaço: é que procurar ícone é outra
+ * tarefa, e um campo de texto no meio dela só serve pra ser esbarrado. Fica o
+ * voltar, a cor (quando há uma: é ela que decide como o ícone vai parecer) e
+ * os ícones.
+ *
+ * As categorias são PÍLULAS que quebram de linha, não uma fileira que anda pro
+ * lado. Fileira que rola esconde o que não coube, e o que não coube some sem
+ * avisar: numa tela de 375px, "Travel" e "Life" ficavam fora da borda e só
+ * existiam pra quem pensasse em arrastar. Em pílulas, as dez categorias estão
+ * todas na tela antes do primeiro toque.
+ */
+export function SheetIconCatalog({
+  value,
+  onPick,
+  onBack,
+  tint,
+  children,
+}: {
+  value: string;
+  onPick: (icon: string) => void;
+  onBack: () => void;
+  tint?: string;
+  /**
+   * O que sobrevive do formulário, entre o voltar e as categorias — hoje só
+   * o seletor de cor dos projetos. Fica ACIMA dos ícones, e não abaixo:
+   * embaixo de uma grade de vinte, mudar a cor pediria rolar de volta pra ver
+   * o que mudou.
+   */
+  children?: ReactNode;
+}) {
+  /** Começa na categoria do ícone de agora — quem veio trocar um avião
+   *  provavelmente quer outro de viagem, não a primeira pílula. */
+  const [aba, setAba] = useState(
+    () => iconCategoryOf(value) ?? ICON_CATALOG[0].id
+  );
+  const atual = ICON_CATALOG.find((c) => c.id === aba) ?? ICON_CATALOG[0];
+
+  return (
+    <div className="axxa-iconcat">
+      <div className="axxa-iconcat-head">
+        <button type="button" className="axxa-home-filter" onClick={onBack}>
+          <Icon name="chevron-left" size={16} />
+          <span>Back</span>
+        </button>
+      </div>
+      {children}
+      <SheetChoices
+        label="Icon category"
+        value={atual.id}
+        onPick={setAba}
+        items={ICON_CATALOG.map((c) => ({ id: c.id, label: c.label }))}
+      />
+      <div className="axxa-icongrid" role="group" aria-label={atual.label}>
+        {atual.icons.map((ic) => (
+          <IconTile
+            key={ic}
+            icon={ic}
+            on={ic === value}
+            tint={tint}
+            onPick={onPick}
+          />
+        ))}
+      </div>
     </div>
   );
 }

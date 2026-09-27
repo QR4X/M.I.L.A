@@ -22,10 +22,12 @@ import {
 import { Icon } from "./Icon";
 import {
   SheetField,
+  SheetIconCatalog,
   SheetIconGrid,
   SheetInput,
   SheetSwatches,
 } from "./SheetForm";
+import { useState } from "react";
 
 export function ProjectForm({
   draft,
@@ -38,6 +40,30 @@ export function ProjectForm({
 }) {
   const set = (campo: Partial<ProjectDraft>) => onDraft({ ...draft, ...campo });
   const cor = projectColor(draft.color);
+  const [procurando, setProcurando] = useState(false);
+
+  // Procurar ícone TOMA a tela. O formulário sai inteiro — cartão, nome — e
+  // ficam três coisas: voltar, a cor e os ícones. A cor fica porque é ela que
+  // decide como cada ícone aparece: trocar de cor com a grade aberta mostra na
+  // hora, e é a pergunta que se faz olhando os dois juntos.
+  if (procurando)
+    return (
+      <SheetIconCatalog
+        value={draft.icon}
+        tint={cor}
+        onBack={() => setProcurando(false)}
+        onPick={(icon) => set({ icon })}
+      >
+        <SheetField label="Color">
+          <SheetSwatches
+            colors={PROJECT_COLORS}
+            value={draft.color}
+            resolve={projectColor}
+            onPick={(color) => set({ color })}
+          />
+        </SheetField>
+      </SheetIconCatalog>
+    );
 
   return (
     <>
@@ -80,6 +106,7 @@ export function ProjectForm({
           icons={PROJECT_ICONS}
           value={draft.icon}
           tint={cor}
+          onBrowse={() => setProcurando(true)}
           onPick={(icon) => set({ icon })}
         />
       </SheetField>
