@@ -35,7 +35,7 @@ import type { ChatData } from "./chatPersistence";
 import {
   exportChatMarkdown,
   exportChatToVault,
-  exportFileName,
+  shareFileName,
 } from "./chatExport";
 
 /** O que o aparelho oferece, medido na hora. */
@@ -156,7 +156,7 @@ export async function compartilharChat(
   //
   // A cópia que fica no vault continua `.md`: lá ela é uma NOTA, e quem lê é o
   // Obsidian.
-  const nome = exportFileName(chat.title, quando, "txt");
+  const nome = shareFileName(chat.title, quando, "txt");
   const markdown = exportChatMarkdown(chat, quando);
   const arquivo = new File([markdown], nome, { type: "text/plain" });
   const caps = medirCaps(app, arquivo);
@@ -176,7 +176,7 @@ export async function compartilharChat(
     if (modo === "capacitor" || modo === "open-with") {
       // Estes dois precisam do arquivo em disco: a folha nativa recebe um
       // caminho, não um blob de JavaScript.
-      const relativo = await exportChatToVault(app, chat, quando, "txt");
+      const relativo = await exportChatToVault(app, chat, quando, "txt", nome);
       if (modo === "capacitor") {
         const abs = caminhoAbsoluto(app, relativo);
         await janela.Capacitor?.Plugins?.Share?.share?.({

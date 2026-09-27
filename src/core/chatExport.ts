@@ -58,6 +58,38 @@ export function exportFileName(
 }
 
 /**
+ * Nome SEM espaço, sem parêntese e sem acento — pra quem vai ler ele como URL.
+ *
+ * Isto não é preciosismo: no Android, quem descobre o tipo de um arquivo a
+ * partir do caminho é o `MimeTypeMap.getFileExtensionFromUrl`, e ele roda uma
+ * regex de URL. Espaço e parêntese fazem a regex não casar, a extensão sai
+ * vazia, e o tipo cai no CORINGA (asterisco barra asterisco). Com ele, a folha
+ * de compartilhar do Android mostra editor de imagem, navegador e app de
+ * banco — mas NÃO mostra o WhatsApp, que só declara tipos específicos.
+ *
+ * "Rewrite the plugin README (2026-09-27).txt" não casa.
+ * "rewrite-the-plugin-readme-2026-09-27.txt" casa, vira `text/plain`, e a
+ * folha muda de gente.
+ */
+export function shareFileName(
+  titulo: string,
+  quando: Date,
+  extensao = "txt"
+): string {
+  const base =
+    titulo
+      // Tira acento sem tirar a letra: "Revisão" → "Revisao".
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 50)
+      .replace(/-+$/g, "") || "chat";
+  return `${base}-${quando.toISOString().slice(0, 10)}.${extensao}`;
+}
+
+/**
  * A nota exportada: frontmatter curto + a conversa em seções.
  *
  * O frontmatter é o mínimo que faz a cópia ser útil DEPOIS — de onde ela veio,
@@ -91,14 +123,15 @@ export async function exportChatToVault(
   app: App,
   chat: ChatData,
   quando: Date = new Date(),
-  extensao = "md"
+  extensao = "md",
+  /** Nome pronto, quando quem chama tem exigência própria — é o caso do
+   *  compartilhamento, que precisa de um nome legível por regex de URL. */
+  nomeForcado?: string
 ): Promise<string> {
   await ensureFolder(app.vault.adapter, EXPORTS_FOLDER);
-  let caminho = `${EXPORTS_FOLDER}/${exportFileName(
-    chat.title,
-    quando,
-    extensao
-  )}`;
+  let caminho = `${EXPORTS_FOLDER}/${
+    nomeForcado ?? exportFileName(chat.title, quando, extensao)
+  }`;
   // Dois exports da mesma conversa no mesmo dia não se sobrescrevem: a
   // segunda cópia pode ter mais conversa que a primeira.
   // Teto de tentativas: `exists` é uma resposta de fora, e um laço que só sai
@@ -106,11 +139,16 @@ export async function exportChatToVault(
   // sempre (o do preview respondia) travava o app inteiro — e num aparelho
   // isso é o app morto sem mensagem nenhuma.
   for (let n = 2; n <= 50 && (await app.vault.adapter.exists(caminho)); n++) {
-    caminho = `${EXPORTS_FOLDER}/${exportFileName(
-      `${chat.title} ${n}`,
-      quando,
-      extensao
-    )}`;
+    caminho = nomeForcado
+      ? `${EXPORTS_FOLDER}/${nomeForcado.replace(
+          /\.([^.]+)$/,
+          `-${n}.$1`
+        )}`
+      : `${EXPORTS_FOLDER}/${exportFileName(
+          `${chat.title} ${n}`,
+          quando,
+          extensao
+        )}`;
   }
   await app.vault.adapter.write(caminho, exportChatMarkdown(chat, quando));
   return caminho;
