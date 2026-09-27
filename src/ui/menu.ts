@@ -28,6 +28,11 @@ import { screen } from "./haptics";
 export interface MenuAction {
   label: string;
   icon?: string;
+  /** Cor própria do item (a de um projeto). Com ela, o ícone vira BRASÃO: o
+   *  mesmo quadrado squircle da lista de projetos, no tom dele. Um menu de
+   *  projetos com ícones cinzas perde justamente o que faz um projeto ser
+   *  reconhecido de relance. */
+  color?: string;
   danger?: boolean;
   /** Opção ATUAL de uma escolha (o filtro de período da home do Agent). */
   checked?: boolean;
@@ -76,7 +81,14 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
     b.setAttribute("role", "menuitem");
     if (a.icon) {
       const ico = document.createElement("span");
-      ico.className = "axxa-pop-ico";
+      // Com cor, o ícone ganha a MESMA plaquinha da lista de projetos
+      // (`axxa-thing-mark`): mesma forma, mesmo jeito de tingir — o fundo sai
+      // do `currentColor`. Reusar a classe é o que garante que as duas telas
+      // não comecem a divergir na terceira mudança.
+      ico.className = a.color
+        ? "axxa-pop-ico axxa-thing-mark"
+        : "axxa-pop-ico";
+      if (a.color) ico.style.color = a.color;
       // O mesmo `setIcon` do resto do app (ver Icon.tsx): o set de ícones é o
       // do Obsidian, então o menu não traz um segundo vocabulário de desenho.
       setIcon(ico, a.icon);

@@ -15,6 +15,7 @@ import type { ChatSummary } from "../core/chatPersistence";
 import { loadChat, setChatStarred } from "../core/chatPersistence";
 import { exportChatToVault } from "../core/chatExport";
 import { usePainel } from "./painel";
+import { projectColor } from "../projects";
 import { useChatStore } from "../store/chat";
 import { PROVIDERS } from "../core/providersMeta";
 import { Icon } from "./Icon";
@@ -341,6 +342,7 @@ export function ChatList({
                       ...projetosRecentes.map((p) => ({
                         label: p.name,
                         icon: p.icon,
+                        color: projectColor(p.color),
                         checked: p.chatIds.includes(c.id),
                         run: () => void paraProjeto(c, p.id),
                       })),

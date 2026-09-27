@@ -5837,6 +5837,20 @@ body.is-mobile .axxa-root .axxa-history-more {
   color: var(--text-muted);
 }
 
+/* O brasão dentro do menu: a plaquinha da lista, em tamanho de linha de menu.
+   Ela NÃO leva traço de borda — a forma vem de máscara, e máscara apaga o que
+   é desenhado fora da caixa (o contorno sairia comido nos cantos; ver
+   docs/SQUIRCLE.md). Quem marca o limite é o próprio fundo tingido. */
+.axxa-root .axxa-pop-ico.axxa-thing-mark {
+  width: 26px;
+  height: 26px;
+}
+
+.axxa-root .axxa-pop-ico.axxa-thing-mark svg {
+  width: 15px;
+  height: 15px;
+}
+
 .axxa-root .axxa-pop-item.is-danger .axxa-pop-ico {
   color: var(--text-error);
 }
