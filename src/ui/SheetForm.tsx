@@ -14,6 +14,7 @@
 
 import { useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
+import { useSheetFull } from "./Sheet";
 import { ICON_CATALOG, iconCategoryOf } from "../iconCatalog";
 
 /** Rótulo + explicação + o campo. A unidade do formulário. */
@@ -254,6 +255,12 @@ export function SheetIconCatalog({
    */
   children?: ReactNode;
 }) {
+  // A folha vai pro tamanho grande ao entrar aqui, e não cresce por conta
+  // própria depois: esta tela não tem campo pra focar nem nada que a faça
+  // crescer sozinha, e na altura do conteúdo apareceriam duas fileiras de
+  // ícones — procurar viraria rolar às cegas.
+  useSheetFull();
+
   /** Começa na categoria do ícone de agora — quem veio trocar um avião
    *  provavelmente quer outro de viagem, não a primeira pílula. */
   const [aba, setAba] = useState(

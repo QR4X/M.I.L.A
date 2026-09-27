@@ -11,7 +11,11 @@
 // position: relative), então cobre só o painel da AXXA — nunca o app inteiro.
 
 import {
+  createContext,
+  useCallback,
+  useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -21,6 +25,32 @@ import {
 import { Icon } from "./Icon";
 import { SearchField } from "./SearchField";
 import { screen, tap, warn } from "./haptics";
+
+/**
+ * O jeito de o CONTEÚDO pedir a folha grande.
+ *
+ * A folha já cresce sozinha quando um campo pega o foco ou quando a pessoa
+ * rola — os dois sinais de "o que estou fazendo não cabe nisto". Mas há
+ * conteúdo que não dá nenhum dos dois e mesmo assim precisa da tela inteira: o
+ * catálogo de ícones é uma grade de vinte, e numa folha do tamanho do conteúdo
+ * aparecem duas fileiras. Procurar ali seria rolar às cegas.
+ *
+ * Contexto, e não uma prop: quem sabe que precisa crescer está três níveis
+ * abaixo (folha → formulário → catálogo), e uma prop pra isso seria um
+ * `pedeTelaCheia` atravessando dois componentes que não têm nada com o
+ * assunto.
+ */
+const SheetSizeCtx = createContext<{ expandir: () => void }>({
+  expandir: () => {},
+});
+
+/** Pede a folha no tamanho grande, uma vez, ao montar. */
+export function useSheetFull(): void {
+  const { expandir } = useContext(SheetSizeCtx);
+  useEffect(() => {
+    expandir();
+  }, [expandir]);
+}
 
 /** Quanto puxar além da borda pra o gesto valer. Menos que isso é solavanco
  *  de rolagem, não intenção. */
@@ -97,6 +127,13 @@ export function Sheet({
    *  a folha grande FECHAR onde devia só encolher. */
   const sizeRef = useRef(size);
   sizeRef.current = size;
+
+  // A identidade de `expandir` é ESTÁVEL de propósito: quem usa (useSheetFull)
+  // põe isto numa dependência de efeito, e uma função nova a cada render faria
+  // o efeito rodar sem parar — ou seja, a folha voltaria a crescer sozinha
+  // logo depois de a pessoa arrastá-la pra baixo.
+  const expandir = useCallback(() => setSize("full"), []);
+  const api = useMemo(() => ({ expandir }), [expandir]);
 
   useEffect(() => {
     if (!open) return;
@@ -407,7 +444,7 @@ export function Sheet({
           )}
         </header>
         <div ref={bodyRef} className="axxa-sheet-body">
-          {children}
+          <SheetSizeCtx.Provider value={api}>{children}</SheetSizeCtx.Provider>
         </div>
         {footer && <div className="axxa-sheet-actions">{footer}</div>}
       </div>
