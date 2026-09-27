@@ -53,6 +53,75 @@ export interface MenuEvent {
 const VAO = 6;
 const MARGEM = 10;
 
+/** Um retângulo, do jeito que `getBoundingClientRect` entrega. */
+export interface Caixa {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Onde o balão pousa — a conta, separada do DOM pra poder ser conferida.
+ *
+ * As coordenadas de SAÍDA são da camada, que é `absolute` dentro da
+ * `.axxa-root`: por isso tudo desconta `raiz`.
+ *
+ * Mas quem decide se CABE é a TELA, não a raiz — e essa distinção é o bug que
+ * esta função existe pra não deixar voltar. No celular a folha vira `fixed` e
+ * vai até o fundo do viewport, que é mais alto que a raiz; um ⋯ na parte de
+ * baixo da folha está numa altura que a raiz nem alcança. Medindo pela raiz, o
+ * balão "cabia" na conta e nascia fora da tela na prática.
+ */
+export function posicaoDoBalao(params: {
+  /** O botão que abriu (coordenadas de viewport). */
+  ancora: Pick<Caixa, "left" | "top" | "right" | "bottom">;
+  /** A `.axxa-root`, que é a origem das coordenadas da camada. */
+  raiz: Caixa;
+  /** A tela. */
+  tela: { width: number; height: number };
+  /** O tamanho do balão já montado. */
+  balao: { width: number; height: number };
+}): { x: number; y: number; origem: "top right" | "bottom right" } {
+  const { ancora, raiz, tela, balao } = params;
+  // A faixa visível, em coordenadas da CAMADA. Quando a raiz cabe inteira na
+  // tela, isto é simplesmente 0 → raiz.height, e nada muda.
+  const topoVis = Math.max(0, -raiz.top);
+  const fundoVis = Math.min(raiz.height, tela.height - raiz.top);
+  const esqVis = Math.max(0, -raiz.left);
+  const dirVis = Math.min(raiz.width, tela.width - raiz.left);
+
+  // Alinhado à DIREITA do botão: o ⋯ mora na ponta direita das listas, e um
+  // balão que abre pra dentro segue a leitura em vez de cruzá-la.
+  let x = ancora.right - raiz.left - balao.width;
+  x = Math.min(
+    Math.max(x, esqVis + MARGEM),
+    Math.max(esqVis + MARGEM, dirVis - balao.width - MARGEM)
+  );
+
+  const abaixo = ancora.bottom - raiz.top + VAO;
+  const acima = ancora.top - raiz.top - balao.height - VAO;
+  // Sem espaço embaixo, ele sobe: melhor cobrir o que está acima do botão do
+  // que nascer fora da tela.
+  let y = abaixo + balao.height > fundoVis - MARGEM ? acima : abaixo;
+  // E se não couber de nenhum lado (balão alto, tela curta), encosta no topo
+  // visível — o começo da lista é o que mais importa ver.
+  y = Math.min(
+    Math.max(y, topoVis + MARGEM),
+    Math.max(topoVis + MARGEM, fundoVis - balao.height - MARGEM)
+  );
+
+  return {
+    x: Math.round(x),
+    y: Math.round(y),
+    // A âncora também é o ponto de origem da animação: ele cresce de onde foi
+    // tocado.
+    origem: y > ancora.top - raiz.top ? "top right" : "bottom right",
+  };
+}
+
 export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
   if (actions.length === 0) return;
   const raiz =
@@ -152,11 +221,6 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
   function posicionar(): void {
     const r = ancoraEl?.getBoundingClientRect?.();
     const base = raiz.getBoundingClientRect();
-    // `offsetWidth/Height`, e não o retângulo: o balão nasce com `scale(0.94)`
-    // pra crescer, e o retângulo mede o TRANSFORMADO — a conta saía 6% menor e
-    // ele pousava 10px pra fora da borda do botão.
-    const bal = { width: balao.offsetWidth, height: balao.offsetHeight };
-
     const ancora = r ?? {
       left: (ev.clientX ?? 0) - 1,
       right: (ev.clientX ?? 0) + 1,
@@ -164,25 +228,19 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
       bottom: (ev.clientY ?? 0) + 1,
     };
 
-    // Alinhado à DIREITA do botão: o ⋯ mora na ponta direita das listas, e um
-    // balão que abre pra dentro segue a leitura em vez de cruzá-la.
-    let x = ancora.right - base.left - bal.width;
-    x = Math.min(Math.max(x, MARGEM), base.width - bal.width - MARGEM);
+    const { x, y, origem } = posicaoDoBalao({
+      ancora,
+      raiz: base,
+      tela: { width: window.innerWidth, height: window.innerHeight },
+      // `offsetWidth/Height`, e não o retângulo: o balão nasce com
+      // `scale(0.94)` pra crescer, e o retângulo mede o TRANSFORMADO — a conta
+      // saía 6% menor e ele pousava 10px pra fora da borda do botão.
+      balao: { width: balao.offsetWidth, height: balao.offsetHeight },
+    });
 
-    let y = ancora.bottom - base.top + VAO;
-    // Sem espaço embaixo, ele sobe: melhor cobrir o que está acima do botão do
-    // que nascer fora da tela.
-    if (y + bal.height > base.height - MARGEM) {
-      y = ancora.top - base.top - bal.height - VAO;
-    }
-    y = Math.max(y, MARGEM);
-
-    balao.style.left = `${Math.round(x)}px`;
-    balao.style.top = `${Math.round(y)}px`;
-    // A âncora também é o ponto de origem da animação: ele cresce de onde foi
-    // tocado.
-    balao.style.transformOrigin =
-      y > ancora.top - base.top ? "top right" : "bottom right";
+    balao.style.left = `${x}px`;
+    balao.style.top = `${y}px`;
+    balao.style.transformOrigin = origem;
   }
 
   desenhar(actions, null);

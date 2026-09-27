@@ -5916,7 +5916,16 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
 .axxa-root .axxa-pop-layer {
   position: absolute;
   inset: 0;
-  z-index: 40;
+  /* A ÚLTIMA camada nossa, e por uma margem folgada.
+     Era 40, que bastava enquanto o menu só era aberto da página (40 > 30 da
+     folha). Mas o ⋯ de um projeto é aberto DE DENTRO da folha — e no mobile a
+     folha sobe pra `position: fixed; z-index: 1000` pra encostar no fundo real
+     da tela (ver o bloco `body.is-mobile` acima). Com 40, o balão abria ATRÁS
+     dela: existia, estava posicionado, respondia no DOM, e não aparecia na
+     tela.
+     Um número só, acima de tudo que a gente empilha nos dois modos — e não um
+     valor por modo, que seriam dois pra manter em sincronia na mão. */
+  z-index: 1100;
 }
 
 .axxa-root .axxa-pop {
