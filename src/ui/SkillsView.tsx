@@ -204,8 +204,10 @@ export function SkillsView({
       }}
       onBack={noFormulario ? fecharNivel : undefined}
       // Nasce grande: é um acervo, e acervo pequeno mostra dois cartões.
-      startFull
-      // O painel não toma o foco: no formulário quem toma é o campo do nome, e
+      // Nasce do tamanho do conteúdo, e cresce sozinha quando um campo
+      // pega o foco (ver Sheet.tsx). Nascer grande fazia um projeto sem nota
+      // nenhuma abrir uma folha de tela inteira com três linhas dentro.
+            // O painel não toma o foco: no formulário quem toma é o campo do nome, e
       // o efeito do pai roda depois do do filho (a mesma armadilha da busca).
       focusOnOpen={false}
     >
@@ -219,7 +221,9 @@ export function SkillsView({
           onSubmit={() => void salvar()}
         />
       ) : (
-        <>
+        /* Pilha com respiro: na folha os blocos são irmãos soltos, e irmão
+           solto não tem vão nenhum. */
+        <div className="axxa-sheet-stack">
           {/* A busca fica no TOPO da folha, que é onde ela funciona: o campo
               encosta na borda de cima e a lista cresce contra o teclado. É a
               mesma peça (SheetSearch) da folha de notas e da de modelos. */}
@@ -342,7 +346,7 @@ export function SkillsView({
               <span>New skill</span>
             </button>
           </div>
-        </>
+        </div>
       )}
     </Sheet>
   );

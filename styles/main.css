@@ -5612,3 +5612,20 @@ body.is-mobile .axxa-root .axxa-history-more {
 .axxa-root .axxa-pill.is-mark {
   border-color: currentColor;
 }
+
+/* Pilha de blocos dentro da folha. O corpo dela é um bloco comum, sem gap:
+   quem escreve conteúdo lá dentro põe os irmãos colados sem perceber — foi o
+   que deixou as pílulas encostadas na caixa e a caixa nos cartões. Aqui o
+   respiro é do CONTÊINER, então nenhum bloco precisa carregar margem própria
+   (e dois irmãos nunca somam a margem de um com a do outro). */
+.axxa-root .axxa-sheet-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--axxa-4);
+}
+
+/* A barra de ação não entra na conta do respiro: ela já traz o seu, e grudada
+   na base ela precisa do próprio fundo encostando no conteúdo. */
+.axxa-root .axxa-sheet-stack > .axxa-sheet-foot {
+  margin-top: var(--axxa-1);
+}

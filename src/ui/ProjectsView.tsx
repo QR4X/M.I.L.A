@@ -222,8 +222,10 @@ export function ProjectsView({
       open={open}
       onClose={fecharTudo}
       onBack={voltar[nivel]}
-      startFull
-      focusOnOpen={false}
+      // Nasce do tamanho do conteúdo, e cresce sozinha quando um campo
+      // pega o foco (ver Sheet.tsx). Nascer grande fazia um projeto sem nota
+      // nenhuma abrir uma folha de tela inteira com três linhas dentro.
+            focusOnOpen={false}
     >
       {nivel === "form" && (
         <ProjectForm
@@ -344,7 +346,10 @@ export function ProjectsView({
       )}
 
       {nivel === "projeto" && aberto && (
-        <>
+        /* Pilha com respiro: dentro da folha os blocos são irmãos soltos, e
+           irmão solto não tem vão nenhum — as pílulas encostavam na caixa, que
+           encostava nos cartões. */
+        <div className="axxa-sheet-stack">
           {/* As pílulas dizem ONDE isto mora — o projeto é agrupamento e vive
               nos dados do plugin, dentro do vault, não num serviço nosso. Não
               dizem "privado": as notas daqui vão como contexto pro modelo
@@ -466,11 +471,11 @@ export function ProjectsView({
               <span>New chat here</span>
             </button>
           </div>
-        </>
+        </div>
       )}
 
       {nivel === "lista" && (
-        <>
+        <div className="axxa-sheet-stack">
           {projects.length > 0 ? (
             <div className="axxa-things">
               {projects.map((p) => (
@@ -543,7 +548,7 @@ export function ProjectsView({
               <span>New project</span>
             </button>
           </div>
-        </>
+        </div>
       )}
     </Sheet>
   );

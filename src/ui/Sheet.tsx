@@ -92,6 +92,26 @@ export function Sheet({
     if (bodyRef.current) bodyRef.current.scrollTop = 0;
   }, [open, focusOnOpen]);
 
+  // Um CAMPO ganhou o foco: o teclado vem junto, e folha pequena com teclado
+  // aberto é um campo e mais nada — o que se está escrevendo fica sem
+  // contexto e a lista de resultados, se houver, fica atrás do teclado. Ela
+  // cresce sozinha, que é o gesto que a pessoa faria na mão.
+  //
+  // É isto que deixa a folha nascer do TAMANHO DO CONTEÚDO: sem a regra, toda
+  // folha com um campo dentro precisava nascer grande por precaução — e uma
+  // ficha de três linhas abria ocupando a tela inteira.
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!open || !el) return;
+    const aoFocar = (e: FocusEvent) => {
+      const alvo = e.target as HTMLElement | null;
+      const tag = alvo?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") setSize("full");
+    };
+    el.addEventListener("focusin", aoFocar);
+    return () => el.removeEventListener("focusin", aoFocar);
+  }, [open]);
+
   // Fechou: volta pro tamanho de nascença, senão a próxima abre do tamanho
   // que a anterior ficou depois do arrasto.
   useEffect(() => {
