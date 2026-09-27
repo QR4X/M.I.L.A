@@ -927,7 +927,11 @@ body.theme-dark {
      a linha não tem — aquele respiro só empurrava a lista pra dentro da
      margem, e ela ficava desalinhada do título, das abas e dos cartões de
      baixo, que começam todos na mesma coluna. */
-  padding: var(--axxa-2) 0;
+  /* Quatro, não oito: a linha tem 42px de conteúdo (o brasão e a coluna da
+     ponta), e com 8 de cada lado ela passava de 58px — três conversas já
+     enchiam a dobra da home. Com 4, a linha fica em 50 e o alvo continua
+     grande: é a linha INTEIRA que abre a conversa, não um texto de 21px. */
+  padding: var(--axxa-1) 0;
   background-color: transparent;
 }
 
