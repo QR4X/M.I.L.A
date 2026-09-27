@@ -32,6 +32,7 @@ import { ConfirmModal } from "./modals";
 import { Icon } from "./Icon";
 import { Sheet, SheetSearch } from "./Sheet";
 import { Segmented } from "./Segmented";
+import { projectColor } from "../projects";
 import { SheetSubmit } from "./SheetForm";
 import { SkillForm } from "./SkillSheet";
 import { openActions } from "./menu";
@@ -112,6 +113,7 @@ export function SkillsView({
       name: s.name,
       description: s.description,
       icon: s.icon,
+      color: s.color,
       mode: s.mode ?? "",
       body: s.body,
     });
@@ -283,7 +285,21 @@ export function SkillsView({
                     <span className="axxa-tile-paper">
                       <span className="axxa-tile-text">{s.body}</span>
                     </span>
-                    <span className="axxa-tile-name">{s.name}</span>
+                    {/* O brasão do skill no CARTÃO, não só na prévia do
+                        formulário. Sem ele, a cor e o ícone que a pessoa
+                        escolheu não apareciam em lugar nenhum depois de
+                        salvar — e a galeria era uma grade de papéis cinzas
+                        onde o nome era a única pista. */}
+                    <span className="axxa-tile-head">
+                      <span
+                        className="axxa-thing-mark is-dense"
+                        style={{ color: projectColor(s.color) }}
+                        aria-hidden="true"
+                      >
+                        <Icon name={s.icon || "sparkles"} size={16} />
+                      </span>
+                      <span className="axxa-tile-name">{s.name}</span>
+                    </span>
                     <span className="axxa-tile-meta">
                       <Icon
                         name={

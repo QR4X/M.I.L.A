@@ -6375,3 +6375,26 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
     animation: none;
   }
 }
+
+/* O nome do skill com o brasão dele, no cartão da galeria. Em coluna de duas,
+   o desenho é o que se acha antes de ler — e é por isso que a cor existe. */
+.axxa-root .axxa-tile-head {
+  display: flex;
+  align-items: center;
+  gap: var(--axxa-2);
+  min-width: 0;
+}
+
+/* O brasão miúdo do cartão: 26px, do tamanho do que cabe ao lado de um nome
+   sem empurrá-lo pra segunda linha. */
+.axxa-root .axxa-tile-head .axxa-thing-mark.is-dense {
+  width: 26px;
+  height: 26px;
+}
+
+.axxa-root .axxa-tile-head .axxa-tile-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

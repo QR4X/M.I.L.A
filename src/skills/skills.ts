@@ -15,6 +15,15 @@ export interface Skill {
   description: string;
   /** Ícone Lucide (default: sparkles). */
   icon: string;
+  /**
+   * Cor do brasão, da mesma paleta dos projetos ("default" = a do texto).
+   *
+   * Skill tinha ícone e mais nada, e numa grade de dois todos os brasões eram
+   * o mesmo cinza: o desenho ficava sendo a única pista, e desenho pequeno em
+   * cinza a gente não distingue de relance. Cor é a segunda pista, e é ela que
+   * faz uma grade virar um acervo reconhecível.
+   */
+  color: string;
   /** Modo preferido (chat / vault-qa / agent) — trocado ao acionar, se houver. */
   mode?: string;
   /** Corpo da nota = prompt/template injetado no composer. */
@@ -51,6 +60,9 @@ function parseSkillFile(
     name,
     description: String(fm.description ?? ""),
     icon: String(fm.icon ?? "sparkles"),
+    // Sem cor no arquivo = "default", que é o brasão neutro de sempre. Skill
+    // escrito à mão no Obsidian continua válido — a cor é opcional.
+    color: String(fm.color ?? "default"),
     mode: fm.mode ? String(fm.mode) : undefined,
     body,
     path,

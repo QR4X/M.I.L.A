@@ -18,6 +18,7 @@
 
 import { CHAT_MODES } from "../core/session";
 import { SKILL_ICONS, type SkillDraft } from "../skills/skillFile";
+import { PROJECT_COLORS, projectColor } from "../projects";
 import { Icon } from "./Icon";
 import { MODULES } from "./modules";
 import {
@@ -26,6 +27,7 @@ import {
   SheetIconCatalog,
   SheetIconGrid,
   SheetInput,
+  SheetSwatches,
   SheetTextarea,
 } from "./SheetForm";
 import { useState } from "react";
@@ -51,6 +53,7 @@ export function SkillForm({
    *  mesmo formulário seriam duas conversas disputando os mesmos campos. */
   const [ajudando, setAjudando] = useState<"" | "body" | "desc">("");
   const { indisponivel, pedirSkill, pedirDescricao } = useAssistant(plugin);
+  const cor = projectColor(draft.color);
 
   // Procurar ícone toma a tela, como nos projetos. Aqui nem a cor sobra: skill
   // não tem paleta, então fica o voltar e os ícones. Sair de cima de um
@@ -60,9 +63,19 @@ export function SkillForm({
     return (
       <SheetIconCatalog
         value={draft.icon}
+        tint={cor}
         onBack={() => setProcurando(false)}
         onPick={(icon) => set({ icon })}
-      />
+      >
+        <SheetField label="Color">
+          <SheetSwatches
+            colors={PROJECT_COLORS}
+            value={draft.color}
+            resolve={projectColor}
+            onPick={(color) => set({ color })}
+          />
+        </SheetField>
+      </SheetIconCatalog>
     );
 
   return (
@@ -71,7 +84,11 @@ export function SkillForm({
           seletor de ícone e a descrição terem sentido antes de salvar —
           senão são dois campos que só se explicam depois. */}
       <div className="axxa-form-preview">
-        <span className="axxa-thing-mark" aria-hidden="true">
+        <span
+          className="axxa-thing-mark"
+          style={{ color: cor }}
+          aria-hidden="true"
+        >
           <Icon name={draft.icon || "sparkles"} size={20} />
         </span>
         <span className="axxa-thing-text">
@@ -194,10 +211,23 @@ export function SkillForm({
         />
       </SheetField>
 
+      {/* A cor vem ANTES do ícone, como nos projetos: ela decide como cada
+          ícone aparece, e escolher o desenho antes do tom é escolher no
+          escuro. */}
+      <SheetField label="Color">
+        <SheetSwatches
+          colors={PROJECT_COLORS}
+          value={draft.color}
+          resolve={projectColor}
+          onPick={(color) => set({ color })}
+        />
+      </SheetField>
+
       <SheetField label="Icon">
         <SheetIconGrid
           icons={SKILL_ICONS}
           value={draft.icon}
+          tint={cor}
           onBrowse={() => setProcurando(true)}
           onPick={(icon) => set({ icon })}
         />

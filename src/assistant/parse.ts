@@ -76,6 +76,7 @@ export interface SkillSugerido {
   name: string;
   description: string;
   icon: string;
+  color: string;
   mode: string;
   body: string;
 }
@@ -99,7 +100,8 @@ export interface ProjetoSugerido {
 export function lerSkill(
   obj: Record<string, unknown> | null,
   iconesValidos: readonly string[],
-  iconePadrao: string
+  iconePadrao: string,
+  coresValidas: readonly string[] = ["default"]
 ): SkillSugerido | null {
   if (!obj) return null;
   const body = texto(obj.body, 4000);
@@ -108,6 +110,7 @@ export function lerSkill(
     name: texto(obj.name, 60) || "Untitled skill",
     description: texto(obj.description, 140),
     icon: daLista(obj.icon, iconesValidos, iconePadrao),
+    color: daLista(obj.color, coresValidas, "default"),
     // "" é válido e é o padrão: quer dizer "abre onde eu estiver".
     mode: daLista(obj.mode, ["", ...CHAT_MODES], ""),
     body,

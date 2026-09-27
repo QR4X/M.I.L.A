@@ -34,6 +34,8 @@ Fields:
   "Review assistant".
 - "description": one line shown under the name in the list. Optional.
 - "icon": one of the allowed names given below. Nothing else.
+- "color": one of the allowed values given below, matching what the skill is
+  for. "default" when nothing in particular fits.
 - "mode": "" (opens wherever the person is), "chat" (plain conversation),
   "vault-qa" (answers from the vault's notes), or "agent" (can write to the
   vault). Choose "vault-qa" only if answering NEEDS the person's notes; choose
@@ -81,12 +83,14 @@ function listas(rotulo: string, itens: readonly string[]): string {
 
 export function promptSkill(
   modo: ModoAssistente,
-  icones: readonly string[]
+  icones: readonly string[],
+  cores: readonly string[]
 ): string {
   return [
     BASE,
     SOBRE_SKILL,
     listas("icon names", icones),
+    listas("color values", cores),
     modo === "direto" ? DIRETO : GUIADO,
   ].join("\n\n");
 }

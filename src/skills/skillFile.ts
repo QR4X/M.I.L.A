@@ -15,6 +15,8 @@ export interface SkillDraft {
   name: string;
   description: string;
   icon: string;
+  /** Cor do brasão — mesma paleta dos projetos (ver PROJECT_COLORS). */
+  color: string;
   /** Modo preferido; "" = usa o que estiver aberto. */
   mode: string;
   /** O prompt. É o que o skill É — sem ele não existe skill. */
@@ -25,6 +27,7 @@ export const SKILL_DRAFT_VAZIO: SkillDraft = {
   name: "",
   description: "",
   icon: "sparkles",
+  color: "default",
   mode: "",
   body: "",
 };
@@ -73,6 +76,9 @@ export function skillMarkdown(d: SkillDraft): string {
     `description: ${yaml(d.description.trim())}`,
     `icon: ${yaml(d.icon || "sparkles")}`,
   ];
+  // Cor padrão não vira linha: um frontmatter com `color: "default"` em toda
+  // nota é ruído no editor pra dizer "nenhuma cor".
+  if (d.color && d.color !== "default") linhas.push(`color: ${yaml(d.color)}`);
   // Modo vazio não vira linha: `mode: ""` faria o acionamento tentar trocar
   // pra um modo que não existe.
   if (d.mode) linhas.push(`mode: ${yaml(d.mode)}`);

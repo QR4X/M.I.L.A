@@ -117,22 +117,33 @@ describe("lerSkill", () => {
     name: "Weekly review",
     description: "Go through the week",
     icon: "graduation-cap",
+    color: "#4361ee",
     mode: "vault-qa",
     body: "Go through this week's notes and tell me what moved.",
   };
 
   it("passa o que é válido", () => {
-    expect(lerSkill(ok, ICONES, "folder")).toEqual(ok);
+    expect(lerSkill(ok, ICONES, "folder", CORES)).toEqual(ok);
+  });
+
+  it("skill também tem cor, e fora da paleta vira default", () => {
+    // Skill tinha ícone e mais nada: numa grade de dois, todos os brasões eram
+    // o mesmo cinza e o desenho miúdo era a única pista.
+    expect(lerSkill({ ...ok, color: "roxo" }, ICONES, "folder", CORES)?.color).toBe(
+      "default"
+    );
+    // Sem paleta declarada, o padrão continua servindo.
+    expect(lerSkill(ok, ICONES, "folder")?.color).toBe("default");
   });
 
   it("ícone inventado vira o padrão, e não um buraco na tela", () => {
-    const r = lerSkill({ ...ok, icon: "sparkles-2" }, ICONES, "folder");
+    const r = lerSkill({ ...ok, icon: "sparkles-2" }, ICONES, "folder", CORES);
     expect(r?.icon).toBe("folder");
   });
 
   it("modo inventado vira vazio (abre onde a pessoa estiver)", () => {
-    expect(lerSkill({ ...ok, mode: "wizard" }, ICONES, "folder")?.mode).toBe("");
-    expect(lerSkill({ ...ok, mode: "agent" }, ICONES, "folder")?.mode).toBe(
+    expect(lerSkill({ ...ok, mode: "wizard" }, ICONES, "folder", CORES)?.mode).toBe("");
+    expect(lerSkill({ ...ok, mode: "agent" }, ICONES, "folder", CORES)?.mode).toBe(
       "agent"
     );
   });
@@ -140,17 +151,17 @@ describe("lerSkill", () => {
   it("sem corpo não é skill", () => {
     // Sem corpo o parser da nota descarta o arquivo, e o skill some no mesmo
     // segundo em que foi criado.
-    expect(lerSkill({ ...ok, body: "" }, ICONES, "folder")).toBeNull();
-    expect(lerSkill({ ...ok, body: 42 }, ICONES, "folder")).toBeNull();
+    expect(lerSkill({ ...ok, body: "" }, ICONES, "folder", CORES)).toBeNull();
+    expect(lerSkill({ ...ok, body: 42 }, ICONES, "folder", CORES)).toBeNull();
   });
 
   it("corpo cercado de crase entra limpo", () => {
-    const r = lerSkill({ ...ok, body: "```\nfaz isso\n```" }, ICONES, "folder");
+    const r = lerSkill({ ...ok, body: "```\nfaz isso\n```" }, ICONES, "folder", CORES);
     expect(r?.body).toBe("faz isso");
   });
 
   it("nome quilométrico não estoura o campo", () => {
-    const r = lerSkill({ ...ok, name: "a".repeat(300) }, ICONES, "folder");
+    const r = lerSkill({ ...ok, name: "a".repeat(300) }, ICONES, "folder", CORES);
     expect(r!.name.length).toBeLessThanOrEqual(60);
   });
 });
@@ -228,13 +239,13 @@ describe("lerPergunta", () => {
 
 describe("os prompts", () => {
   it("o de skill leva os ícones permitidos", () => {
-    const p = promptSkill("direto", ICONES);
+    const p = promptSkill("direto", ICONES, CORES);
     expect(p).toContain("graduation-cap");
     expect(p).toContain("Do not ask questions");
   });
 
   it("o guiado permite perguntar, com teto", () => {
-    expect(promptSkill("guiado", ICONES)).toMatch(/up to 3/i);
+    expect(promptSkill("guiado", ICONES, CORES)).toMatch(/up to 3/i);
   });
 
   it("sem notas, ele MANDA devolver lista vazia", () => {

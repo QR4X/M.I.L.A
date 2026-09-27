@@ -94,10 +94,18 @@ export function useAssistant(plugin: AxxaPlugin) {
       turnos: TurnoAssistente[]
     ): Promise<RodadaAssistente<SkillSugerido>> => {
       const permitidos = icones(SKILL_ICONS);
-      const r = await rodar(promptSkill(modo, permitidos), turnos);
+      const r = await rodar(
+        promptSkill(modo, permitidos, PROJECT_COLORS),
+        turnos
+      );
       if (r.erro) return { erro: r.erro };
       if (r.pergunta) return { pergunta: r.pergunta };
-      const draft = lerSkill(r.bruto ?? null, permitidos, SKILL_ICONS[0]);
+      const draft = lerSkill(
+        r.bruto ?? null,
+        permitidos,
+        SKILL_ICONS[0],
+        PROJECT_COLORS
+      );
       return draft
         ? { draft }
         : { erro: "The assistant did not write a prompt. Try saying more." };
