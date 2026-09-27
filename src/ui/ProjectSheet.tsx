@@ -28,19 +28,33 @@ import {
   SheetSwatches,
 } from "./SheetForm";
 import { useState } from "react";
+import type AxxaPlugin from "../main";
+import { AssistantButton, AssistantPanel } from "./AssistantPanel";
+import { useAssistant } from "./useAssistant";
 
 export function ProjectForm({
   draft,
   focar,
   onDraft,
+  plugin,
+  onNotas,
 }: {
   draft: ProjectDraft;
   focar: boolean;
   onDraft: (d: ProjectDraft) => void;
+  plugin: AxxaPlugin;
+  /**
+   * A assistente também sugere NOTAS e INSTRUÇÕES, e essas duas não cabem no
+   * rascunho: `ProjectDraft` é só nome/ícone/cor — o resto do projeto só
+   * existe depois que ele é criado. Quem sabe guardar isso é a folha.
+   */
+  onNotas?: (notas: string[], instrucoes: string) => void;
 }) {
   const set = (campo: Partial<ProjectDraft>) => onDraft({ ...draft, ...campo });
   const cor = projectColor(draft.color);
   const [procurando, setProcurando] = useState(false);
+  const [ajudando, setAjudando] = useState(false);
+  const { indisponivel, pedirProjeto } = useAssistant(plugin);
 
   // Procurar ícone TOMA a tela. O formulário sai inteiro — cartão, nome — e
   // ficam três coisas: voltar, a cor e os ícones. A cor fica porque é ela que
@@ -67,6 +81,32 @@ export function ProjectForm({
 
   return (
     <>
+      {/* Antes de tudo, porque é a alternativa a tudo. */}
+      {ajudando ? (
+        <AssistantPanel
+          para="project"
+          indisponivel={indisponivel}
+          onFechar={() => setAjudando(false)}
+          onPedir={async (modo, turnos) => {
+            const r = await pedirProjeto(modo, turnos);
+            if (r.draft) {
+              set({
+                name: r.draft.name,
+                icon: r.draft.icon,
+                color: r.draft.color,
+              });
+              // Notas e instruções não cabem no rascunho — a folha guarda e
+              // aplica assim que o projeto existir.
+              onNotas?.(r.draft.notes, r.draft.instructions);
+              return { pronto: true };
+            }
+            return { pergunta: r.pergunta, erro: r.erro };
+          }}
+        />
+      ) : (
+        <AssistantButton onClick={() => setAjudando(true)} />
+      )}
+
       <div className="axxa-form-preview">
         <span
           className="axxa-thing-mark"

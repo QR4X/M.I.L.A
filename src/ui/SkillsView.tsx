@@ -228,6 +228,7 @@ export function SkillsView({
           draft={draft ?? SKILL_DRAFT_VAZIO}
           focar={noFormulario}
           onDraft={setDraft}
+          plugin={plugin}
         />
       ) : (
         /* Pilha com respiro: na folha os blocos são irmãos soltos, e irmão

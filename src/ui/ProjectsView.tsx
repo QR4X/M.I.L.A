@@ -107,6 +107,18 @@ export function ProjectsView({
     setDraft({ name: p.name, icon: p.icon, color: p.color });
   };
 
+  /**
+   * O que a assistente sugeriu ALÉM do rascunho: notas de origem e instruções.
+   *
+   * Elas não cabem no `ProjectDraft` (que é nome/ícone/cor) porque só existem
+   * depois que o projeto existe — fonte é caminho anexado a um id, e instrução
+   * é campo do projeto, não do formulário. Ficam aqui esperando o `salvar`.
+   */
+  const [sugerido, setSugerido] = useState<{
+    notes: string[];
+    instructions: string;
+  } | null>(null);
+
   const problema = draft
     ? projectProblema(draft, projects, editandoId ?? undefined)
     : null;
@@ -118,7 +130,20 @@ export function ProjectsView({
       await update((prev) =>
         prev.map((x) =>
           x.id === editandoId
-            ? { ...x, name: nome, icon: draft.icon, color: draft.color }
+            ? {
+                ...x,
+                name: nome,
+                icon: draft.icon,
+                color: draft.color,
+                // Editando, o que a assistente sugeriu SOMA ao que já havia:
+                // ela não sabe o que você anexou antes dela, e apagar fonte
+                // por conta própria seria a coisa mais cara que ela poderia
+                // fazer aqui.
+                sources: sugerido
+                  ? [...new Set([...x.sources, ...sugerido.notes])]
+                  : x.sources,
+                instructions: sugerido?.instructions || x.instructions,
+              }
             : x
         )
       );
@@ -128,7 +153,8 @@ export function ProjectsView({
         name: nome,
         icon: draft.icon,
         color: draft.color,
-        sources: [],
+        sources: sugerido?.notes ?? [],
+        instructions: sugerido?.instructions || undefined,
         // A conversa que pediu o projeto entra junto: quem criou o projeto a
         // partir do menu dela não devia ter que voltar lá e repetir o caminho.
         chatIds: chatPendente ? [chatPendente] : [],
@@ -143,6 +169,7 @@ export function ProjectsView({
     }
     setDraft(null);
     setEditandoId(null);
+    setSugerido(null);
   };
 
   const apagar = async (p: Project) => {
@@ -301,6 +328,7 @@ export function ProjectsView({
     form: () => {
       setDraft(null);
       setEditandoId(null);
+      setSugerido(null);
     },
     instrucoes: () => setInstrucoes(null),
     escolher: () => setEscolhendo(false),
@@ -408,6 +436,8 @@ export function ProjectsView({
           draft={draft ?? PROJECT_DRAFT_VAZIO}
           focar={nivel === "form"}
           onDraft={setDraft}
+          plugin={plugin}
+          onNotas={(notes, instructions) => setSugerido({ notes, instructions })}
         />
       )}
 

@@ -1,0 +1,131 @@
+// src/assistant/prompt.ts
+// O que a assistente SABE.
+//
+// Ela não é um chat com um pedido colado na frente. O que a torna útil é saber
+// duas coisas que ninguém de fora sabe: como um skill e um projeto funcionam
+// NESTE app (o corpo do skill vira texto no campo, as instruções do projeto
+// SOMAM ao prompt em vez de substituí-lo), e como um vault do Obsidian é
+// escrito (wikilink, frontmatter, nota diária, tag). Sem a primeira, ela
+// escreve conselho genérico de prompt; sem a segunda, escreve como se o vault
+// fosse uma pasta de arquivos de texto.
+//
+// O contrato de saída é JSON, e é apertado de propósito: os campos são de um
+// formulário, não de uma conversa, e tudo que sai daqui passa pelo parse (que
+// não confia em nada — ver parse.ts).
+
+/** Regras que valem pras duas — quem ela é, e como responde. */
+const BASE = `You help someone set up their AXXA workspace inside Obsidian.
+You know Obsidian well: wikilinks ([[Note]]), frontmatter, daily notes, tags,
+folders, and that a vault is someone's own writing — not a database.
+
+Rules for every answer:
+- Answer with ONE JSON object and nothing else. No prose, no code fences.
+- Write in the same language the person used.
+- Be concrete. Never invent a file, folder or note that was not given to you.`;
+
+/** O que um skill É aqui — a parte que não dá pra inferir de fora. */
+const SOBRE_SKILL = `A SKILL in AXXA is a saved prompt. Tapping it drops its
+text into the composer, ready to send — it is not an agent, not a macro, not a
+setting. So the body must read as something a person would type, in the first
+person, addressed to the assistant.
+
+Fields:
+- "name": 2-4 words, what it DOES, not what it is. "Weekly review", not
+  "Review assistant".
+- "description": one line shown under the name in the list. Optional.
+- "icon": one of the allowed names given below. Nothing else.
+- "mode": "" (opens wherever the person is), "chat" (plain conversation),
+  "vault-qa" (answers from the vault's notes), or "agent" (can write to the
+  vault). Choose "vault-qa" only if answering NEEDS the person's notes; choose
+  "agent" only if the task must CHANGE files.
+- "body": the prompt itself. Several lines is fine. Ask for the shape of the
+  answer when the shape matters (a list, a table, three bullets).`;
+
+/** O que um projeto É aqui. */
+const SOBRE_PROJETO = `A PROJECT in AXXA groups chats around one subject, and
+carries two things into every new chat started inside it: its source notes and
+its custom instructions.
+
+The instructions ADD to how the app already works — they never replace it. So
+do not write "you are a helpful assistant" or restate general behaviour. Write
+only what is true about THIS subject: vocabulary, constraints, what the person
+is trying to get done, how they want to be answered.
+
+Fields:
+- "name": 1-3 words, the subject as the person would say it.
+- "icon" and "color": from the allowed lists below, matching the subject.
+- "instructions": what the model should know in every chat here. A few lines.
+  Empty string if nothing is genuinely worth saying.
+- "notes": paths to attach as sources, copied EXACTLY from the vault list
+  given below. Only notes that clearly belong to this subject — three right
+  ones beat ten plausible ones. Empty array if none fit or no list was given.`;
+
+/** Uma volta só: nada de perguntar, devolve o rascunho. */
+const DIRETO = `Return: {"draft": { ...the fields... }}
+Do not ask questions. Fill everything from what you were told; where you are
+unsure, make the most useful reasonable choice.`;
+
+/** Guiado: pergunta uma coisa de cada vez, e fecha. */
+const GUIADO = `You may ask up to 3 short questions before writing, one at a
+time, and only when the answer would genuinely change what you write.
+To ask: {"ask": "your question"}
+When you have enough (or after 3 questions): {"draft": { ...the fields... }}
+Ask about the person's purpose and habits, never about the fields themselves —
+they will review and edit everything afterwards.`;
+
+export type ModoAssistente = "direto" | "guiado";
+
+function listas(rotulo: string, itens: readonly string[]): string {
+  return `Allowed ${rotulo}: ${itens.join(", ")}.`;
+}
+
+export function promptSkill(
+  modo: ModoAssistente,
+  icones: readonly string[]
+): string {
+  return [
+    BASE,
+    SOBRE_SKILL,
+    listas("icon names", icones),
+    modo === "direto" ? DIRETO : GUIADO,
+  ].join("\n\n");
+}
+
+export function promptProjeto(
+  modo: ModoAssistente,
+  icones: readonly string[],
+  cores: readonly string[],
+  /** Caminhos do vault que a pessoa autorizou a enviar. Vazio = não enviar. */
+  notas: readonly string[]
+): string {
+  const partes = [
+    BASE,
+    SOBRE_PROJETO,
+    listas("icon names", icones),
+    listas("color values", cores),
+  ];
+  // A lista do vault só entra quando existe. Dizer "here are the notes:" e não
+  // mandar nada convida o modelo a preencher o vazio com caminhos plausíveis.
+  if (notas.length)
+    partes.push(
+      `Notes in this vault (use these exact paths, or none):\n${notas
+        .map((n) => `- ${n}`)
+        .join("\n")}`
+    );
+  else
+    partes.push(
+      `You have NOT been given the vault's notes. Return "notes": [].`
+    );
+  partes.push(modo === "direto" ? DIRETO : GUIADO);
+  return partes.join("\n\n");
+}
+
+/**
+ * Quantas notas cabem no prompt.
+ *
+ * Teto porque um vault de dez mil notas viraria um prompt de centenas de
+ * milhares de tokens — no modelo free isso é um erro de contexto, não uma
+ * resposta ruim. E porque é o nome das SUAS notas indo pra fora: quanto menos
+ * sair, melhor, e a sugestão fica boa com as mais recentes.
+ */
+export const TETO_NOTAS = 300;

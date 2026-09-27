@@ -73,6 +73,26 @@ export interface AxxaSettings {
   activeModels: Record<string, string[]>;
   /** Modelos FAVORITOS por provider — aparecem na tela inicial. Máx. 5. */
   favoriteModels: Record<string, string[]>;
+  // ---- A assistente de criação (skills e projetos)
+  /**
+   * Onde a ASSISTENTE roda — separada do modelo do chat de propósito.
+   *
+   * Escrever um skill é trabalho de formulário: texto curto, estruturado,
+   * revisado por quem pediu antes de virar qualquer coisa. Não é a tarefa que
+   * justifica o modelo caro da conversa. Vazio = a gente descobre sozinha o
+   * favorito free do OpenRouter (ver assistant/model.ts): id de modelo free
+   * muda de nome, e um id fixo aqui viraria um 404 num dia qualquer.
+   */
+  assistantProvider: string;
+  assistantModel: string;
+  /**
+   * A assistente de PROJETO pode ver os NOMES das notas do vault, pra sugerir
+   * quais anexar como fonte. Só os caminhos, nunca o conteúdo — mas caminho de
+   * nota já é assunto de quem escreveu, então isto é uma escolha explícita e
+   * nasce DESLIGADA. Sem ela, a assistente é instruída a não sugerir nota
+   * nenhuma (ver prompt.ts).
+   */
+  assistantSeesVault: boolean;
   /** O "Data controls" da OpenAI está ligado na conta? Ligando lá, ela dá uma
    *  cota diária de tokens sem custo. É um interruptor DELES — aqui a gente só
    *  registra, pra poder mostrar a cota certa em vez de prometer desconto que
@@ -208,6 +228,10 @@ const DEFAULT_SETTINGS: AxxaSettings = {
     ollama: ["llama3.2", "qwen2.5", "deepseek-r1", "mistral"],
   },
   favoriteModels: {},
+  assistantProvider: "",
+  assistantModel: "",
+  // Desligada: mandar o nome das suas notas pra fora é escolha, não padrão.
+  assistantSeesVault: false,
   // Desligado e tier 1: o padrão é o que a conta nova TEM, não o melhor caso.
   openaiDataSharing: false,
   openaiTier: 1,

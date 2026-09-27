@@ -29,19 +29,26 @@ import {
   SheetTextarea,
 } from "./SheetForm";
 import { useState } from "react";
+import type AxxaPlugin from "../main";
+import { AssistantButton, AssistantPanel } from "./AssistantPanel";
+import { useAssistant } from "./useAssistant";
 
 export function SkillForm({
   draft,
   focar,
   onDraft,
+  plugin,
 }: {
   draft: SkillDraft;
   /** O campo do nome toma o foco (a folha acabou de abrir neste nível). */
   focar: boolean;
   onDraft: (d: SkillDraft) => void;
+  plugin: AxxaPlugin;
 }) {
   const set = (campo: Partial<SkillDraft>) => onDraft({ ...draft, ...campo });
   const [procurando, setProcurando] = useState(false);
+  const [ajudando, setAjudando] = useState(false);
+  const { indisponivel, pedirSkill } = useAssistant(plugin);
 
   // Procurar ícone toma a tela, como nos projetos. Aqui nem a cor sobra: skill
   // não tem paleta, então fica o voltar e os ícones. Sair de cima de um
@@ -58,6 +65,29 @@ export function SkillForm({
 
   return (
     <>
+      {/* A assistente vem ANTES de tudo, porque é a alternativa a tudo: quem
+          abre o formulário sem saber o que escrever precisa ver a saída antes
+          de encarar cinco campos vazios. Quem sabe, ignora uma linha. */}
+      {ajudando ? (
+        <AssistantPanel
+          para="skill"
+          indisponivel={indisponivel}
+          onFechar={() => setAjudando(false)}
+          onPedir={async (modo, turnos) => {
+            const r = await pedirSkill(modo, turnos);
+            if (r.draft) {
+              // PREENCHE, não salva: o resultado cai nos mesmos campos que a
+              // pessoa já estava olhando, e ela edita o que quiser.
+              set(r.draft);
+              return { pronto: true };
+            }
+            return { pergunta: r.pergunta, erro: r.erro };
+          }}
+        />
+      ) : (
+        <AssistantButton onClick={() => setAjudando(true)} />
+      )}
+
       {/* O skill como ele vai aparecer na lista. Não é enfeite: é o que faz o
           seletor de ícone e a descrição terem sentido antes de salvar —
           senão são dois campos que só se explicam depois. */}

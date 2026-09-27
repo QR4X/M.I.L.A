@@ -251,6 +251,10 @@ Conteúdo de mentira da nota, o bastante pra virar contexto.`,
     unreadChats: ["9"],
     openaiApiKey: "sk-test",
     anthropicApiKey: "sk-ant",
+    // Com chave e com um free na lista: é o estado em que a assistente de
+    // criação FUNCIONA. Sem isto o painel dela só sabia mostrar o convite pra
+    // configurar, e o caminho feliz nunca aparecia no preview.
+    openrouterApiKey: "sk-or-test",
     activeModels: {
       // Longa DE PROPÓSITO: é com a lista rolando que dá pra ver se o cartão
       // chega no fim da tela ou morre atrás de uma faixa.
@@ -260,6 +264,11 @@ Conteúdo de mentira da nota, o bastante pra virar contexto.`,
         "tts-1", "tts-1-hd",
       ],
       anthropic: ["claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5"],
+      openrouter: [
+        "anthropic/claude-3.5-sonnet",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "deepseek/deepseek-chat:free",
+      ],
     },
     // ?favoritos=0 zera os favoritos: é o estado em que a folha de modelo já
     // lista TUDO no primeiro nível e a linha "Show list" some — e foi esse o
@@ -356,7 +365,14 @@ Conteúdo de mentira da nota, o bastante pra virar contexto.`,
   providerCredential: (id: string) =>
     params.get("nokey")
       ? ""
-      : ({ openai: "sk-test", anthropic: "sk-ant", gemini: "gm-test" })[id] ?? "",
+      : ({
+          openai: "sk-test",
+          anthropic: "sk-ant",
+          gemini: "gm-test",
+          // A assistente de criação roda no OpenRouter: sem isto aqui, o
+          // preview só sabia mostrar o convite pra colar a chave.
+          openrouter: "sk-or-test",
+        })[id] ?? "",
   // Catálogo falso: o preview não fala com a rede. Grande e bagunçado DE
   // PROPÓSITO — é assim que o catálogo real chega, e é o que o agrupamento
   // por papel/família tem que domar.

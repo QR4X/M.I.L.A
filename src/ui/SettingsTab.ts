@@ -24,6 +24,7 @@ import {
 } from "../core/providersMeta";
 import { EFFORT_LEVELS, EFFORT_LABELS } from "../core/effort";
 import { AXXA_HIDDEN } from "../core/vaultPaths";
+import { escolherAssistente, ehFree } from "../assistant/model";
 import { CHAT_MODES } from "../core/session";
 import { getAllEmbeddingModels } from "../rag/types";
 import { indexVault } from "../rag/indexer";
@@ -971,7 +972,63 @@ export class AxxaSettingsTab extends PluginSettingTab {
         });
       });
 
+    this.renderAssistant(el);
     this.renderVoice(el);
+  }
+
+  // ── A assistente de criação ────────────────────────────────────────────────
+  // Ela escreve skills e projetos por você. Mora aqui, e não junto dos
+  // providers, porque não é sobre com quem você conversa — é sobre quem te
+  // ajuda a montar as coisas. E tem modelo PRÓPRIO de propósito: preencher um
+  // formulário não justifica o modelo caro da conversa.
+
+  private renderAssistant(el: HTMLElement): void {
+    const s = this.s;
+    new Setting(el).setName("Assistant").setHeading();
+
+    const alvo = escolherAssistente({
+      assistantProvider: s.assistantProvider,
+      assistantModel: s.assistantModel,
+      favoriteModels: s.favoriteModels,
+      activeModels: s.activeModels,
+    });
+
+    new Setting(el)
+      .setName("Model")
+      .setDesc(
+        alvo
+          ? `Writes skills and projects for you. Now: ${alvo.model}${
+              ehFree(alvo.model) ? " (free)" : ""
+            }`
+          : "Nothing free found yet — run SCAN on OpenRouter, or pick a model here."
+      )
+      .addDropdown((d) => {
+        // "Automático" primeiro, e é o padrão: id de modelo free muda de nome e
+        // some do catálogo, então deixar a gente procurar sozinha envelhece
+        // melhor que fixar um.
+        d.addOption("", "Automatic — first free OpenRouter model");
+        for (const id of s.activeModels?.openrouter ?? [])
+          d.addOption(id, ehFree(id) ? `${id} · free` : id);
+        d.setValue(s.assistantModel ?? "").onChange(async (v) => {
+          s.assistantModel = v;
+          s.assistantProvider = v ? "openrouter" : "";
+          await this.save();
+          this.renderBody();
+        });
+      });
+
+    new Setting(el)
+      .setName("Let it see your note names")
+      .setDesc(
+        "So it can suggest which notes to attach to a project. Only the paths " +
+          "are sent — never what is inside them. Off by default."
+      )
+      .addToggle((t) =>
+        t.setValue(!!s.assistantSeesVault).onChange(async (v) => {
+          s.assistantSeesVault = v;
+          await this.save();
+        })
+      );
   }
 
   // ── Voz ────────────────────────────────────────────────────────────────────

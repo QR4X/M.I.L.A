@@ -6184,3 +6184,123 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   width: 15px;
   height: 15px;
 }
+
+/* ── a ASSISTENTE de criação ────────────────────────────────────────────────
+   O botão que oferece, e o painel que atende. Os dois moram DENTRO do
+   formulário, acima dos campos: a assistente não salva nada, ela PREENCHE — o
+   resultado aparece nos mesmos campos que a pessoa já estava olhando. Numa
+   tela própria, o resultado chegaria como fato consumado; aqui chega como
+   rascunho. */
+
+/* O convite. Pílula de texto, não barra em accent: ela é uma ALTERNATIVA ao
+   formulário, não o que a tela quer que você faça — quem já sabe o que
+   escrever passa direto por ela sem tropeçar. */
+.axxa-root button.axxa-assist-abrir {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--axxa-2);
+  align-self: flex-start;
+  margin-bottom: var(--axxa-3);
+  min-height: 34px;
+  padding: 0 var(--axxa-3);
+  border-radius: var(--axxa-r-pill);
+  border: 1px solid var(--axxa-hairline);
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--interactive-accent);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+}
+
+.axxa-root button.axxa-assist-abrir:hover {
+  background-color: var(--axxa-hover);
+}
+
+.axxa-root .axxa-assist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--axxa-2);
+  margin-bottom: var(--axxa-4);
+  padding: var(--axxa-3);
+  border-radius: var(--axxa-r);
+  background-color: var(--axxa-s1);
+  box-shadow: var(--axxa-e1);
+}
+
+.axxa-root .axxa-assist-head {
+  display: flex;
+  align-items: center;
+  gap: var(--axxa-2);
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+}
+
+/* O X vai pra ponta e o título fica onde começou — o painel abre no meio de um
+   formulário, e um título centralizado ali competiria com os rótulos. */
+.axxa-root .axxa-assist-head > button {
+  margin-left: auto;
+}
+
+/* A pergunta dela é FALA, não rótulo: sem caixa, sem negrito, no tamanho do
+   texto — o campo abaixo é a resposta. */
+.axxa-root .axxa-assist-ask {
+  margin: 0;
+  color: var(--text-normal);
+}
+
+.axxa-root .axxa-assist-note,
+.axxa-root .axxa-assist-erro {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--axxa-2);
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.axxa-root .axxa-assist-campo {
+  min-height: 72px;
+}
+
+.axxa-root .axxa-assist-acoes {
+  display: flex;
+  align-items: center;
+  gap: var(--axxa-2);
+}
+
+/* O botão que conclui a rodada fica na DIREITA, como todo "faz agora" do app. */
+.axxa-root button.axxa-assist-cta {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--axxa-2);
+  min-height: 36px;
+  padding: 0 var(--axxa-4);
+  border-radius: var(--axxa-r-pill);
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-weight: var(--font-semibold);
+}
+
+.axxa-root button.axxa-assist-cta:disabled,
+.axxa-root button.axxa-assist-abrir:disabled {
+  opacity: 0.5;
+}
+
+/* Girando enquanto escreve. `transform` numa camada própria: a folha inteira
+   repinta a cada quadro se a animação mexer no layout. */
+.axxa-root button.axxa-assist-cta:disabled .axxa-icon svg {
+  animation: axxa-assist-gira 900ms linear infinite;
+}
+
+@keyframes axxa-assist-gira {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .axxa-root button.axxa-assist-cta:disabled .axxa-icon svg {
+    animation: none;
+  }
+}
