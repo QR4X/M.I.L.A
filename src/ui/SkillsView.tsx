@@ -213,11 +213,13 @@ export function SkillsView({
         onClose();
       }}
       onBack={noFormulario ? fecharNivel : undefined}
-      // Nasce grande: é um acervo, e acervo pequeno mostra dois cartões.
-      // Nasce do tamanho do conteúdo, e cresce sozinha quando um campo
-      // pega o foco (ver Sheet.tsx). Nascer grande fazia um projeto sem nota
-      // nenhuma abrir uma folha de tela inteira com três linhas dentro.
-            // O painel não toma o foco: no formulário quem toma é o campo do nome, e
+      // Nasce GRANDE. Skills é um acervo em grade de dois: do tamanho do
+      // conteúdo, uma fileira e meia aparecia, e a primeira coisa a fazer era
+      // arrastar a folha pra poder olhar. Um acervo se percorre com o olho.
+      // (Projetos é o caso oposto e por isso usa `minSize="mid"`: lá a lista é
+      // de uma coluna e a folha grande abriria com metade de vazio.)
+      startFull
+      // O painel não toma o foco: no formulário quem toma é o campo do nome, e
       // o efeito do pai roda depois do do filho (a mesma armadilha da busca).
       focusOnOpen={false}
     >
