@@ -6187,28 +6187,45 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    tela própria, o resultado chegaria como fato consumado; aqui chega como
    rascunho. */
 
-/* O convite. Pílula de texto, não barra em accent: ela é uma ALTERNATIVA ao
-   formulário, não o que a tela quer que você faça — quem já sabe o que
-   escrever passa direto por ela sem tropeçar. */
-.axxa-root button.axxa-assist-abrir {
+/* O convite mora DENTRO do campo que ele preenche.
+   Como pílula solta acima do formulário, ele era mais um item da pilha: a
+   pessoa lia "Write it for me", "Name" e "Prompt" como três coisas do mesmo
+   nível. Aqui ele é o que é — uma oferta sobre AQUELE espaço vazio, no canto
+   onde o olho já está quando percebe que não sabe o que escrever. */
+.axxa-root .axxa-spark-wrap {
+  position: relative;
+  display: block;
+}
+
+.axxa-root button.axxa-assist-spark {
+  position: absolute;
+  right: 6px;
+  /* Encostado embaixo, não centralizado: no textarea de sete linhas, o meio
+     fica no vazio do campo; no fim, ele é sempre o mesmo canto. */
+  bottom: 6px;
   display: inline-flex;
   align-items: center;
-  gap: var(--axxa-2);
-  align-self: flex-start;
-  margin-bottom: var(--axxa-3);
-  min-height: 34px;
-  padding: 0 var(--axxa-3);
-  border-radius: var(--axxa-r-pill);
-  border: 1px solid var(--axxa-hairline);
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--axxa-r-sm);
   background-color: transparent;
   box-shadow: none;
   color: var(--interactive-accent);
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-medium);
 }
 
-.axxa-root button.axxa-assist-abrir:hover {
+.axxa-root button.axxa-assist-spark:hover {
   background-color: var(--axxa-hover);
+}
+
+/* O respiro pro botão vem do próprio campo: sem ele o texto corre por baixo
+   do desenho justamente quando fica comprido. */
+.axxa-root .axxa-input.axxa-has-spark {
+  padding-right: 42px;
+}
+
+.axxa-root .axxa-textarea.axxa-has-spark {
+  padding-bottom: 40px;
 }
 
 .axxa-root .axxa-assist {

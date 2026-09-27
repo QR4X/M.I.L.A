@@ -29,7 +29,7 @@ import {
 } from "./SheetForm";
 import { useState } from "react";
 import type AxxaPlugin from "../main";
-import { AssistantButton, AssistantPanel } from "./AssistantPanel";
+import { AssistantPanel, ComAssistente } from "./AssistantPanel";
 import { useAssistant } from "./useAssistant";
 
 export function ProjectForm({
@@ -81,32 +81,6 @@ export function ProjectForm({
 
   return (
     <>
-      {/* Antes de tudo, porque é a alternativa a tudo. */}
-      {ajudando ? (
-        <AssistantPanel
-          para="project"
-          indisponivel={indisponivel}
-          onFechar={() => setAjudando(false)}
-          onPedir={async (modo, turnos) => {
-            const r = await pedirProjeto(modo, turnos);
-            if (r.draft) {
-              set({
-                name: r.draft.name,
-                icon: r.draft.icon,
-                color: r.draft.color,
-              });
-              // Notas e instruções não cabem no rascunho — a folha guarda e
-              // aplica assim que o projeto existir.
-              onNotas?.(r.draft.notes, r.draft.instructions);
-              return { pronto: true };
-            }
-            return { pergunta: r.pergunta, erro: r.erro };
-          }}
-        />
-      ) : (
-        <AssistantButton onClick={() => setAjudando(true)} />
-      )}
-
       <div className="axxa-form-preview">
         <span
           className="axxa-thing-mark"
@@ -124,12 +98,43 @@ export function ProjectForm({
       </div>
 
       <SheetField label="Name">
-        <SheetInput
-          value={draft.name}
-          placeholder="Thesis, Client X, Apartment…"
-          autoFocus={focar}
-          onChange={(name) => set({ name })}
-        />
+        {/* O primeiro campo vazio da tela é onde a oferta faz sentido:
+            daqui ela monta o projeto inteiro — nome, ícone, cor,
+            instruções e as notas de origem. */}
+        <ComAssistente
+          aberto={ajudando}
+          onAbrir={() => setAjudando(true)}
+          painel={
+            <AssistantPanel
+              para="project"
+              indisponivel={indisponivel}
+              onFechar={() => setAjudando(false)}
+              onPedir={async (modo, turnos) => {
+                const r = await pedirProjeto(modo, turnos);
+                if (r.draft) {
+                  set({
+                    name: r.draft.name,
+                    icon: r.draft.icon,
+                    color: r.draft.color,
+                  });
+                  // Notas e instruções não cabem no rascunho — a folha
+                  // guarda e aplica assim que o projeto existir.
+                  onNotas?.(r.draft.notes, r.draft.instructions);
+                  return { pronto: true };
+                }
+                return { pergunta: r.pergunta, erro: r.erro };
+              }}
+            />
+          }
+        >
+          <SheetInput
+            comSpark
+            value={draft.name}
+            placeholder="Thesis, Client X, Apartment…"
+            autoFocus={focar}
+            onChange={(name) => set({ name })}
+          />
+        </ComAssistente>
       </SheetField>
 
       <SheetField label="Color">

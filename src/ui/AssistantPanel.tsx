@@ -13,7 +13,7 @@
 // O mesmo endpoint serve aos dois: o modelo devolve `{"ask": …}` ou
 // `{"draft": …}`, e quem decide quando tem o bastante é ele (ver prompt.ts).
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
 import type { ModoAssistente } from "../assistant/prompt";
 import type { TurnoAssistente } from "../assistant/run";
@@ -169,12 +169,66 @@ export function AssistantPanel({
   );
 }
 
-/** O botão que ABRE o painel — a mesma peça nos dois formulários. */
-export function AssistantButton({ onClick }: { onClick: () => void }) {
+/**
+ * O convite, DENTRO do campo que ele preenche.
+ *
+ * Era uma pílula solta acima do formulário, e ali ela era mais um item da
+ * pilha: a pessoa lia "Write it for me", "Name", "Prompt" como três coisas do
+ * mesmo nível. Dentro do campo, ela vira o que é — uma oferta sobre AQUELE
+ * espaço vazio, no lugar onde o olho já está quando percebe que não sabe o que
+ * escrever. É o mesmo lugar em que a lupa mora numa busca.
+ *
+ * `onMouseDown` com `preventDefault` porque o campo pode estar com o foco: sem
+ * isso o toque tira o cursor de lá antes do clique, e num celular isso fecha o
+ * teclado — a tela inteira salta no instante em que se toca no botão.
+ */
+export function AssistantSpark({
+  onClick,
+  titulo = "Write it for me",
+}: {
+  onClick: () => void;
+  titulo?: string;
+}) {
   return (
-    <button type="button" className="axxa-assist-abrir" onClick={onClick}>
+    <button
+      type="button"
+      className="axxa-assist-spark"
+      aria-label={titulo}
+      title={titulo}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+    >
       <Icon name="sparkles" size={16} />
-      <span>Write it for me</span>
     </button>
+  );
+}
+
+/**
+ * O campo com o botão dentro.
+ *
+ * `position: relative` no invólucro e o botão por cima; o respiro pra ele vem
+ * de uma classe no próprio campo (ver `.axxa-has-spark`), senão o texto passa
+ * por baixo do botão exatamente quando fica comprido.
+ */
+export function ComAssistente({
+  children,
+  aberto,
+  onAbrir,
+  painel,
+}: {
+  children: ReactNode;
+  aberto: boolean;
+  onAbrir: () => void;
+  /** O painel, renderizado LOGO ABAIXO do campo quando aberto. */
+  painel: ReactNode;
+}) {
+  return (
+    <>
+      <span className="axxa-spark-wrap">
+        {children}
+        {!aberto && <AssistantSpark onClick={onAbrir} />}
+      </span>
+      {aberto && painel}
+    </>
   );
 }

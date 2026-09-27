@@ -41,16 +41,20 @@ export function SheetInput({
   value,
   placeholder,
   autoFocus,
+  comSpark,
   onChange,
 }: {
   value: string;
   placeholder?: string;
   autoFocus?: boolean;
+  /** Abre espaço pro botão da assistente, que mora dentro do campo. Sem isto
+   *  o texto passa por baixo dele exatamente quando fica comprido. */
+  comSpark?: boolean;
   onChange: (v: string) => void;
 }) {
   return (
     <input
-      className="axxa-input"
+      className={comSpark ? "axxa-input axxa-has-spark" : "axxa-input"}
       type="text"
       value={value}
       placeholder={placeholder}
@@ -67,16 +71,19 @@ export function SheetTextarea({
   value,
   placeholder,
   rows = 6,
+  comSpark,
   onChange,
 }: {
   value: string;
   placeholder?: string;
   rows?: number;
+  /** Ver SheetInput: espaço pro botão da assistente. */
+  comSpark?: boolean;
   onChange: (v: string) => void;
 }) {
   return (
     <textarea
-      className="axxa-textarea"
+      className={comSpark ? "axxa-textarea axxa-has-spark" : "axxa-textarea"}
       value={value}
       placeholder={placeholder}
       rows={rows}

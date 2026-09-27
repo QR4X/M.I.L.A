@@ -30,7 +30,7 @@ import {
 } from "./SheetForm";
 import { useState } from "react";
 import type AxxaPlugin from "../main";
-import { AssistantButton, AssistantPanel } from "./AssistantPanel";
+import { AssistantPanel, ComAssistente } from "./AssistantPanel";
 import { useAssistant } from "./useAssistant";
 
 export function SkillForm({
@@ -65,29 +65,6 @@ export function SkillForm({
 
   return (
     <>
-      {/* A assistente vem ANTES de tudo, porque é a alternativa a tudo: quem
-          abre o formulário sem saber o que escrever precisa ver a saída antes
-          de encarar cinco campos vazios. Quem sabe, ignora uma linha. */}
-      {ajudando ? (
-        <AssistantPanel
-          para="skill"
-          indisponivel={indisponivel}
-          onFechar={() => setAjudando(false)}
-          onPedir={async (modo, turnos) => {
-            const r = await pedirSkill(modo, turnos);
-            if (r.draft) {
-              // PREENCHE, não salva: o resultado cai nos mesmos campos que a
-              // pessoa já estava olhando, e ela edita o que quiser.
-              set(r.draft);
-              return { pronto: true };
-            }
-            return { pergunta: r.pergunta, erro: r.erro };
-          }}
-        />
-      ) : (
-        <AssistantButton onClick={() => setAjudando(true)} />
-      )}
-
       {/* O skill como ele vai aparecer na lista. Não é enfeite: é o que faz o
           seletor de ícone e a descrição terem sentido antes de salvar —
           senão são dois campos que só se explicam depois. */}
@@ -124,14 +101,39 @@ export function SkillForm({
         label="Prompt"
         hint="What gets written for you when you use the skill."
       >
-        <SheetTextarea
-          value={draft.body}
-          rows={7}
-          placeholder={
-            "Go through this week's notes and tell me:\n- what moved\n- what stalled\n- what I should drop"
+        {/* A assistente mora DENTRO deste campo: é ele que ela escreve, e é
+            olhando pra ele vazio que a pessoa percebe que não sabe começar. */}
+        <ComAssistente
+          aberto={ajudando}
+          onAbrir={() => setAjudando(true)}
+          painel={
+            <AssistantPanel
+              para="skill"
+              indisponivel={indisponivel}
+              onFechar={() => setAjudando(false)}
+              onPedir={async (modo, turnos) => {
+                const r = await pedirSkill(modo, turnos);
+                if (r.draft) {
+                  // PREENCHE, não salva: o resultado cai nos mesmos campos
+                  // que a pessoa já estava olhando, e ela edita o que quiser.
+                  set(r.draft);
+                  return { pronto: true };
+                }
+                return { pergunta: r.pergunta, erro: r.erro };
+              }}
+            />
           }
-          onChange={(body) => set({ body })}
-        />
+        >
+          <SheetTextarea
+            comSpark
+            value={draft.body}
+            rows={7}
+            placeholder={
+              "Go through this week's notes and tell me:\n- what moved\n- what stalled\n- what I should drop"
+            }
+            onChange={(body) => set({ body })}
+          />
+        </ComAssistente>
       </SheetField>
 
       <SheetField label="Description" hint="One line, shown in the list.">
