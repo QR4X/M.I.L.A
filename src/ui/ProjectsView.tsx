@@ -297,6 +297,12 @@ export function ProjectsView({
     <Sheet
       title={TITULOS[nivel]}
       footer={rodape}
+      // Nasce média, mesmo com dois projetos. Sendo "a altura do conteúdo", a
+      // folha contava quantos projetos existem antes de a pessoa ler um: quem
+      // tinha dois abria uma faixa de dois dedos, quem tinha oito abria meia
+      // tela. Com o piso ela abre no mesmo lugar toda vez — e o espaço vazio
+      // embaixo dos dois primeiros é onde os próximos vão entrar.
+      minSize="mid"
       // Criar mora na barra, como na folha de skills: é o que esta lista
       // oferece. O rodapé continua sendo de quem CONCLUI (salvar, ou começar
       // a conversa de um projeto aberto).

@@ -65,6 +65,7 @@ export function Sheet({
   onClose,
   onBack,
   startFull,
+  minSize,
   focusOnOpen = true,
   children,
 }: {
@@ -109,6 +110,21 @@ export function Sheet({
    *  teclado já come metade — abrir pequena deixaria dois resultados à vista
    *  e obrigaria a um arrasto antes de ler qualquer coisa. */
   startFull?: boolean;
+  /**
+   * Um PISO pro tamanho pequeno: a folha nunca fica menor que isto, mesmo com
+   * pouco conteúdo.
+   *
+   * É o caso dos projetos. Como o pequeno é "a altura do conteúdo", uma lista
+   * de dois projetos abria uma folha de dois dedos — e o tamanho da folha
+   * virava uma informação sobre o acervo em vez de uma sobre a tela. Com o
+   * piso, ela abre no mesmo lugar toda vez, e quem tem dois projetos vê o
+   * espaço onde os outros vão entrar.
+   *
+   * Piso, e não `startFull`: continua sendo o tamanho PEQUENO da folha, então
+   * o gesto não muda — pra cima cresce, pra baixo fecha, e voltar do grande
+   * pousa aqui em vez de encolher até o conteúdo.
+   */
+  minSize?: "mid";
   /** Por padrão o painel toma o foco ao abrir (é o que faz o teclado físico
    *  navegar a folha). Quem tem um campo lá dentro que abre COM teclado passa
    *  `false`: senão o painel rouba o foco do campo — o efeito do pai roda
@@ -372,7 +388,13 @@ export function Sheet({
       <div className="axxa-scrim" onClick={onClose} />
       <div
         ref={panelRef}
-        className={size === "full" ? "axxa-sheet is-full" : "axxa-sheet"}
+        className={
+          size === "full"
+            ? "axxa-sheet is-full"
+            : minSize === "mid"
+              ? "axxa-sheet is-mid"
+              : "axxa-sheet"
+        }
         role="dialog"
         aria-modal="true"
         aria-label={title}
