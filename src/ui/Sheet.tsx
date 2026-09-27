@@ -52,6 +52,38 @@ export function useSheetFull(): void {
   }, [expandir]);
 }
 
+/**
+ * Um NÍVEL declarado pelo conteúdo.
+ *
+ * A folha já tem níveis — lista → projeto → notas —, mas quem os conhece é
+ * quem monta a folha. O catálogo de ícones é um nível que nasce três andares
+ * abaixo, dentro de um formulário, e a barra de cima não sabia dele: o título
+ * continuava dizendo "New skill" enquanto a tela mostrava ícones, e a seta de
+ * voltar pulava o formulário inteiro e caía na lista de skills. Voltar
+ * desfazia dois toques em vez de um.
+ *
+ * Com isto o conteúdo EMPRESTA seu título e seu voltar à barra enquanto está
+ * na tela, e devolve ao sair. A regra da casa continua de pé: a seta desfaz o
+ * toque que trouxe você.
+ */
+const SheetLevelCtx = createContext<{
+  push: (titulo: string, voltar: () => void) => void;
+  pop: () => void;
+}>({ push: () => {}, pop: () => {} });
+
+export function useSheetLevel(titulo: string, voltar: () => void): void {
+  const { push, pop } = useContext(SheetLevelCtx);
+  // O callback vive numa ref e o efeito depende só do TÍTULO: `voltar` ganha
+  // identidade nova a cada render do filho, e como dependência faria o nível
+  // ser desmontado e remontado a cada tecla digitada na tela.
+  const ref = useRef(voltar);
+  ref.current = voltar;
+  useEffect(() => {
+    push(titulo, () => ref.current());
+    return () => pop();
+  }, [titulo, push, pop]);
+}
+
 /** Quanto puxar além da borda pra o gesto valer. Menos que isso é solavanco
  *  de rolagem, não intenção. */
 const PULL_THRESHOLD = 72;
@@ -150,6 +182,20 @@ export function Sheet({
   // logo depois de a pessoa arrastá-la pra baixo.
   const expandir = useCallback(() => setSize("full"), []);
   const api = useMemo(() => ({ expandir }), [expandir]);
+
+  /** O nível que o conteúdo emprestou, se houver (ver useSheetLevel). */
+  const [interno, setInterno] = useState<{
+    titulo: string;
+    voltar: () => void;
+  } | null>(null);
+  const nivelApi = useMemo(
+    () => ({
+      push: (titulo: string, voltar: () => void) =>
+        setInterno({ titulo, voltar }),
+      pop: () => setInterno(null),
+    }),
+    []
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -414,10 +460,10 @@ export function Sheet({
           <button
             type="button"
             className="axxa-icon-btn"
-            aria-label={onBack ? "Back" : "Close"}
-            onClick={onBack ?? onClose}
+            aria-label={interno || onBack ? "Back" : "Close"}
+            onClick={interno ? interno.voltar : (onBack ?? onClose)}
           >
-            <Icon name={onBack ? "chevron-left" : "x"} />
+            <Icon name={interno || onBack ? "chevron-left" : "x"} />
           </button>
           <h3 className="axxa-sheet-title">
             {/* A marca vive COM o nome, que é o único lugar onde ela não vira
@@ -434,7 +480,9 @@ export function Sheet({
                 <Icon name={mark.icon} size={16} />
               </span>
             )}
-            <span className="axxa-sheet-title-text">{title}</span>
+            <span className="axxa-sheet-title-text">
+              {interno?.titulo ?? title}
+            </span>
           </h3>
           {/* Espelha a largura do botão pra manter o título no centro óptico —
               e no nível interno esse lugar é do X. */}
@@ -450,7 +498,7 @@ export function Sheet({
               {action.text && <span>{action.text}</span>}
             </button>
           )}
-          {onBack ? (
+          {interno || onBack ? (
             <button
               type="button"
               className="axxa-icon-btn"
@@ -466,7 +514,11 @@ export function Sheet({
           )}
         </header>
         <div ref={bodyRef} className="axxa-sheet-body">
-          <SheetSizeCtx.Provider value={api}>{children}</SheetSizeCtx.Provider>
+          <SheetSizeCtx.Provider value={api}>
+            <SheetLevelCtx.Provider value={nivelApi}>
+              {children}
+            </SheetLevelCtx.Provider>
+          </SheetSizeCtx.Provider>
         </div>
         {footer && <div className="axxa-sheet-actions">{footer}</div>}
       </div>

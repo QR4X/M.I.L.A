@@ -5414,11 +5414,6 @@ body.is-mobile .axxa-root .axxa-history-more {
   gap: var(--axxa-4);
 }
 
-.axxa-root .axxa-iconcat-head {
-  display: flex;
-  align-items: center;
-}
-
 /* O fio entre os ícones e o resto da tela. Acima dele fica o que CONTROLA
    (voltar, cor, categoria); abaixo, o que se escolhe. Sem ele, a grade era só
    mais uma fileira de coisas redondas embaixo de outra fileira de coisas

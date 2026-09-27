@@ -14,7 +14,7 @@
 
 import { useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
-import { useSheetFull } from "./Sheet";
+import { useSheetFull, useSheetLevel } from "./Sheet";
 import { ICON_CATALOG, iconCategoryOf } from "../iconCatalog";
 
 /** Rótulo + explicação + o campo. A unidade do formulário. */
@@ -281,6 +281,11 @@ export function SheetIconCatalog({
   // crescer sozinha, e na altura do conteúdo apareceriam duas fileiras de
   // ícones — procurar viraria rolar às cegas.
   useSheetFull();
+  // E EMPRESTA o título e o voltar à barra de cima enquanto está aberto. Sem
+  // isto a barra continuava dizendo "New skill" com a tela cheia de ícones, e
+  // a seta dela pulava o formulário inteiro: voltar desfazia dois toques em
+  // vez de um.
+  useSheetLevel("Icon", onBack);
 
   /** Começa na categoria do ícone de agora — quem veio trocar um avião
    *  provavelmente quer outro de viagem, não a primeira pílula. */
@@ -291,12 +296,10 @@ export function SheetIconCatalog({
 
   return (
     <div className="axxa-iconcat">
-      <div className="axxa-iconcat-head">
-        <button type="button" className="axxa-home-filter" onClick={onBack}>
-          <Icon name="chevron-left" size={16} />
-          <span>Back</span>
-        </button>
-      </div>
+      {/* Sem botão de voltar aqui dentro: quem volta é a seta da barra de
+          cima, que esta tela agora empresta (useSheetLevel). Enquanto ela
+          pulava o formulário inteiro, um voltar próprio era a única saída
+          certa; agora as duas fariam a mesma coisa a 50px uma da outra. */}
       {children}
       <SheetChoices
         label="Icon category"
