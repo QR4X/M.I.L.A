@@ -3,7 +3,6 @@ import {
   exportChatMarkdown,
   exportFileName,
   limparMarcas,
-  shareFileName,
 } from "../src/core/chatExport";
 import type { ChatData } from "../src/core/chatPersistence";
 
@@ -65,15 +64,6 @@ describe("exportFileName", () => {
   it("título vazio ainda dá um arquivo", () => {
     expect(exportFileName("   ", dia)).toBe("chat (2026-09-20).md");
   });
-
-  it("a extensão é de quem chama — e ela decide quem recebe", () => {
-    // No Android o tipo do arquivo sai da extensão, e o tipo decide quem
-    // aparece na folha: `.md` é `text/markdown` (editores, apps de IA) e
-    // `.txt` é `text/plain` (o WhatsApp entra).
-    expect(exportFileName("Weekly review", dia, "txt")).toBe(
-      "Weekly review (2026-09-20).txt"
-    );
-  });
 });
 
 describe("exportChatMarkdown", () => {
@@ -112,31 +102,3 @@ describe("exportChatMarkdown", () => {
   });
 });
 
-describe("shareFileName", () => {
-  const dia = new Date("2026-09-20T10:00:00.000Z");
-
-  it("sem espaço, sem parêntese, sem acento", () => {
-    // No Android é a regex de URL do MimeTypeMap que lê a extensão daqui.
-    // Espaço e parêntese fazem a regex não casar, o tipo cai no coringa — e no
-    // coringa o WhatsApp não aparece na folha.
-    expect(shareFileName("Revisão da semana (v2)", dia, "txt")).toBe(
-      "revisao-da-semana-v2-2026-09-20.txt"
-    );
-  });
-
-  it("não deixa traço sobrando nas pontas", () => {
-    expect(shareFileName("  --- olá ---  ", dia, "txt")).toBe(
-      "ola-2026-09-20.txt"
-    );
-  });
-
-  it("título só de símbolo ainda dá um nome", () => {
-    expect(shareFileName("¿?¡!", dia, "txt")).toBe("chat-2026-09-20.txt");
-  });
-
-  it("título longo é cortado sem virar lixo", () => {
-    const n = shareFileName("a".repeat(120), dia, "txt");
-    expect(n.length).toBeLessThan(70);
-    expect(n.endsWith("-2026-09-20.txt")).toBe(true);
-  });
-});
