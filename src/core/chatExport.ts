@@ -84,13 +84,15 @@ export async function exportChatToVault(
   let caminho = `${EXPORTS_FOLDER}/${exportFileName(chat.title, quando)}`;
   // Dois exports da mesma conversa no mesmo dia não se sobrescrevem: a
   // segunda cópia pode ter mais conversa que a primeira.
-  let n = 2;
-  while (await app.vault.adapter.exists(caminho)) {
+  // Teto de tentativas: `exists` é uma resposta de fora, e um laço que só sai
+  // quando ela disser "não" fica à mercê dela. Um adapter que responde `true`
+  // sempre (o do preview respondia) travava o app inteiro — e num aparelho
+  // isso é o app morto sem mensagem nenhuma.
+  for (let n = 2; n <= 50 && (await app.vault.adapter.exists(caminho)); n++) {
     caminho = `${EXPORTS_FOLDER}/${exportFileName(
       `${chat.title} ${n}`,
       quando
     )}`;
-    n++;
   }
   await app.vault.adapter.write(caminho, exportChatMarkdown(chat, quando));
   return caminho;

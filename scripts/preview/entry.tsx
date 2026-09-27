@@ -133,7 +133,48 @@ const plugin = {
         // Escrita de mentira, mas VISÍVEL: o relatório de uso vai parar no
         // console em vez de sumir. Sem isto o botão "Save report" estourava
         // num TypeError e o preview dizia que ele não funciona.
-        exists: async () => true,
+        // Responde pelo que ele TEM. O `true` fixo de antes fazia o laço de
+        // nome único do export girar pra sempre — o preview travando a tela
+        // por causa de uma mentira de uma linha.
+        exists: async (caminho: string) => SKILL_FILES.has(caminho) || !caminho.includes("/exports/"),
+        // LER de verdade (de mentira): o caminho de uma conversa vira um .md
+        // no formato do app. Sem isto, exportar e compartilhar estouravam num
+        // "read is not a function" — o preview escondendo dois caminhos
+        // inteiros que o aparelho percorre.
+        read: async (caminho: string) => {
+          const id = (caminho.split("/").pop() ?? "").replace(/\.md$/, "");
+          const c =
+            chats.find((x) => x.id === id) ?? chats[0];
+          return [
+            "---",
+            `id: "${c.id}"`,
+            `title: "${c.title}"`,
+            `date: "${c.date}"`,
+            `mode: "${c.mode}"`,
+            `provider: "${c.provider}"`,
+            `model: "${c.model}"`,
+            'effort: "med"',
+            `tokens_in: ${c.tokensIn}`,
+            `tokens_out: ${c.tokensOut}`,
+            `message_count: ${c.messageCount}`,
+            "tags:",
+            "  - axxa",
+            "---",
+            "",
+            `# ${c.title}`,
+            "",
+            "## You",
+            "",
+            "<!-- axxa: ts=1758900000000 -->",
+            "faz um resumo disso pra mim",
+            "",
+            "## Assistant",
+            "",
+            "Claro. Em tres pontos: o que mudou, o que ficou de fora e o que",
+            "eu faria a seguir.",
+            "",
+          ].join("\n");
+        },
         mkdir: async () => undefined,
         write: async (caminho: string, conteudo: string) => {
           console.log(`[preview] gravaria ${caminho}:`, conteudo.slice(0, 400));

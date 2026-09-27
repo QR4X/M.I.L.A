@@ -13,7 +13,12 @@ import type AxxaPlugin from "../main";
 import type { ChatSession } from "../core/session";
 import type { ChatSummary } from "../core/chatPersistence";
 import { loadChat, setChatStarred } from "../core/chatPersistence";
-import { exportChatToVault } from "../core/chatExport";
+import {
+  exportChatMarkdown,
+  exportChatToVault,
+  exportFileName,
+} from "../core/chatExport";
+import { compartilharMarkdown, mensagemDoModo } from "../core/chatShare";
 import { usePainel } from "./painel";
 import { useChatStore } from "../store/chat";
 import { PROVIDERS } from "../core/providersMeta";
@@ -175,6 +180,35 @@ export function ChatList({
     } catch (err) {
       new Notice(
         `Export failed: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  };
+
+  /** Mandar a conversa pra FORA do aparelho (WhatsApp, e-mail, o que houver).
+   *  Ver core/chatShare: arquivo primeiro, texto se o aparelho não deixar,
+   *  área de transferência no desktop — e a tela diz qual foi. */
+  const compartilhar = async (c: ChatSummary) => {
+    try {
+      const chat = await loadChat(
+        plugin.app,
+        plugin.settings.chatsPath,
+        c.mode,
+        c.id
+      );
+      const agora = new Date();
+      const nome = exportFileName(chat.title, agora);
+      const modo = await compartilharMarkdown(
+        nome,
+        chat.title || "Chat",
+        exportChatMarkdown(chat, agora)
+      );
+      // `null` é você fechando a folha do sistema: cancelar não é erro e não
+      // merece aviso nenhum.
+      if (modo && modo !== "file") new Notice(mensagemDoModo(modo, nome));
+      if (modo === "none") new Notice(mensagemDoModo(modo, nome));
+    } catch (err) {
+      new Notice(
+        `Could not share: ${err instanceof Error ? err.message : String(err)}`
       );
     }
   };
@@ -354,6 +388,11 @@ export function ChatList({
                           ]
                         : []),
                     ],
+                  },
+                  {
+                    label: "Share…",
+                    icon: "share-2",
+                    run: () => void compartilhar(c),
                   },
                   {
                     label: "Export to vault",
