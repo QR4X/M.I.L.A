@@ -29,6 +29,7 @@ import { Icon } from "./Icon";
 import { useSheetFull } from "./Sheet";
 import { openActions } from "./menu";
 import { ThinkingGlyph, ThinkingInline } from "./Thinking";
+import { prettyModelName } from "../providers/modelDescriptions";
 import {
   assinar,
   comecarRodada,
@@ -39,15 +40,13 @@ import {
 import type { ModoAssistente } from "../assistant/prompt";
 import type { TurnoAssistente } from "../assistant/run";
 
-/**
- * O nome do modelo do jeito que cabe numa linha de painel.
- *
- * Sai o vendor e sai o `:free` — o primeiro é ruído (são todos do mesmo
- * provider aqui) e o segundo já é dito pelo ícone do menu.
- */
-function nomeCurto(id: string): string {
-  return (id.split("/").pop() ?? id).replace(/:free$/, "");
-}
+// O nome do modelo é o NOSSO, nunca o da API.
+//
+// Eu tinha escrito um encurtador aqui — tirava o vendor e o `:free` e pronto.
+// Era um segundo jeito de escrever a mesma coisa: o app já tem
+// `prettyModelName`, que é o que aparece na pílula do composer e na folha de
+// modelos. Dois jeitos significam que um dia eles divergem, e aí o mesmo
+// modelo tem dois nomes em duas telas do mesmo app.
 
 export type AlvoAssistente =
   | "skill"
@@ -154,7 +153,7 @@ export function AssistantPanel({
             openActions(
               e as unknown as MouseEvent,
               modelo.opcoes.map((m) => ({
-                label: nomeCurto(m),
+                label: prettyModelName(m),
                 icon: m.endsWith(":free") ? "gift" : "credit-card",
                 checked: m === modelo.atual,
                 run: () => modelo.onTrocar(m),
@@ -162,7 +161,7 @@ export function AssistantPanel({
             )
           }
         >
-          <span>{nomeCurto(modelo.atual)}</span>
+          <span>{prettyModelName(modelo.atual)}</span>
           <Icon name="chevron-down" size={14} />
         </button>
       )}

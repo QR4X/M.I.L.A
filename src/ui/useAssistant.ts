@@ -66,8 +66,15 @@ export function useAssistant(plugin: AxxaPlugin) {
         assistantModel: s.assistantModel,
         favoriteModels: s.favoriteModels,
         activeModels: s.activeModels,
+        freeModels: s.freeModels,
       }),
-    [s.assistantProvider, s.assistantModel, s.favoriteModels, s.activeModels]
+    [
+      s.assistantProvider,
+      s.assistantModel,
+      s.favoriteModels,
+      s.activeModels,
+      s.freeModels,
+    ]
   );
 
   const indisponivel = useMemo(
@@ -209,11 +216,19 @@ export function useAssistant(plugin: AxxaPlugin) {
    * pessoa quer achar sem procurar.
    */
   const modelos = useMemo(() => {
-    const todos = s.activeModels?.openrouter ?? [];
-    return [...todos].sort(
-      (a, b) => Number(ehFree(b)) - Number(ehFree(a)) || a.localeCompare(b)
+    const livres = s.freeModels?.openrouter ?? [];
+    // Os grátis descobertos entram na lista mesmo sem estar em `activeModels`:
+    // quem escaneou e ainda não curou nada teria a lista vazia justamente do
+    // que a assistente foi feita pra usar.
+    const todos = [
+      ...new Set([...(s.activeModels?.openrouter ?? []), ...livres]),
+    ];
+    return todos.sort(
+      (a, b) =>
+        Number(ehFree(b, livres)) - Number(ehFree(a, livres)) ||
+        a.localeCompare(b)
     );
-  }, [s.activeModels]);
+  }, [s.activeModels, s.freeModels]);
 
   const escolherModelo = useCallback(
     async (model: string) => {

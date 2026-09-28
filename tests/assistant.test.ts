@@ -4,6 +4,7 @@ import {
   escolherAssistente,
   motivoIndisponivel,
 } from "../src/assistant/model";
+import { ehPrecoZero } from "../src/providers/openrouter";
 import {
   lerObjeto,
   lerProjeto,
@@ -341,5 +342,53 @@ describe("o idioma", () => {
       // E a porta aberta não pode voltar.
       expect(p).not.toMatch(/same language the person used/i);
     }
+  });
+});
+
+describe("free pelo PREÇO, não pelo nome", () => {
+  // O app reconhecia grátis pelo sufixo `:free` do id. Isso acerta a maioria e
+  // perde os que o OpenRouter publica com preço zero sem dizer no nome — e
+  // quem paga por essa perda é justamente quem não quer pagar nada.
+  it("a lista descoberta manda, mesmo sem o sufixo", () => {
+    expect(ehFree("vendor/modelo")).toBe(false);
+    expect(ehFree("vendor/modelo", ["vendor/modelo"])).toBe(true);
+  });
+
+  it("sem lista, o sufixo ainda é o palpite", () => {
+    expect(ehFree("x/y:free", [])).toBe(true);
+    expect(ehFree("x/y:free")).toBe(true);
+  });
+
+  it("a assistente escolhe um grátis SEM sufixo", () => {
+    const alvo = escolherAssistente({
+      activeModels: { openrouter: ["pago/um", "grátis/dois"] },
+      freeModels: { openrouter: ["grátis/dois"] },
+    });
+    expect(alvo).toEqual({ provider: "openrouter", model: "grátis/dois" });
+  });
+
+  it("escaneou mas não curou nada: ainda assim acha um", () => {
+    // Sem isto a assistente ficaria "sem modelo" com uma lista de grátis na
+    // mão — o estado exato de quem acabou de rodar o SCAN.
+    expect(
+      escolherAssistente({ freeModels: { openrouter: ["a/b"] } })
+    ).toEqual({ provider: "openrouter", model: "a/b" });
+  });
+});
+
+describe("ehPrecoZero", () => {
+  it("zero dos dois lados é grátis", () => {
+    expect(ehPrecoZero({ prompt: "0", completion: "0" })).toBe(true);
+    expect(ehPrecoZero({ prompt: 0, completion: 0 })).toBe(true);
+  });
+
+  it("grátis na entrada e pago na saída NÃO é grátis", () => {
+    expect(ehPrecoZero({ prompt: "0", completion: "0.0000004" })).toBe(false);
+  });
+
+  it("sem preço, não assume nada", () => {
+    expect(ehPrecoZero(undefined)).toBe(false);
+    expect(ehPrecoZero({})).toBe(false);
+    expect(ehPrecoZero({ prompt: "grátis", completion: "grátis" })).toBe(false);
   });
 });

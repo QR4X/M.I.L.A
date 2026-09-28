@@ -1017,15 +1017,17 @@ export class AxxaSettingsTab extends PluginSettingTab {
       assistantModel: s.assistantModel,
       favoriteModels: s.favoriteModels,
       activeModels: s.activeModels,
+      freeModels: s.freeModels,
     });
+    const livres = s.freeModels?.openrouter ?? [];
 
     new Setting(el)
       .setName("Model")
       .setDesc(
         alvo
-          ? `Writes skills and projects for you. Now: ${alvo.model}${
-              ehFree(alvo.model) ? " (free)" : ""
-            }`
+          ? `Writes skills and projects for you. Now: ${prettyModelName(
+              alvo.model
+            )}${ehFree(alvo.model, livres) ? " · free" : ""}`
           : "Nothing free found yet — run SCAN on OpenRouter, or pick a model here."
       )
       .addDropdown((d) => {
@@ -1033,8 +1035,18 @@ export class AxxaSettingsTab extends PluginSettingTab {
         // some do catálogo, então deixar a gente procurar sozinha envelhece
         // melhor que fixar um.
         d.addOption("", "Automatic — first free OpenRouter model");
-        for (const id of s.activeModels?.openrouter ?? [])
-          d.addOption(id, ehFree(id) ? `${id} · free` : id);
+        // O nome é o NOSSO (prettyModelName), como em toda parte do app — o
+        // id cru do catálogo só aparece onde ele É o dado (a chave, o debug).
+        const todos = [
+          ...new Set([...(s.activeModels?.openrouter ?? []), ...livres]),
+        ].sort();
+        for (const id of todos)
+          d.addOption(
+            id,
+            ehFree(id, livres)
+              ? `${prettyModelName(id)} · free`
+              : prettyModelName(id)
+          );
         d.setValue(s.assistantModel ?? "").onChange(async (v) => {
           s.assistantModel = v;
           s.assistantProvider = v ? "openrouter" : "";

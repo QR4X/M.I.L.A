@@ -74,6 +74,16 @@ export interface AxxaSettings {
   activeModels: Record<string, string[]>;
   /** Modelos FAVORITOS por provider — aparecem na tela inicial. Máx. 5. */
   favoriteModels: Record<string, string[]>;
+  /**
+   * Quais modelos são GRÁTIS, por provider — descoberto no SCAN, pelo PREÇO
+   * que o catálogo publica.
+   *
+   * Até aqui free era adivinhado pelo NOME (o sufixo `:free` do OpenRouter).
+   * Isso acerta a maioria e perde os outros — e quem paga por essa perda é
+   * justamente quem não quer pagar nada. Vazio = ainda não escaneou, e aí o
+   * sufixo volta a ser o palpite (ver assistant/model.ts: ehFree).
+   */
+  freeModels: Record<string, string[]>;
   // ---- A assistente de criação (skills e projetos)
   /**
    * Onde a ASSISTENTE roda — separada do modelo do chat de propósito.
@@ -229,6 +239,7 @@ const DEFAULT_SETTINGS: AxxaSettings = {
     ollama: ["llama3.2", "qwen2.5", "deepseek-r1", "mistral"],
   },
   favoriteModels: {},
+  freeModels: {},
   assistantProvider: "",
   assistantModel: "",
   // Desligada: mandar o nome das suas notas pra fora é escolha, não padrão.
@@ -565,7 +576,29 @@ export default class AxxaPlugin extends Plugin {
   async scanModels(providerId: string): Promise<string[]> {
     const p = getProvider(providerId);
     if (!p.listModels) return [];
-    return p.listModels(this.providerCredential(providerId));
+    const lista = await p.listModels(this.providerCredential(providerId));
+    // Aproveita a volta pra saber quais são GRÁTIS. O preço vem no mesmo
+    // `/models`, então isto não custa uma chamada a mais — e sem isto o app
+    // continuaria adivinhando free pelo nome.
+    await this.scanFreeModels(providerId);
+    return lista;
+  }
+
+  /** Atualiza a lista de grátis do provider. Silencioso: não saber quais são
+   *  é pior que a lista velha, mas não é motivo pra derrubar o SCAN. */
+  async scanFreeModels(providerId: string): Promise<void> {
+    const p = getProvider(providerId);
+    if (!p.listFreeModels) return;
+    try {
+      const livres = await p.listFreeModels(
+        this.providerCredential(providerId)
+      );
+      if (!livres.length) return;
+      (this.settings.freeModels ??= {})[providerId] = livres;
+      await this.saveSettings();
+    } catch (err) {
+      console.error("[axxa] não consegui listar os modelos grátis:", err);
+    }
   }
 
   /**

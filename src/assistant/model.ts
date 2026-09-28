@@ -22,6 +22,8 @@ export interface AssistantAlvo {
 
 /** O que a escolha precisa saber das settings. */
 export interface AssistantFontes {
+  /** Os grátis descobertos no SCAN (settings.freeModels). */
+  freeModels?: Record<string, string[]>;
   /** Escolha explícita da pessoa (Settings). Vazio = descobrir. */
   assistantProvider?: string;
   assistantModel?: string;
@@ -31,8 +33,18 @@ export interface AssistantFontes {
   activeModels?: Record<string, string[]>;
 }
 
-/** No OpenRouter, free é sufixo no id. É assim que o app inteiro reconhece. */
-export function ehFree(model: string): boolean {
+/**
+ * O modelo é grátis?
+ *
+ * Primeiro o que o CATÁLOGO disse (a lista descoberta no SCAN, pelo preço);
+ * só depois o palpite pelo nome. A ordem importa: o sufixo `:free` acerta a
+ * maioria dos do OpenRouter e perde os que são grátis sem dizer no id — e
+ * quem paga por essa perda é justamente quem não quer pagar nada.
+ *
+ * Sem lista (ninguém escaneou ainda), o palpite volta a ser tudo que temos.
+ */
+export function ehFree(model: string, livres?: readonly string[]): boolean {
+  if (livres?.length && livres.includes(model)) return true;
   return (model || "").toLowerCase().endsWith(":free");
 }
 
@@ -52,13 +64,21 @@ export function escolherAssistente(s: AssistantFontes): AssistantAlvo | null {
       model: escolhido,
     };
 
+  const livres = s.freeModels?.openrouter ?? [];
+  const eGratis = (m: string) => ehFree(m, livres);
+
   const favoritos = s.favoriteModels?.openrouter ?? [];
-  const favFree = favoritos.find(ehFree);
+  const favFree = favoritos.find(eGratis);
   if (favFree) return { provider: "openrouter", model: favFree };
 
   const ativos = s.activeModels?.openrouter ?? [];
-  const ativoFree = ativos.find(ehFree);
+  const ativoFree = ativos.find(eGratis);
   if (ativoFree) return { provider: "openrouter", model: ativoFree };
+
+  // Nada nos conhecidos, mas o catálogo listou grátis: serve. É o caso de quem
+  // escaneou e ainda não curou nada — sem isto a assistente ficaria "sem
+  // modelo" com uma lista de grátis na mão.
+  if (livres.length) return { provider: "openrouter", model: livres[0] };
 
   return null;
 }

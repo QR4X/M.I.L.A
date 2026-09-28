@@ -184,6 +184,14 @@ export interface Provider {
   /** Lista os modelos disponíveis no provider (catálogo /models). Usado pelo
    *  "SCAN" do seletor de modelo e pela curadoria de activeModels. */
   listModels?(apiKey: string): Promise<string[]>;
+  /**
+   * Quais deles são GRÁTIS, pelo preço que o catálogo publica.
+   *
+   * Só quem tem essa informação implementa. Reconhecer free pelo NOME (o
+   * sufixo `:free` do OpenRouter) acerta a maioria e perde o resto — e quem
+   * paga por essa perda é quem não quer pagar nada.
+   */
+  listFreeModels?(apiKey: string): Promise<string[]>;
 }
 
 /**

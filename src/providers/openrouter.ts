@@ -189,6 +189,48 @@ export class OpenRouterProvider implements Provider {
     return all.filter(isRelevantOpenRouterModel).sort();
   }
 
+  /**
+   * Os modelos GRÁTIS de verdade — pelo PREÇO, não pelo nome.
+   *
+   * O app inteiro reconhecia free pelo sufixo `:free` do id. Isso acerta a
+   * maioria e perde os outros: o OpenRouter também publica modelos com
+   * `pricing.prompt: "0"` sem sufixo nenhum, e esses simplesmente não
+   * existiam pra gente — inclusive pra assistente de criação, que é feita pra
+   * rodar em free e ficava sem candidato.
+   *
+   * O preço vem no mesmo `/models` que já buscamos, então isto não é uma
+   * chamada a mais: é olhar um campo que estava ali.
+   *
+   * Graceful: lista vazia em erro. Não saber quais são grátis é pior que a
+   * lista antiga, mas não é motivo pra derrubar o SCAN inteiro.
+   */
+  async listFreeModels(apiKey: string): Promise<string[]> {
+    if (!apiKey || !apiKey.trim()) return [];
+    try {
+      const res = await requestUrl({
+        url: OPENROUTER_MODELS_ENDPOINT,
+        method: "GET",
+        headers: { Authorization: `Bearer ${apiKey.trim()}`, ...APP_HEADERS },
+        throw: false,
+      });
+      if (res.status < 200 || res.status >= 300) return [];
+      const data = Array.isArray(res.json?.data) ? res.json.data : [];
+      return data
+        .filter(
+          (m: unknown): m is { id: string; pricing?: Record<string, unknown> } =>
+            typeof (m as { id?: unknown })?.id === "string"
+        )
+        .filter((m: { pricing?: Record<string, unknown> }) =>
+          ehPrecoZero(m.pricing)
+        )
+        .map((m: { id: string }) => m.id)
+        .filter(isRelevantOpenRouterModel)
+        .sort();
+    } catch {
+      return [];
+    }
+  }
+
   /** Modelos de EMBEDDING do catálogo (pro RAG). Mantém os :free (o embedding
    *  multimodal da NVIDIA no OpenRouter é :free). Graceful: [] em erro/no-key. */
   async listEmbeddingModels(apiKey: string): Promise<string[]> {
@@ -218,6 +260,25 @@ export class OpenRouterProvider implements Provider {
  *   - exclui embeddings (vão pro listEmbeddingModels);
  *   - MANTÉM ":free" (capabilities marcam free via overlay).
  */
+/**
+ * O preço zera nos dois lados?
+ *
+ * O catálogo manda os valores como STRING ("0", "0.0000001"), então comparar
+ * com 0 direto falha em silêncio — `"0" == 0` é true por coerção, mas
+ * `"0.0000001"` também vira um número que ninguém compara certo sem converter.
+ * E um modelo grátis de entrada e pago na saída não é grátis: os dois contam.
+ */
+export function ehPrecoZero(pricing: unknown): boolean {
+  const p = pricing as Record<string, unknown> | undefined;
+  if (!p) return false;
+  const zero = (v: unknown) => {
+    if (typeof v !== "string" && typeof v !== "number") return false;
+    const n = Number(v);
+    return Number.isFinite(n) && n === 0;
+  };
+  return zero(p.prompt) && zero(p.completion);
+}
+
 export function isRelevantOpenRouterModel(id: string): boolean {
   if (id.startsWith("openrouter/")) return false; // auto-router etc
   if (isEmbeddingModelId(id)) return false;
