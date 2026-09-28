@@ -55,7 +55,8 @@ export const PASSOS_SKILL = [
   { id: "name", label: "Name" },
   { id: "description", label: "Description" },
   { id: "mode", label: "Opens in" },
-  { id: "look", label: "Look" },
+  { id: "color", label: "Color" },
+  { id: "icon", label: "Icon" },
 ] as const;
 
 export type PassoSkill = (typeof PASSOS_SKILL)[number]["id"];
@@ -291,11 +292,13 @@ export function SkillForm({
       </SheetField>
       )}
 
-      {/* Cor e ícone dividem UM passo, e não porque sobraram: são a mesma
-          decisão. A cor é o que pinta o ícone (é o `tint` da grade), então
-          separá-las em duas telas seria escolher o desenho sem ver o tom e o
-          tom sem ver o desenho. A cor vem ANTES, como nos projetos. */}
-      {mostra("look") && (
+      {/* A cor vem ANTES do ícone, como nos projetos: ela é o `tint` da grade
+          logo abaixo, então escolher o desenho antes do tom é escolher no
+          escuro. Duas telas, e não uma: elas já andaram juntas por um passo
+          só, com o argumento de serem "a mesma decisão" — mas a regra é uma
+          pergunta por tela, e o cartão de prévia já mostra o ícone tingido,
+          então não se perde nada vendo uma de cada vez. */}
+      {mostra("color") && (
         <SheetField label="Color">
           <SheetSwatches
             colors={PROJECT_COLORS}
@@ -306,7 +309,7 @@ export function SkillForm({
         </SheetField>
       )}
 
-      {mostra("look") && (
+      {mostra("icon") && (
         <SheetField label="Icon">
           <SheetIconGrid
             icons={SKILL_ICONS}

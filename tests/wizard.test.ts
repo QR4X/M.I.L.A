@@ -10,7 +10,13 @@ import { SKILL_DRAFT_VAZIO } from "../src/skills/skillFile";
 // O pé da fila é meia dúzia de ternários, e cada um deles já errou uma vez em
 // algum formulário deste app. Aqui eles são casos.
 
-const pe = (atual: number, total = 5, problema: string | null = null) =>
+// A fila REAL: nada de 5 ou 6 escritos à mão aqui. Quando um passo entra ou
+// sai — e já aconteceu, quando "Look" virou Color e Icon —, o que muda é a
+// lista, não vinte números espalhados por este arquivo.
+const TOTAL = PASSOS_SKILL.length;
+const ULTIMO = TOTAL - 1;
+
+const pe = (atual: number, problema: string | null = null, total = TOTAL) =>
   peDoWizard({ atual, total, problema });
 
 describe("os botões da fila", () => {
@@ -24,20 +30,20 @@ describe("os botões da fila", () => {
 
   it("o do meio avança, o último conclui", () => {
     expect(pe(0).primario).toBe("next");
-    expect(pe(3).primario).toBe("next");
-    expect(pe(4).primario).toBe("submit");
-    expect(pe(4).ultimo).toBe(true);
+    expect(pe(ULTIMO - 1).primario).toBe("next");
+    expect(pe(ULTIMO).primario).toBe("submit");
+    expect(pe(ULTIMO).ultimo).toBe(true);
   });
 
   it("uma fila de UM passo é um formulário comum: conclui e não volta", () => {
-    const p = pe(0, 1);
+    const p = pe(0, null, 1);
     expect(p.primario).toBe("submit");
     expect(p.back).toBe(false);
   });
 
   it("um índice além do fim não inventa um passo que não existe", () => {
     // Acontece se a lista de passos encolher com o estado do passo já em pé.
-    expect(pe(9).primario).toBe("submit");
+    expect(pe(TOTAL + 4).primario).toBe("submit");
   });
 });
 
@@ -45,28 +51,28 @@ describe("a linha de status", () => {
   it("o que FALTA só aparece onde há o que salvar", () => {
     // "Give it a name." na tela do prompt é um aviso sobre uma pergunta que a
     // fila ainda não fez — e a pessoa lê como erro do que acabou de escrever.
-    expect(pe(0, 5, "Give it a name.").status).toBe(null);
-    expect(pe(4, 5, "Give it a name.").status).toBe("problema");
+    expect(pe(0, "Give it a name.").status).toBe(null);
+    expect(pe(ULTIMO, "Give it a name.").status).toBe("problema");
   });
 
   it("pronto no meio do caminho vira ATALHO de concluir", () => {
     // O caso de quem pediu ajuda à assistente no primeiro passo e recebeu o
-    // skill inteiro preenchido: o resto é enfeite, e ninguém deve tocar "Next"
-    // quatro vezes pra sair de uma coisa que já está pronta.
+    // skill inteiro preenchido: o resto é enfeite, e ninguém deve atravessar a
+    // fila inteira pra sair de uma coisa que já está pronta.
     expect(pe(0).status).toBe("atalho");
-    expect(pe(3).status).toBe("atalho");
+    expect(pe(ULTIMO - 1).status).toBe("atalho");
   });
 
   it("no último passo, pronto, a linha some — não há o que dizer", () => {
-    expect(pe(4).status).toBe(null);
+    expect(pe(ULTIMO).status).toBe(null);
   });
 
   it("problema e atalho nunca aparecem juntos", () => {
     // São a mesma pergunta ("posso acabar?") com as duas respostas possíveis,
     // e é por isso que dividem o mesmo lugar.
-    for (let i = 0; i < 6; i++)
+    for (let i = 0; i <= TOTAL; i++)
       for (const prob of [null, "falta algo"]) {
-        const s = peDoWizard({ atual: i, total: 5, problema: prob }).status;
+        const s = peDoWizard({ atual: i, total: TOTAL, problema: prob }).status;
         expect(s === "problema" && prob === null).toBe(false);
         expect(s === "atalho" && prob !== null).toBe(false);
       }
@@ -75,22 +81,20 @@ describe("a linha de status", () => {
   it("o botão de concluir só se oferece quando dá", () => {
     // Ele não fica APAGADO: botão apagado não diz o que falta. Ele continua
     // clicável e explica — `pronto` é só o tom.
-    expect(pe(4, 5, "falta").pronto).toBe(false);
-    expect(pe(4).pronto).toBe(true);
+    expect(pe(ULTIMO, "falta").pronto).toBe(false);
+    expect(pe(ULTIMO).pronto).toBe(true);
   });
 });
 
 describe("os passos cobrem o skill", () => {
-  it("todo campo do rascunho é perguntado em algum passo", () => {
-    // Um campo novo no rascunho sem passo pra ele seria um campo que só existe
-    // ao EDITAR: invisível pra quem cria, e é quem cria que precisa dele.
-    const ids = new Set<string>(PASSOS_SKILL.map((p) => p.id));
-    // "look" responde por dois de uma vez, e de propósito: a cor é o que pinta
-    // o ícone, então separá-las seria escolher o desenho sem ver o tom.
-    ids.delete("look");
-    ids.add("color");
-    ids.add("icon");
-    expect([...Object.keys(SKILL_DRAFT_VAZIO)].sort()).toEqual([...ids].sort());
+  it("uma pergunta por tela: um passo por campo, nem mais nem menos", () => {
+    // Os dois lados importam. Um campo do rascunho SEM passo é um campo que só
+    // existe ao editar — invisível pra quem cria, e é quem cria que precisa
+    // dele. E um passo com DOIS campos dentro deixa de ser uma pergunta por
+    // tela, que é a regra inteira do wizard: cor e ícone já dividiram um passo
+    // chamado "Look" com o argumento de serem "a mesma decisão", e não eram.
+    const ids = PASSOS_SKILL.map((p) => p.id as string).sort();
+    expect(ids).toEqual([...Object.keys(SKILL_DRAFT_VAZIO)].sort());
   });
 
   it("nenhum passo repetido, e o prompt vem primeiro", () => {
