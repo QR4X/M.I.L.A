@@ -5804,6 +5804,10 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    dentro de botão não existe. */
 .axxa-root .axxa-tile-wrap {
   position: relative;
+  /* A altura das DUAS fileiras do rodapé (a caixa do desenho manda). Um número
+     só, porque três coisas dependem dele: as duas caixas de ícone e a conta
+     que sobe o ⋯ até a fileira do nome. */
+  --axxa-tile-row: 26px;
 }
 
 .axxa-root button.axxa-tile {
@@ -5889,7 +5893,15 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
 .axxa-root button.axxa-tile-more {
   position: absolute;
   right: var(--axxa-1);
-  bottom: var(--axxa-1);
+  /* Na altura do NOME, que é o que o comentário acima sempre prometeu e o
+     `bottom: 4px` nunca entregou: encostado no canto, ele pousava na fileira
+     de baixo, ao lado da data. A conta sobe da borda do cartão: a borda, o
+     respiro do fim, a fileira de baixo e o vão entre elas — isso encosta o
+     botão na base da fileira do nome. O -1px é a diferença entre a altura
+     dela e a do botão (30 contra 32), dividida por dois. */
+  bottom: calc(
+    1px + var(--axxa-3) + var(--axxa-tile-row) + var(--axxa-1) - 1px
+  );
   width: 32px;
   height: 32px;
   background-color: transparent;
@@ -6449,6 +6461,6 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: var(--axxa-tile-row);
+  height: var(--axxa-tile-row);
 }
