@@ -5411,22 +5411,24 @@ body.is-mobile .axxa-root .axxa-history-more {
   min-height: 44px;
   gap: var(--axxa-1);
   padding: 0 var(--axxa-2);
-  background-color: color-mix(
-    in srgb,
-    var(--interactive-accent) 14%,
-    transparent
-  );
+  /* SEM fundo e SEM a máscara do squircle. Cheia, ela virava uma almofada: a
+     forma squircle existe pra desenhar COISAS (um brasão, um azulejo), e
+     aplicada a um rótulo de duas palavras ela infla o texto num travesseiro
+     roxo no fim da grade.
+     O que a separa dos azulejos continua de pé sem ela: duas colunas de
+     largura, palavra dentro, e a única em accent. Nenhuma delas precisava de
+     fundo. */
+  -webkit-mask-image: none;
+  mask-image: none;
+  background-color: transparent;
   color: var(--interactive-accent);
   font-size: var(--font-ui-small);
   font-weight: var(--font-medium);
 }
 
+/* No toque ela acende, como todo botão de texto do app. */
 .axxa-root button.axxa-icontile.is-more:hover {
-  background-color: color-mix(
-    in srgb,
-    var(--interactive-accent) 22%,
-    transparent
-  );
+  background-color: var(--axxa-hover);
 }
 
 /* Quantos há do outro lado — dito ANTES do toque, como nas pílulas de
