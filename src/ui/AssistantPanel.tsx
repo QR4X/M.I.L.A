@@ -31,7 +31,14 @@
 //    cancela nada. Num modelo free uma volta leva de cinco a vinte segundos, e
 //    ninguém fica olhando um botão por vinte segundos.
 
-import { useState, useSyncExternalStore, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 import { openActions } from "./menu";
 import { ThinkingGlyph, ThinkingInline } from "./Thinking";
@@ -203,20 +210,53 @@ export function AssistantPanel({
     </div>
   );
 
-  /** O véu e a camada: ela é um modal, não um bloco do formulário. */
-  const camada = (dentro: ReactNode) => (
-    <div className="axxa-assist-layer">
-      {/* Tocar fora fecha — mas não cancela o que está a caminho (ver o X). */}
-      <div
-        className="axxa-scrim"
-        onClick={() => {
-          if (run.fase !== "rodando") limparRun(para);
-          onFechar();
-        }}
-      />
-      {dentro}
-    </div>
-  );
+  /**
+   * A camada sai da FOLHA por um portal, e isto não é arrumação de código.
+   *
+   * `.axxa-sheet` tem `transform` e `will-change: transform` — e um ancestral
+   * transformado vira o bloco de contenção de todo `position: fixed` que
+   * estiver dentro dele. O modal, sendo filho do formulário, não era fixo à
+   * TELA: era fixo à folha, e ainda por cima recortado pelo `overflow: hidden`
+   * da camada dela. No preview isso passou despercebido porque a folha estava
+   * grande e o fundo dela coincidia com o fundo da tela; no aparelho, com a
+   * folha em 62%, o modal nascia atrás do rodapé — invisível.
+   *
+   * É a mesma armadilha que fazia o teclado ser ignorado: preso à folha, a
+   * conta de `--keyboard-height` (que é sobre a tela) não queria dizer nada.
+   *
+   * O portal leva a camada pra `.axxa-root`, que não tem transform nenhum —
+   * então `fixed` volta a ser fixo de verdade, e o CSS continua no escopo
+   * `.axxa-root` de sempre.
+   */
+  const ancora = useRef<HTMLSpanElement>(null);
+  const [raiz, setRaiz] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    setRaiz(ancora.current?.closest<HTMLElement>(".axxa-root") ?? null);
+  }, []);
+
+  const camada = (dentro: ReactNode) => {
+    const layer = (
+      <div className="axxa-assist-layer">
+        {/* Tocar fora fecha — mas não cancela o que está a caminho (ver o X). */}
+        <div
+          className="axxa-scrim"
+          onClick={() => {
+            if (run.fase !== "rodando") limparRun(para);
+            onFechar();
+          }}
+        />
+        {dentro}
+      </div>
+    );
+    return (
+      <>
+        {/* A âncora fica na árvore original só pra achar a raiz — ela não
+            desenha nada. */}
+        <span ref={ancora} hidden />
+        {raiz ? createPortal(layer, raiz) : null}
+      </>
+    );
+  };
 
   if (indisponivel)
     return camada(
