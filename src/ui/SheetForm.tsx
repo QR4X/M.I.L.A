@@ -15,7 +15,7 @@
 import { useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
 import { useSheetFull, useSheetLevel } from "./Sheet";
-import { ICON_CATALOG, iconCategoryOf } from "../iconCatalog";
+import { ICON_CATALOG, iconCatalogSize, iconCategoryOf } from "../iconCatalog";
 
 /** Rótulo + explicação + o campo. A unidade do formulário. */
 export function SheetField({
@@ -233,17 +233,21 @@ export function SheetIconGrid({
           onPick={onPick}
         />
       ))}
-      {/* O "+" fecha a fileira, no lugar onde um item a mais entraria — e não
-          no começo, que é do primeiro ícone de verdade. Ele não é um ícone
-          escolhível: é a porta pros outros. */}
+      {/* A porta pros outros — e ela precisa NÃO parecer um ícone.
+          Quadrada e do mesmo tamanho, era o 29º desenho da grade: a pessoa
+          lia "mais um símbolo que eu não reconheço" e passava direto. Aqui
+          ela ocupa DUAS colunas, leva a palavra e diz quantos há do outro
+          lado. Largura e texto são as duas coisas que um azulejo de ícone
+          nunca tem. */}
       <button
         type="button"
         className="axxa-icontile is-more"
-        aria-label="More icons"
-        title="More icons"
+        aria-label={`More icons — ${iconCatalogSize()} to choose from`}
         onClick={onBrowse}
       >
-        <Icon name="plus" size={20} />
+        <Icon name="plus" size={18} />
+        <span className="axxa-more-rotulo">More</span>
+        <span className="axxa-more-conta">{iconCatalogSize()}</span>
       </button>
     </div>
   );

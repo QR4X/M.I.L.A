@@ -5391,17 +5391,50 @@ body.is-mobile .axxa-root .axxa-history-more {
   color: var(--text-on-accent);
 }
 
-/* O "+" que abre o catálogo. Um passo acima da superfície dos outros
-   azulejos: ele fecha a fileira no lugar onde entraria mais um ícone, e sem
-   essa diferença de tom seria lido como um ícone de "mais" — algo que se
-   ESCOLHE — em vez da porta pros outros. */
+/* A porta pros outros ícones. Ela não pode PARECER um ícone.
+   Quadrada e do mesmo tamanho, era só o 29º desenho da grade — "mais um
+   símbolo que eu não reconheço" — e a pessoa passava direto. Três coisas a
+   separam agora, e nenhuma delas é sutil: ela ocupa DUAS colunas, tem
+   PALAVRA dentro, e é a única em accent. Largura e texto são justamente o que
+   um azulejo de ícone nunca tem.
+   O fundo é accent a 14%, e não accent cheio: cheio é como o azulejo
+   ESCOLHIDO se pinta nas skills, e a porta não é uma escolha. */
 .axxa-root button.axxa-icontile.is-more {
-  background-color: var(--axxa-s2);
-  color: var(--text-normal);
+  grid-column: span 2;
+  /* A grade é de quadrados; esta não é quadrada. Sem isto o `aspect-ratio: 1`
+     herdado faria uma caixa de duas colunas de ALTURA também.
+     E com `auto` ela desabava pra 19px quando caía sozinha na última fileira:
+     sem irmão quadrado do lado, a fileira toma a altura do conteúdo dela. O
+     piso é o mesmo 44px do `minmax` da grade — ela nunca fica mais baixa que
+     um azulejo, e estica junto quando divide a fileira com um. */
+  aspect-ratio: auto;
+  min-height: 44px;
+  gap: var(--axxa-1);
+  padding: 0 var(--axxa-2);
+  background-color: color-mix(
+    in srgb,
+    var(--interactive-accent) 14%,
+    transparent
+  );
+  color: var(--interactive-accent);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
 }
 
 .axxa-root button.axxa-icontile.is-more:hover {
-  background-color: var(--axxa-hover);
+  background-color: color-mix(
+    in srgb,
+    var(--interactive-accent) 22%,
+    transparent
+  );
+}
+
+/* Quantos há do outro lado — dito ANTES do toque, como nas pílulas de
+   categoria. Miúdo e recuado: é nota de rodapé da palavra, não um segundo
+   rótulo. */
+.axxa-root .axxa-more-conta {
+  font-size: var(--font-ui-smaller);
+  opacity: 0.7;
 }
 
 /* O catálogo substitui o FORMULÁRIO inteiro enquanto está aberto: procurar
