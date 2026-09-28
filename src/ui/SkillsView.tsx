@@ -296,7 +296,11 @@ export function SkillsView({
                         style={{ color: projectColor(s.color) }}
                         aria-hidden="true"
                       >
-                        <Icon name={s.icon || "sparkles"} size={16} />
+                        {/* 14 e não 16: dentro de um squircle de 26, o
+                            desenho tem que caber com folga, senão ele encosta
+                            na curva e a plaquinha some atrás dele. É a mesma
+                            proporção do brasão grande (20 em 36). */}
+                        <Icon name={s.icon || "sparkles"} size={14} />
                       </span>
                       <span className="axxa-tile-name">{s.name}</span>
                     </span>

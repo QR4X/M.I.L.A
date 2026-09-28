@@ -6464,3 +6464,23 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   width: var(--axxa-tile-row);
   height: var(--axxa-tile-row);
 }
+
+/* O TAMANHO DO DESENHO em CSS, e não pela prop do componente.
+   A prop escreve width/height no <svg> logo depois do `setIcon` — e onde o
+   ícone é hidratado DEPOIS (o preview troca um <i data-lucide> por svg mais
+   tarde), ela escreve num svg que ainda não existe e o desenho fica no
+   tamanho padrão do set. Em CSS vale sempre, e é como as plaquinhas do menu
+   já faziam.
+   14 dentro de um squircle de 26: a mesma proporção do brasão grande (20 em
+   36). Com 16 o desenho encostava na curva e a plaquinha sumia atrás dele. */
+.axxa-root .axxa-tile-head .axxa-thing-mark.is-dense svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* O do meta é um glifo SOLTO, sem forma em volta: ele pode ser um tico maior
+   sem pesar mais que o de dentro da plaquinha. */
+.axxa-root .axxa-tile-meta > .axxa-icon svg {
+  width: 15px;
+  height: 15px;
+}
