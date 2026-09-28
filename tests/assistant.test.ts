@@ -392,3 +392,13 @@ describe("ehPrecoZero", () => {
     expect(ehPrecoZero({ prompt: "grátis", completion: "grátis" })).toBe(false);
   });
 });
+
+describe("o interrogatório pede TRÊS", () => {
+  it("o prompt manda exatamente três, e proíbe uma quarta", () => {
+    // A quarta é do app — o "eu escrevo" —, e uma vinda do modelo apareceria
+    // duas vezes ou no lugar errado.
+    const p = promptSkill("guiado", ICONES, CORES, "English");
+    expect(p).toMatch(/EXACTLY 3 options/);
+    expect(p).toMatch(/never offer one yourself/i);
+  });
+});

@@ -89,10 +89,12 @@ const GUIADO = `You may ask up to 3 short questions before writing, one at a
 time, and only when the answer would genuinely change what you write.
 
 To ask: {"ask": "your question", "options": ["...", "...", "..."]}
-ALWAYS offer 2 to 4 options — they are how the person answers on a phone, with
-a tap instead of typing. Each one is at most 3 words, and they must be real,
-different answers to YOUR question, not "yes/no/maybe". The person can also
-type something else, so never say "or type your own" in the question.
+ALWAYS give EXACTLY 3 options, never more, never fewer. They are how the person
+answers on a phone: a tap instead of typing. Each one is at most 3 words, and
+they must be three real, different answers to YOUR question — not
+"yes/no/maybe", not a scale, not "other". The app adds a fourth option of its
+own for typing, so never offer one yourself and never say "or type your own"
+in the question.
 
 When you have enough (or after 3 questions): {"draft": { ...the fields... }}
 

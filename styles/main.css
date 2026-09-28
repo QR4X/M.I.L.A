@@ -6438,6 +6438,23 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   opacity: 0.5;
 }
 
+/* A QUARTA pastilha — a nossa, a saída. De contorno, não cheia: as três de
+   cima são respostas à pergunta; esta é outra coisa, é sair do trilho. Igual
+   às outras, ela pareceria uma quarta resposta. */
+.axxa-root button.axxa-assist-opcao.is-escrever {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--axxa-1);
+  background-color: transparent;
+  border-color: var(--axxa-hairline);
+  color: var(--text-muted);
+}
+
+.axxa-root button.axxa-assist-opcao.is-escrever:hover:not(:disabled) {
+  background-color: var(--axxa-hover);
+  color: var(--text-normal);
+}
+
 /* No campo, quem espera é o MESMO glifo das conversas: quem fechou o painel vê
    ali o desenho que veria se tivesse ficado. Ele é um pouco menor que os 17px
    do fio da conversa — a caixa aqui é de 32. */

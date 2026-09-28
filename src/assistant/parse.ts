@@ -176,8 +176,13 @@ export function lerPergunta(obj: Record<string, unknown> | null): string {
  * mesmo aberta), e o campo de texto continua ali pra quem quiser dizer outra
  * coisa — elas são atalho, não gaiola.
  *
- * Teto de cinco e de trinta caracteres: seis pastilhas numa tela de 375px
- * viram três fileiras, e pastilha com frase dentro não se lê de relance.
+ * TRÊS, sempre. A quarta é nossa — o "eu escrevo" — e ela precisa existir em
+ * toda pergunta, com o mesmo texto e no mesmo lugar: é a saída, e saída que
+ * muda de nome e de posição não é saída. Se o modelo mandar mais, o excedente
+ * cai fora; se mandar menos, é o que há (a pergunta ainda funciona).
+ *
+ * Trinta caracteres por pastilha: pastilha com frase dentro não se lê de
+ * relance, e quatro delas numa tela de 375px precisam caber em duas fileiras.
  */
 export function lerOpcoes(obj: Record<string, unknown> | null): string[] {
   const cruas = obj && Array.isArray(obj.options) ? obj.options : [];
@@ -186,5 +191,5 @@ export function lerOpcoes(obj: Record<string, unknown> | null): string[] {
     .map((o) => o.trim().slice(0, 30))
     .filter(Boolean)
     .filter((o, i, todas) => todas.indexOf(o) === i)
-    .slice(0, 5);
+    .slice(0, 3);
 }

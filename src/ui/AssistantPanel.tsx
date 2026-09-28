@@ -124,6 +124,15 @@ export function AssistantPanel({
 }: AssistantPanelProps) {
   const run = useRun(para);
   const [texto, setTexto] = useState("");
+  /**
+   * A pessoa escolheu a quarta pastilha ("Let me type") nesta pergunta.
+   *
+   * Enquanto ela não escolhe, o campo de texto nem aparece: depois da frase do
+   * objetivo, o interrogatório é de TOQUE. Um campo aberto ao lado das
+   * pastilhas transforma cada pergunta numa redação opcional — e quem está no
+   * celular responde a redação, porque ela parece o caminho "certo".
+   */
+  const [digitando, setDigitando] = useState(false);
   const ocupado = run.fase === "rodando";
   const partirDoVazio = PARTE_DO_VAZIO[para];
   const perguntando = run.fase === "perguntando";
@@ -137,6 +146,7 @@ export function AssistantPanel({
       ? [...run.turnos, { quem: "pessoa", texto: limpo }]
       : run.turnos;
     setTexto("");
+    setDigitando(false);
     // Dispara e esquece: o resultado chega pelo store, e o store sobrevive a
     // este componente sair da tela.
     comecarRodada(para, proximos, (t) => onPedir(modo, t));
@@ -226,8 +236,11 @@ export function AssistantPanel({
 
       {/* As pastilhas: a resposta em um toque. Elas mandam NA HORA, sem passar
           pelo campo — parar pra digitar depois de escolher seria cobrar duas
-          vezes pela mesma decisão. */}
-      {perguntando && run.opcoes.length > 0 && (
+          vezes pela mesma decisão.
+          Três dela e uma NOSSA. A quarta é a saída, e existe em toda pergunta
+          com o mesmo texto e no mesmo lugar: saída que muda de nome e de
+          posição não é saída. */}
+      {perguntando && !digitando && (
         <div className="axxa-assist-opcoes">
           {run.opcoes.map((o) => (
             <button
@@ -240,9 +253,21 @@ export function AssistantPanel({
               {o}
             </button>
           ))}
+          <button
+            type="button"
+            className="axxa-assist-opcao is-escrever"
+            disabled={ocupado}
+            onClick={() => setDigitando(true)}
+          >
+            <Icon name="pencil" size={14} />
+            <span>Let me type</span>
+          </button>
         </div>
       )}
 
+      {/* A caixa só aparece quando é ela que responde: na frase do OBJETIVO
+          (antes da primeira pergunta) e quando a pessoa pede pra digitar. */}
+      {(!perguntando || digitando) && (
       <div className="axxa-assist-box">
         <textarea
           className="axxa-assist-campo"
@@ -276,6 +301,21 @@ export function AssistantPanel({
                   <span>Grill me</span>
                 </button>
               )}
+              {/* Voltar pras pastilhas: escolher "eu escrevo" e mudar de ideia
+                  não pode ser um beco. */}
+              {digitando && (
+                <button
+                  type="button"
+                  className="axxa-assist-guiado"
+                  onClick={() => {
+                    setDigitando(false);
+                    setTexto("");
+                  }}
+                >
+                  <Icon name="chevron-left" size={15} />
+                  <span>Options</span>
+                </button>
+              )}
               <button
                 type="button"
                 className="axxa-assist-cta"
@@ -291,6 +331,7 @@ export function AssistantPanel({
           )}
         </div>
       </div>
+      )}
 
       {/* Que dá pra sair só é dito ENQUANTO ela escreve: no resto do tempo
           seria papel de parede. */}

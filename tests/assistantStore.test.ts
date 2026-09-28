@@ -104,11 +104,15 @@ describe("lerOpcoes", () => {
     ]);
   });
 
-  it("corta em cinco e em trinta caracteres", () => {
-    // Seis pastilhas num telefone viram três fileiras, e pastilha com frase
-    // dentro não se lê de relance.
-    const r = lerOpcoes({ options: ["a", "b", "c", "d", "e", "f"] });
-    expect(r).toHaveLength(5);
+  it("corta em TRÊS — a quarta pastilha é nossa", () => {
+    // A quarta é o "eu escrevo", e ela precisa existir em toda pergunta com o
+    // mesmo texto e no mesmo lugar: saída que muda de nome não é saída.
+    const r = lerOpcoes({ options: ["a", "b", "c", "d", "e"] });
+    expect(r).toEqual(["a", "b", "c"]);
+  });
+
+  it("pastilha com frase dentro é cortada", () => {
+    // Quatro pastilhas numa tela de 375px têm que caber em duas fileiras.
     expect(lerOpcoes({ options: ["x".repeat(80)] })[0]).toHaveLength(30);
   });
 
