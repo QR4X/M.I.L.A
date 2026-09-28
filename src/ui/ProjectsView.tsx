@@ -91,7 +91,7 @@ export function ProjectsView({
   const [instrucoes, setInstrucoes] = useState<string | null>(null);
   /** A assistente aberta no campo de instruções. */
   const [ajudandoInstrucoes, setAjudandoInstrucoes] = useState(false);
-  const { indisponivel, pedirInstrucoes } = useAssistant(plugin);
+  const { indisponivel, pedirInstrucoes, alvo, modelos, escolherModelo } = useAssistant(plugin);
 
   const chats = useChatSummaries(plugin);
   const projects = plugin.settings.projects ?? [];
@@ -465,6 +465,11 @@ export function ProjectsView({
                 <AssistantPanel
                   para="instructions"
                   indisponivel={indisponivel}
+                  modelo={{
+                    atual: alvo?.model ?? "",
+                    opcoes: modelos,
+                    onTrocar: (m) => void escolherModelo(m),
+                  }}
                   onFechar={() => setAjudandoInstrucoes(false)}
                   onPedir={async (modo, turnos) => {
                     const r = await pedirInstrucoes(

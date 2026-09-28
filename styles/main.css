@@ -6301,10 +6301,50 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   font-weight: var(--font-semibold);
 }
 
-/* O X vai pra ponta e o título fica onde começou — o painel abre no meio de um
-   formulário, e um título centralizado ali competiria com os rótulos. */
-.axxa-root .axxa-assist-head > button {
+/* O título não quebra: com o nome do modelo do lado, "Write it for me" virava
+   duas linhas e o cabeçalho dobrava de altura. */
+.axxa-root .axxa-assist-head > span {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* QUEM ESTÁ ESCREVENDO, e a troca — no lugar onde se percebe que precisa
+   trocar. Discreto: é informação com uma porta, não uma ação que a tela
+   ofereça. Ele encolhe primeiro e corta com reticências, porque nome de modelo
+   não tem fim e o título tem. */
+.axxa-root button.axxa-assist-modelo {
+  flex: 0 1 auto;
+  min-width: 0;
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--axxa-1);
+  min-height: 28px;
+  padding: 0 var(--axxa-2);
+  border-radius: var(--axxa-r-pill);
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal);
+}
+
+.axxa-root button.axxa-assist-modelo > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.axxa-root button.axxa-assist-modelo:hover {
+  background-color: var(--axxa-hover);
+  color: var(--text-normal);
+}
+
+/* O X fecha o painel e fica na ponta, depois de tudo. */
+.axxa-root .axxa-assist-head > button.axxa-icon-btn {
+  flex: 0 0 auto;
+  margin-left: 0;
 }
 
 /* A pergunta dela é FALA, não rótulo: sem caixa, sem negrito, no tamanho do

@@ -351,7 +351,19 @@ export function Sheet({
      */
     const emCampoDeTexto = (alvo: EventTarget | null): boolean => {
       const el = alvo as HTMLElement | null;
-      return !!el?.closest?.("input, textarea, [contenteditable='true']");
+      const campo = el?.closest?.(
+        "input, textarea, [contenteditable='true']"
+      ) as HTMLElement | null;
+      if (!campo) return false;
+      // Só protege o campo em que se está ESCREVENDO.
+      //
+      // Proteger todo campo era largo demais: a busca da folha de skills mora
+      // no terço de cima, que é justamente onde o dedo começa o swipe pra
+      // baixo — e a folha parou de descer. Mas o gesto que a gente precisa
+      // preservar (pôr o cursor, selecionar, puxar a alcinha) só acontece
+      // DENTRO do campo que já tem o foco. Campo sem foco é superfície como
+      // qualquer outra.
+      return document.activeElement === campo;
     };
 
     const comecar = (y: number) => {

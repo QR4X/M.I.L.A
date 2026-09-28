@@ -16,6 +16,17 @@
 import { useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
 import { useSheetFull } from "./Sheet";
+import { openActions } from "./menu";
+
+/**
+ * O nome do modelo do jeito que cabe numa linha de painel.
+ *
+ * Sai o vendor e sai o `:free` — o primeiro é ruído (são todos do mesmo
+ * provider aqui) e o segundo já é dito pelo ícone do menu.
+ */
+function nomeCurto(id: string): string {
+  return (id.split("/").pop() ?? id).replace(/:free$/, "");
+}
 import type { ModoAssistente } from "../assistant/prompt";
 import type { TurnoAssistente } from "../assistant/run";
 
@@ -34,6 +45,19 @@ export interface AssistantPanelProps {
   ) => Promise<{ pergunta?: string; erro?: string; pronto?: boolean }>;
   /** Fecha o painel. */
   onFechar: () => void;
+  /**
+   * Quem está escrevendo, e como trocar — aqui mesmo.
+   *
+   * O motivo mais comum pra querer outro modelo é o resultado que acabou de
+   * aparecer: texto ruim, ou no idioma errado. Mandar a pessoa pras settings
+   * nesse momento é fazê-la perder o que estava escrito e o lugar onde
+   * estava.
+   */
+  modelo?: {
+    atual: string;
+    opcoes: string[];
+    onTrocar: (model: string) => void;
+  };
 }
 
 const CONVITE = {
@@ -65,6 +89,7 @@ export function AssistantPanel({
   indisponivel,
   onPedir,
   onFechar,
+  modelo,
 }: AssistantPanelProps) {
   // A folha vai pro tamanho grande: o painel abre ABAIXO do campo, e num campo
   // que já estava no meio da tela ele nasce atrás do rodapé — a pessoa toca no
@@ -131,6 +156,30 @@ export function AssistantPanel({
       <div className="axxa-assist-head">
         <Icon name="sparkles" size={16} />
         <span>Write it for me</span>
+        {/* Quem escreve, e a troca — no lugar onde se percebe que precisa
+            trocar. O nome é o do modelo sem o vendor: numa linha de painel,
+            "meta-llama/llama-3.3-70b-instruct:free" é uma parede. */}
+        {modelo && modelo.opcoes.length > 1 && (
+          <button
+            type="button"
+            className="axxa-assist-modelo"
+            title={`Writing with ${modelo.atual}`}
+            onClick={(e) =>
+              openActions(
+                e as unknown as MouseEvent,
+                modelo.opcoes.map((m) => ({
+                  label: nomeCurto(m),
+                  icon: m.endsWith(":free") ? "gift" : "credit-card",
+                  checked: m === modelo.atual,
+                  run: () => modelo.onTrocar(m),
+                }))
+              )
+            }
+          >
+            <span>{nomeCurto(modelo.atual)}</span>
+            <Icon name="chevron-down" size={14} />
+          </button>
+        )}
         <button
           type="button"
           className="axxa-icon-btn"

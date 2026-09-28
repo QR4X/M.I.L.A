@@ -11,6 +11,7 @@ import { useCallback, useMemo } from "react";
 import type AxxaPlugin from "../main";
 import { getProvider } from "../providers";
 import {
+  ehFree,
   escolherAssistente,
   motivoIndisponivel,
 } from "../assistant/model";
@@ -193,7 +194,38 @@ export function useAssistant(plugin: AxxaPlugin) {
     [pedirCampo, idioma]
   );
 
+  /**
+   * Os modelos que dá pra usar aqui, e o que está em uso.
+   *
+   * Isto existe pra o painel poder TROCAR de modelo sem mandar a pessoa pras
+   * settings. Quem chegou até aqui está no meio de criar um skill, e o motivo
+   * mais comum pra querer trocar é o resultado que acabou de aparecer —
+   * texto ruim, ou no idioma errado. Fazer a volta pelas configurações nesse
+   * momento é perder o que estava escrito.
+   *
+   * Free primeiro: é o que a assistente foi feita pra usar, e é o que a
+   * pessoa quer achar sem procurar.
+   */
+  const modelos = useMemo(() => {
+    const todos = s.activeModels?.openrouter ?? [];
+    return [...todos].sort(
+      (a, b) => Number(ehFree(b)) - Number(ehFree(a)) || a.localeCompare(b)
+    );
+  }, [s.activeModels]);
+
+  const escolherModelo = useCallback(
+    async (model: string) => {
+      s.assistantModel = model;
+      s.assistantProvider = model ? "openrouter" : "";
+      await plugin.saveSettings();
+    },
+    [plugin, s]
+  );
+
   return {
+    alvo,
+    modelos,
+    escolherModelo,
     indisponivel,
     pedirSkill,
     pedirProjeto,

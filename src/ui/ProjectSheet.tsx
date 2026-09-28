@@ -54,7 +54,7 @@ export function ProjectForm({
   const cor = projectColor(draft.color);
   const [procurando, setProcurando] = useState(false);
   const [ajudando, setAjudando] = useState(false);
-  const { indisponivel, pedirProjeto } = useAssistant(plugin);
+  const { indisponivel, pedirProjeto, alvo, modelos, escolherModelo } = useAssistant(plugin);
 
   // Procurar ícone TOMA a tela. O formulário sai inteiro — cartão, nome — e
   // ficam três coisas: voltar, a cor e os ícones. A cor fica porque é ela que
@@ -108,6 +108,11 @@ export function ProjectForm({
             <AssistantPanel
               para="project"
               indisponivel={indisponivel}
+              modelo={{
+                atual: alvo?.model ?? "",
+                opcoes: modelos,
+                onTrocar: (m) => void escolherModelo(m),
+              }}
               onFechar={() => setAjudando(false)}
               onPedir={async (modo, turnos) => {
                 const r = await pedirProjeto(modo, turnos);

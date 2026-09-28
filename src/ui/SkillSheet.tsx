@@ -52,7 +52,7 @@ export function SkillForm({
   /** Qual campo está com a assistente aberta. Um de cada vez: dois painéis no
    *  mesmo formulário seriam duas conversas disputando os mesmos campos. */
   const [ajudando, setAjudando] = useState<"" | "body" | "desc">("");
-  const { indisponivel, pedirSkill, pedirDescricao } = useAssistant(plugin);
+  const { indisponivel, pedirSkill, pedirDescricao, alvo, modelos, escolherModelo } = useAssistant(plugin);
   const cor = projectColor(draft.color);
 
   // Procurar ícone toma a tela, como nos projetos. Aqui nem a cor sobra: skill
@@ -129,6 +129,11 @@ export function SkillForm({
             <AssistantPanel
               para="skill"
               indisponivel={indisponivel}
+              modelo={{
+                atual: alvo?.model ?? "",
+                opcoes: modelos,
+                onTrocar: (m) => void escolherModelo(m),
+              }}
               onFechar={() => setAjudando("")}
               onPedir={async (modo, turnos) => {
                 const r = await pedirSkill(modo, turnos);
@@ -166,6 +171,11 @@ export function SkillForm({
             <AssistantPanel
               para="description"
               indisponivel={indisponivel}
+              modelo={{
+                atual: alvo?.model ?? "",
+                opcoes: modelos,
+                onTrocar: (m) => void escolherModelo(m),
+              }}
               onFechar={() => setAjudando("")}
               onPedir={async (modo, turnos) => {
                 const r = await pedirDescricao(
