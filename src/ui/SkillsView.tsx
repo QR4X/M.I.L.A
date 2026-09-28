@@ -33,7 +33,7 @@ import { Icon } from "./Icon";
 import { Sheet, SheetSearch } from "./Sheet";
 import { Segmented } from "./Segmented";
 import { projectColor } from "../projects";
-import { SheetSubmit, SheetWizardFoot } from "./SheetForm";
+import { SheetProgress, SheetSubmit, SheetWizardFoot } from "./SheetForm";
 import { SkillForm, PASSOS_SKILL } from "./SkillSheet";
 import { openActions } from "./menu";
 import { MODULES, relativeShort } from "./modules";
@@ -216,8 +216,8 @@ export function SkillsView({
     undefined
   ) : criando ? (
     <SheetWizardFoot
-      passos={PASSOS_SKILL}
       atual={passo}
+      total={PASSOS_SKILL.length}
       onPasso={setPasso}
       problema={problema}
       label="Create skill"
@@ -234,6 +234,18 @@ export function SkillsView({
   return (
     <Sheet
       footer={rodape}
+      // A fita de progresso vive no TOPO da folha, colada no título: as duas
+      // respondem "onde eu estou". Some com o catálogo de ícones aberto —
+      // ali a tela é dele, e a fila continua onde parou quando se volta.
+      progress={
+        criando && !procurando ? (
+          <SheetProgress
+            passos={PASSOS_SKILL}
+            atual={passo}
+            onPasso={setPasso}
+          />
+        ) : undefined
+      }
       // Criar mora na BARRA: é o que a folha oferece, não o que ela conclui.
       // Embaixo, a pílula disputava o fim da lista com o fim do assunto.
       action={

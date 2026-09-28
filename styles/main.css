@@ -5703,60 +5703,75 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   color: var(--text-muted);
 }
 
-/* ── o pé do WIZARD ────────────────────────────────────────────────────
-   Criar um skill é uma fila de telas (ver SkillSheet.tsx: PASSOS_SKILL), e
-   este é o painel de comando dela: onde estou, o que falta, pra onde vou.
-   Ele reaproveita `.axxa-form-foot` de propósito — é o mesmo lugar do mesmo
-   botão, e mudar a casca entre criar e editar ensinaria que são duas coisas. */
+/* ── a fita de progresso do WIZARD ─────────────────────────────────────
+   Criar um skill é uma fila de telas (ver SkillSheet.tsx: PASSOS_SKILL). A
+   fita mora no TOPO da folha, colada embaixo do título, porque progresso é o
+   endereço da tela — "New skill · Color" e a fita respondem à mesma pergunta,
+   e ela se faz antes de olhar o campo.
 
-.axxa-root .axxa-wiz-dots {
+   Ela já foi uma fileira de pontos no PÉ. Além de estar longe do título, o pé
+   é a única faixa que sobra com o teclado aberto, e ali o espaço é do botão. */
+
+.axxa-root .axxa-wiz-bar {
+  flex: 0 0 auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Vão generoso: os pontos são BOTÕES de 8px, e é a área invisível em volta
-     que faz um alvo de 8px ser tocável com o polegar. */
-  gap: var(--axxa-2);
-  padding-bottom: var(--axxa-1);
+  /* Segmentos de larguras IGUAIS: a fita mede passos, não o tamanho de cada
+     um. Um passo de uma pergunta e um de uma grade de ícones custam o mesmo
+     toque, e é o toque que a pessoa está contando. */
+  gap: 3px;
+  /* SANGRA até a borda da folha, como o rodapé faz: a folha tem
+     `padding: … var(--axxa-3)`, e uma fita que morre 12px antes do canto vira
+     um objeto pousado ali em vez do fio que atravessa a tela. */
+  margin: 0 calc(-1 * var(--axxa-3));
+  /* O respiro do toque vai no PADDING do contêiner, não na altura dos
+     segmentos: o desenho continua de 4px e o alvo fica com 14. */
+  padding: var(--axxa-1) var(--axxa-3) var(--axxa-2);
 }
 
-.axxa-root button.axxa-wiz-dot {
-  /* O alvo tem 28px; o desenho, 8. O resto é o que separa "tocar no ponto" de
-     "tentar acertar o ponto". */
-  width: 28px;
-  height: 28px;
+.axxa-root button.axxa-wiz-seg {
+  /* Todos crescem igual e podem encolher a zero: com onze passos numa tela de
+     320px, `flex-basis: 0` é o que mantém a fita cabendo em vez de estourar. */
+  flex: 1 1 0;
+  min-width: 0;
+  height: 14px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: 0;
   background-color: transparent;
   box-shadow: none;
-  /* O ponto é o ::before, não o botão: pintar o botão daria uma bolota de
-     28px, e aí os cinco passos viriam a ser cinco moedas numa fileira. */
+  /* O traço é o ::before, não o botão: pintar os 14px daria uma fileira de
+     tijolos, e a fita deixaria de ser um fio. */
   position: relative;
 }
 
-.axxa-root button.axxa-wiz-dot::before {
+.axxa-root button.axxa-wiz-seg::before {
   content: "";
   position: absolute;
-  inset: 50% auto auto 50%;
-  width: 8px;
-  height: 8px;
-  transform: translate(-50%, -50%);
+  inset: 50% 0 auto 0;
+  height: 4px;
+  transform: translateY(-50%);
   border-radius: 999px;
   background-color: var(--axxa-line);
-  transition: width 120ms ease, background-color 120ms ease;
+  transition: background-color 140ms ease;
 }
 
-/* O passo JÁ respondido fica com a cor do app: a fileira conta a história do
-   que foi feito, não só onde você está. */
-.axxa-root button.axxa-wiz-dot.is-done::before {
-  background-color: color-mix(in srgb, var(--interactive-accent) 55%, transparent);
+/* O passo JÁ respondido fica com a cor do app, mais fraca: a fita conta o que
+   foi feito, não só onde você está. */
+.axxa-root button.axxa-wiz-seg.is-done::before {
+  background-color: color-mix(in srgb, var(--interactive-accent) 50%, transparent);
 }
 
-/* O atual é um TRAÇO, não um ponto maior. Tamanho é uma diferença que se mede;
-   forma é uma que se vê. */
-.axxa-root button.axxa-wiz-dot.is-on::before {
-  width: 22px;
+/* O atual é o accent CHEIO — a cabeça da fita. É o que diferencia "andei até
+   aqui" de "estou aqui", que num traço de 4px é diferença de cor, não de
+   forma. */
+.axxa-root button.axxa-wiz-seg.is-on::before {
   background-color: var(--interactive-accent);
 }
+
+/* ── o pé do WIZARD ────────────────────────────────────────────────────
+   Onde você ESTÁ é da fita, lá em cima. Aqui embaixo fica o que falta e pra
+   onde ir. Reaproveita `.axxa-form-foot` de propósito: é o mesmo lugar do
+   mesmo botão, e mudar a casca entre criar e editar ensinaria que são duas
+   coisas diferentes. */
 
 /* Já dá pra salvar e ainda sobram passos. Discreto de propósito: é uma saída,
    não o caminho — quem quiser os enfeites toca "Next" e não repara nisto. */

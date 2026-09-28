@@ -92,6 +92,7 @@ export function Sheet({
   title,
   mark,
   footer,
+  progress,
   action,
   open,
   onClose,
@@ -116,6 +117,19 @@ export function Sheet({
    * cobrir nada, e não depende do tamanho que sobrou.
    */
   footer?: ReactNode;
+  /**
+   * A fita de progresso, entre o cabeçalho e o que rola.
+   *
+   * Aqui em cima e não lá embaixo com os botões: progresso é o ENDEREÇO da
+   * tela, e endereço se lê junto do título — é a mesma pergunta ("onde eu
+   * estou?"), e ela se responde no topo, antes de olhar o campo. No pé ela
+   * dividia lugar com o que a tela quer que você FAÇA, que é outra coisa.
+   *
+   * Fora do scroller, como o rodapé: dentro dele a fita rolava pra fora na
+   * primeira arrastada e o progresso sumia justamente em quem está rolando
+   * atrás do que falta.
+   */
+  progress?: ReactNode;
   /**
    * A ação da BARRA — o "+" que cria mais um do que a folha lista.
    *
@@ -548,6 +562,7 @@ export function Sheet({
             )
           )}
         </header>
+        {progress}
         <div ref={bodyRef} className="axxa-sheet-body">
           <SheetSizeCtx.Provider value={api}>
             <SheetLevelCtx.Provider value={nivelApi}>

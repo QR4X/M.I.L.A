@@ -442,32 +442,86 @@ export function SheetSubmit({
 }
 
 /**
- * O pé de um WIZARD: onde você está, o que falta, e para onde ir.
+ * A fita de progresso de um wizard — vai no TOPO da folha (prop `progress` do
+ * Sheet), logo abaixo do título.
  *
- * Três coisas, nesta ordem de leitura:
+ * Ela já foi uma fileira de pontos no pé, junto dos botões, e estava no lugar
+ * errado por dois motivos. Um: progresso é o ENDEREÇO da tela, e endereço se
+ * lê junto do título — "New skill · Color" e a fita respondem à mesma pergunta,
+ * e ela se faz antes de olhar o campo, não depois. Dois: com o teclado aberto,
+ * que é o estado normal de um formulário no celular, o pé é a única faixa que
+ * sobra, e ali cada milímetro é do botão.
  *
- * 1. Os PONTOS. Eles não são enfeite de progresso — são navegação: cada um é
- *    um botão que pula direto pro passo. Sem isso o wizard seria uma jaula, e
- *    uma jaula é exatamente o que um formulário de cinco telas não pode ser
- *    quando você só quer trocar o ícone.
- * 2. A linha de STATUS, que tem dois estados que nunca coexistem: o que falta
+ * É uma fita SEGMENTADA, não uma barra que enche: com seis passos, um traço
+ * contínuo em 83% diz "falta pouco"; seis segmentos com um apagado dizem
+ * "falta um". A segunda é a informação que a pessoa quer.
+ *
+ * E cada segmento é um BOTÃO: toca e pula pro passo. Sem isso o wizard vira
+ * jaula — e quem só quer trocar o ícone de um rascunho atravessaria a fila
+ * inteira pra chegar nele.
+ */
+export function SheetProgress({
+  passos,
+  atual,
+  onPasso,
+}: {
+  passos: readonly { id: string; label: string }[];
+  atual: number;
+  onPasso: (i: number) => void;
+}) {
+  return (
+    <div
+      className="axxa-wiz-bar"
+      role="group"
+      aria-label={`Step ${Math.min(atual + 1, passos.length)} of ${
+        passos.length
+      }`}
+    >
+      {passos.map((p, i) => (
+        <button
+          key={p.id}
+          type="button"
+          className={
+            "axxa-wiz-seg" +
+            (i === atual ? " is-on" : i < atual ? " is-done" : "")
+          }
+          aria-current={i === atual ? "step" : undefined}
+          aria-label={`${i + 1}. ${p.label}`}
+          onClick={() => onPasso(i)}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * O pé de um WIZARD: o que falta e para onde ir.
+ *
+ * Onde você ESTÁ não é assunto daqui — é da fita lá em cima (SheetProgress).
+ * Aqui embaixo fica só o que falta e para onde ir.
+ *
+ * Duas coisas, nesta ordem de leitura:
+ *
+ * 1. A linha de STATUS, que tem dois estados que nunca coexistem: o que falta
  *    pra salvar, ou — quando já não falta nada e ainda há passos à frente — o
  *    atalho de terminar agora. São a mesma pergunta ("posso acabar?") com as
  *    duas respostas possíveis, então dividem o mesmo lugar.
- * 3. Os BOTÕES. `‹ Back` só aparece a partir do segundo passo: no primeiro,
+ * 2. Os BOTÕES. `‹ Back` só aparece a partir do segundo passo: no primeiro,
  *    voltar é sair do formulário, e isso já é a seta da barra de cima —
  *    repetir aqui embaixo com outro significado é como se chamam armadilhas.
  */
 export function SheetWizardFoot({
-  passos,
   atual,
+  total,
   onPasso,
   problema,
   label,
   onSubmit,
 }: {
-  passos: readonly { id: string; label: string }[];
   atual: number;
+  /** Quantos passos a fila tem. Aqui basta o NÚMERO: os rótulos são da fita,
+   *  que é quem nomeia cada passo. */
+  total: number;
   onPasso: (i: number) => void;
   /** O que impede de salvar agora; null = pronto. */
   problema?: string | null;
@@ -477,25 +531,9 @@ export function SheetWizardFoot({
 }) {
   // Quais botões existem e o que a linha de status diz — ver wizard.ts, onde
   // essa meia dúzia de ternários é uma função pura com testes.
-  const pe = peDoWizard({ atual, total: passos.length, problema });
+  const pe = peDoWizard({ atual, total, problema });
   return (
     <div className="axxa-form-foot">
-      <div className="axxa-wiz-dots">
-        {passos.map((p, i) => (
-          <button
-            key={p.id}
-            type="button"
-            className={
-              "axxa-wiz-dot" +
-              (i === atual ? " is-on" : i < atual ? " is-done" : "")
-            }
-            aria-current={i === atual ? "step" : undefined}
-            aria-label={`${i + 1}. ${p.label}`}
-            onClick={() => onPasso(i)}
-          />
-        ))}
-      </div>
-
       {pe.status === "problema" ? (
         /* O que falta só aparece no ÚLTIMO passo, que é onde mora o botão de
            concluir. "Give it a name." na tela do prompt seria um aviso sobre
