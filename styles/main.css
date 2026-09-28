@@ -3626,42 +3626,34 @@ body.is-mobile .axxa-root .axxa-drawer-layer {
   z-index: 1000;
 }
 
-/* Teclado aberto: a CAMADA termina onde o teclado começa — é ela que decide
-   onde fica o fim da folha, e o fim da folha é onde mora o botão.
-   
-   Isto é o mecanismo do COMPOSER, e por isso funciona: o composer não faz
-   conta nenhuma de teclado. Ele está no fim de uma coluna cuja altura é
-   `calc(100dvh - var(--keyboard-height))` — a regra da gaveta, lá no bloco do
-   teclado. A mesma altura, escrita aqui, dá à camada o mesmo fim.
+/* Teclado aberto: a camada deixa de ser `fixed` e vira `absolute` DENTRO da
+   `.axxa-root` — que é a caixa onde o composer mora.
 
-   Por que ALTURA e não `bottom`: esta camada é `fixed`, e de quem ela é
-   `fixed` depende da versão do Obsidian. Medido no preview (app.css do
-   desktop), `.workspace-drawer` tem `contain: content` — que estabelece bloco
-   contenedor pra descendente fixo —, então a camada já nascia com o fim da
-   gaveta (512 de 812, com 300 de teclado) e o botão aparecia. No APARELHO não:
-   o comentário da regra `fixed` logo acima é a prova, e ele é de lá — "fixed
-   cobre o viewport inteiro e encosta no fundo". Lá a camada ia até 812, e o
-   botão ficava atrás do teclado. `bottom: var(--keyboard-height)` acertaria um
-   mundo e erraria o outro por 300px.
+   Esta é a terceira tentativa, e as duas primeiras erraram do mesmo jeito:
+   cada uma inventou uma conta pra chegar no topo do teclado. A 0.7.30 repetia
+   a fórmula da gaveta (`100dvh - --keyboard-height`) na própria camada, e no
+   aparelho o botão ficou uns 37px atrás do teclado — a altura da barra de
+   ferramentas do SwiftKey, que a medida publicada não inclui. Qualquer conta
+   nossa herda o erro da medida.
 
-   `dvh` é a unidade que não se importa: ela mede o VIEWPORT, contida ou não.
-   Com `top: 0` (do `inset: 0`), altura `100dvh - teclado` põe o fim no mesmo
-   lugar nos dois mundos. E é a MESMA conta da gaveta — o que for verdade pra
-   ela é verdade aqui, que é o mais perto de "não ter conta própria" que dá
-   pra chegar.
+   Então a camada para de ter conta. `.axxa-root` é o fim da coluna onde o
+   composer é o último item em fluxo: se o composer pousa no lugar certo — e
+   pousa, há quinze releases —, esta camada pousa no mesmo lugar, porque é
+   literalmente a mesma borda. Não há número pra errar.
 
-   `bottom: auto` explícito: com top, height e bottom todos definidos a regra
-   fica sobre-restrita e o navegador descarta um deles. Escrito, não sorteado.
+   Só com o teclado ABERTO. Fechado a camada continua `fixed` (regra logo
+   acima), que é o que a faz encostar no fundo de verdade passando por cima do
+   respiro da navbar — a lição da 0.2.37, escrita ali. Com o teclado aberto não
+   há navbar: ela está debaixo do teclado, e é justamente aí que a borda da
+   raiz passa a ser a borda certa.
 
-   Some daqui o `max-height` que esta regra tinha antes (`100vh - teclado -
-   16px`): com a camada do tamanho certo, os tamanhos da folha são
-   porcentagens DELA (62% e 94%) e encolhem sozinhos. Duas contas pro mesmo
-   fim é como o double-count da 0.1.246 voltava. */
+   `height: auto` desfaz a conta da 0.7.30; `inset: 0` volta a valer inteiro
+   porque agora ele é o retângulo da raiz. */
 body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-layer,
 body.is-mobile.axxa-keyboard-open .axxa-root .axxa-drawer-layer {
-  bottom: auto;
-  height: calc(100vh - var(--keyboard-height, 0px));
-  height: calc(100dvh - var(--keyboard-height, 0px));
+  position: absolute;
+  inset: 0;
+  height: auto;
 }
 
 .axxa-root .axxa-drawer-layer.is-open {

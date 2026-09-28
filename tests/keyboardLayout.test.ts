@@ -59,19 +59,24 @@ describe("a única conta de teclado", () => {
     expect(b.indexOf("100vh")).toBeLessThan(b.indexOf("100dvh"));
   });
 
-  it("as camadas da folha terminam onde a gaveta termina", () => {
-    // Elas são `fixed` no mobile, e de QUEM elas são fixed depende da versão do
-    // Obsidian (um ancestral com `contain` vira bloco contenedor). Medindo a
-    // mesma altura da gaveta, o fim é o mesmo nos dois mundos — que é o mais
-    // perto de "não ter conta própria" que dá pra chegar estando fora da
-    // cadeia dela.
+  it("as camadas da folha entram na CAIXA do composer, sem conta própria", () => {
+    // Com o teclado aberto elas deixam de ser `fixed` e viram `absolute` dentro
+    // da `.axxa-root` — a mesma caixa onde o composer é o último item em fluxo.
+    // Se o composer pousa no lugar certo, elas pousam no mesmo lugar, porque é
+    // literalmente a mesma borda.
+    //
+    // A versão anterior repetia a fórmula da gaveta aqui, e no aparelho o botão
+    // ficou uns 37px atrás do teclado: a barra do SwiftKey não entra na medida
+    // publicada, e qualquer conta nossa herda o erro dela. A borda da raiz não
+    // tem esse problema porque não é uma conta.
     const b = bloco(
       "body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-layer"
     );
-    expect(b).toContain("calc(100dvh - var(--keyboard-height, 0px))");
-    // `bottom: auto` explícito: com top, height e bottom definidos a regra fica
-    // sobre-restrita e o navegador descarta um deles por conta própria.
-    expect(b).toContain("bottom: auto");
+    expect(b).toContain("position: absolute");
+    expect(b).not.toContain("--keyboard-height");
+    // `height: auto` desfaz a conta que esta regra já teve — sem ele, uma
+    // altura antiga sobreviveria à troca de mecanismo.
+    expect(b).toContain("height: auto");
   });
 
   it("a lista de quem desconta o teclado é ESTA, e ela é curta", () => {
@@ -83,11 +88,6 @@ describe("a única conta de teclado", () => {
       // A gaveta, no fullscreen e no modo normal: a ÚNICA conta que importa.
       "height: calc(100vh - var(--keyboard-height, 0px)) !important",
       "height: calc(100dvh - var(--keyboard-height, 0px)) !important",
-      // As camadas `fixed` da folha e da gaveta de navegação. `fixed` pode
-      // escapar da cadeia (depende de quem tem `contain` na versão do
-      // Obsidian), então elas repetem a altura dela em vez de herdar.
-      "height: calc(100vh - var(--keyboard-height, 0px))",
-      "height: calc(100dvh - var(--keyboard-height, 0px))",
       // Modais NATIVOS do Obsidian: `.modal-container` é filho do <body>, fora
       // da gaveta, e por isso desconta sozinho.
       "max-height: calc(100vh - var(--keyboard-height, 50vh) - 32px)",

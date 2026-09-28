@@ -12,7 +12,7 @@
 // Rótulo que vive de placeholder some na hora em que a pessoa começa a
 // digitar — justamente quando ela ainda precisa dele.
 
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
 import { useSheetFull, useSheetLevel } from "./Sheet";
 import { ICON_CATALOG, iconCatalogSize, iconCategoryOf } from "../iconCatalog";
@@ -51,6 +51,34 @@ export function SheetField({
   );
 }
 
+/**
+ * Põe o cursor no campo — e, no celular, o teclado na tela.
+ *
+ * Não é o `autoFocus` do React, e a diferença tem dois motivos, os dois já
+ * pagos em release:
+ *
+ * · `autoFocus` chama `focus()` SEM `preventScroll`, e focar um campo rola o
+ *   ancestral pra "mostrar" o que já estava visível. É o pulo que a folha
+ *   levava ao entrar na busca (ver SearchField, que resolveu isto primeiro) —
+ *   e num wizard é o campo subindo e o rodapé indo junto.
+ * · `autoFocus` só age na MONTAGEM. Aqui o valor vira true depois, quando a
+ *   fila anda de um passo pro outro sem trocar de componente; como dependência
+ *   do efeito, cada chegada num passo abre o teclado de novo.
+ *
+ * `useLayoutEffect` e não `useEffect`: o foco tem que sair no mesmo quadro do
+ * toque que abriu a tela. O WebView do Android só levanta o teclado quando o
+ * foco é filho de um gesto, e um quadro de atraso já é tarde demais — foi a
+ * lição do painel da assistente (0.7.25).
+ */
+function useFocarCampo<T extends HTMLElement>(ligado?: boolean) {
+  const ref = useRef<T>(null);
+  useLayoutEffect(() => {
+    if (!ligado) return;
+    ref.current?.focus({ preventScroll: true });
+  }, [ligado]);
+  return ref;
+}
+
 export function SheetInput({
   value,
   placeholder,
@@ -66,16 +94,14 @@ export function SheetInput({
   comSpark?: boolean;
   onChange: (v: string) => void;
 }) {
+  const ref = useFocarCampo<HTMLInputElement>(autoFocus);
   return (
     <input
+      ref={ref}
       className={comSpark ? "axxa-input axxa-has-spark" : "axxa-input"}
       type="text"
       value={value}
       placeholder={placeholder}
-      // A folha do formulário abre com `focusOnOpen={false}` pra este campo
-      // poder pegar o foco — o efeito do pai roda depois do do filho, e sem
-      // isso o painel rouba o cursor (a mesma armadilha da busca).
-      autoFocus={autoFocus}
       onChange={(e) => onChange(e.currentTarget.value)}
     />
   );
@@ -99,13 +125,14 @@ export function SheetTextarea({
   autoFocus?: boolean;
   onChange: (v: string) => void;
 }) {
+  const ref = useFocarCampo<HTMLTextAreaElement>(autoFocus);
   return (
     <textarea
+      ref={ref}
       className={comSpark ? "axxa-textarea axxa-has-spark" : "axxa-textarea"}
       value={value}
       placeholder={placeholder}
       rows={rows}
-      autoFocus={autoFocus}
       onChange={(e) => onChange(e.currentTarget.value)}
     />
   );
