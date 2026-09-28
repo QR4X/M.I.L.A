@@ -33,8 +33,8 @@ import { Icon } from "./Icon";
 import { Sheet, SheetSearch } from "./Sheet";
 import { Segmented } from "./Segmented";
 import { projectColor } from "../projects";
-import { SheetSubmit } from "./SheetForm";
-import { SkillForm } from "./SkillSheet";
+import { SheetSubmit, SheetWizardFoot } from "./SheetForm";
+import { SkillForm, PASSOS_SKILL } from "./SkillSheet";
 import { openActions } from "./menu";
 import { MODULES, relativeShort } from "./modules";
 import { CHAT_MODES, isChatMode } from "../core/session";
@@ -63,6 +63,18 @@ export function SkillsView({
   const [draft, setDraft] = useState<SkillDraft | null>(null);
   /** Caminho do skill em edição — null quando é criação. */
   const [editandoPath, setEditandoPath] = useState<string | null>(null);
+  /**
+   * O passo da CRIAÇÃO (índice em PASSOS_SKILL).
+   *
+   * Mora aqui, e não no formulário, porque quem desenha o rodapé é a folha
+   * (prop `footer`, fora da área que rola — ver Sheet.tsx) e é o rodapé que
+   * anda na fila. Estado do passo dentro do formulário deixaria os botões de
+   * avançar sem como avançar.
+   */
+  const [passo, setPasso] = useState(0);
+  /** O catálogo de ícones está aberto — é um nível da folha, e enquanto ele
+   *  está na tela o rodapé sai: o catálogo tem o voltar dele. */
+  const [procurando, setProcurando] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -104,11 +116,14 @@ export function SkillsView({
 
   const criar = () => {
     setEditandoPath(null);
+    setPasso(0);
+    setProcurando(false);
     setDraft(SKILL_DRAFT_VAZIO);
   };
 
   const editar = (s: Skill) => {
     setEditandoPath(s.path);
+    setProcurando(false);
     setDraft({
       name: s.name,
       description: s.description,
@@ -122,6 +137,8 @@ export function SkillsView({
   const fecharNivel = () => {
     setDraft(null);
     setEditandoPath(null);
+    setProcurando(false);
+    setPasso(0);
   };
 
   /** Grava o rascunho: cria a nota ou reescreve a que está sendo editada. */
@@ -184,13 +201,31 @@ export function SkillsView({
   };
 
   const noFormulario = draft !== null;
+  /** Criando = wizard, um campo por tela. Editando = o formulário inteiro:
+   *  quem veio trocar o ícone de um skill que já existe não deve atravessar
+   *  cinco telas pra chegar nele. */
+  const criando = noFormulario && editandoPath === null;
 
   /** A barra de baixo é da FOLHA, fora do que rola (ver `footer` em
    *  Sheet.tsx): grudada no fim do conteúdo com sticky, ela subia pro meio do
    *  formulário quando o teclado encolhia a área visível. */
-  const rodape = noFormulario ? (
+  const rodape = procurando ? (
+    // O catálogo de ícones toma a tela e traz o voltar dele. Um "Back / Next"
+    // por baixo seriam dois voltares na mesma tela querendo dizer coisas
+    // diferentes.
+    undefined
+  ) : criando ? (
+    <SheetWizardFoot
+      passos={PASSOS_SKILL}
+      atual={passo}
+      onPasso={setPasso}
+      problema={problema}
+      label="Create skill"
+      onSubmit={() => void salvar()}
+    />
+  ) : noFormulario ? (
     <SheetSubmit
-      label={editandoPath ? "Save skill" : "Create skill"}
+      label="Save skill"
       problema={problema}
       onSubmit={() => void salvar()}
     />
@@ -206,8 +241,18 @@ export function SkillsView({
           ? undefined
           : { icon: "plus", label: "New skill", text: "New", onClick: criar }
       }
+      // Com o catálogo aberto quem manda no título é ELE (useSheetLevel →
+      // `interno` em Sheet.tsx), então não há o que dizer daqui.
       title={
-        noFormulario ? (editandoPath ? "Edit skill" : "New skill") : "Skills"
+        criando
+          ? // O passo no TÍTULO, não só nos pontos do rodapé: "New skill"
+            // cinco vezes seguidas não distingue uma tela da seguinte, e a
+            // pessoa precisa saber o que a tela está perguntando antes de
+            // olhar pro campo.
+            `New skill · ${PASSOS_SKILL[passo].label}`
+          : noFormulario
+            ? "Edit skill"
+            : "Skills"
       }
       open={open}
       onClose={() => {
@@ -231,6 +276,9 @@ export function SkillsView({
           focar={noFormulario}
           onDraft={setDraft}
           plugin={plugin}
+          passo={criando ? PASSOS_SKILL[passo].id : undefined}
+          procurando={procurando}
+          onProcurar={setProcurando}
         />
       ) : (
         /* Pilha com respiro: na folha os blocos são irmãos soltos, e irmão

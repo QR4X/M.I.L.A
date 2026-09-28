@@ -5677,6 +5677,119 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   color: var(--text-muted);
 }
 
+/* ── o pé do WIZARD ────────────────────────────────────────────────────
+   Criar um skill é uma fila de telas (ver SkillSheet.tsx: PASSOS_SKILL), e
+   este é o painel de comando dela: onde estou, o que falta, pra onde vou.
+   Ele reaproveita `.axxa-form-foot` de propósito — é o mesmo lugar do mesmo
+   botão, e mudar a casca entre criar e editar ensinaria que são duas coisas. */
+
+.axxa-root .axxa-wiz-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Vão generoso: os pontos são BOTÕES de 8px, e é a área invisível em volta
+     que faz um alvo de 8px ser tocável com o polegar. */
+  gap: var(--axxa-2);
+  padding-bottom: var(--axxa-1);
+}
+
+.axxa-root button.axxa-wiz-dot {
+  /* O alvo tem 28px; o desenho, 8. O resto é o que separa "tocar no ponto" de
+     "tentar acertar o ponto". */
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  background-color: transparent;
+  box-shadow: none;
+  /* O ponto é o ::before, não o botão: pintar o botão daria uma bolota de
+     28px, e aí os cinco passos viriam a ser cinco moedas numa fileira. */
+  position: relative;
+}
+
+.axxa-root button.axxa-wiz-dot::before {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background-color: var(--axxa-line);
+  transition: width 120ms ease, background-color 120ms ease;
+}
+
+/* O passo JÁ respondido fica com a cor do app: a fileira conta a história do
+   que foi feito, não só onde você está. */
+.axxa-root button.axxa-wiz-dot.is-done::before {
+  background-color: color-mix(in srgb, var(--interactive-accent) 55%, transparent);
+}
+
+/* O atual é um TRAÇO, não um ponto maior. Tamanho é uma diferença que se mede;
+   forma é uma que se vê. */
+.axxa-root button.axxa-wiz-dot.is-on::before {
+  width: 22px;
+  background-color: var(--interactive-accent);
+}
+
+/* Já dá pra salvar e ainda sobram passos. Discreto de propósito: é uma saída,
+   não o caminho — quem quiser os enfeites toca "Next" e não repara nisto. */
+.axxa-root button.axxa-wiz-now {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--axxa-2);
+  min-height: 32px;
+  padding: 0 var(--axxa-2);
+  border-radius: var(--axxa-r-sm, 8px);
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.axxa-root button.axxa-wiz-now:hover {
+  background-color: var(--axxa-hover);
+  color: var(--text-normal);
+}
+
+.axxa-root .axxa-wiz-row {
+  display: flex;
+  align-items: center;
+  gap: var(--axxa-2);
+}
+
+/* `Next` manda: ele fica com o que sobrar da fileira, e no primeiro passo —
+   onde não há Back — ocupa a largura inteira, que é exatamente o desenho que
+   o formulário de editar tem. A fila não muda de casca no caminho. */
+.axxa-root .axxa-wiz-row .axxa-form-submit {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+/* Voltar é texto com contorno: ele precisa ser achável sem competir com o que
+   a tela quer que você faça. */
+.axxa-root button.axxa-wiz-back {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--axxa-1);
+  min-height: 48px;
+  padding: 0 var(--axxa-4) 0 var(--axxa-3);
+  border-radius: 999px;
+  background-color: var(--axxa-hover);
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+  box-shadow: none;
+}
+
+.axxa-root button.axxa-wiz-back:hover {
+  /* `--axxa-hover` JÁ é `--background-modifier-hover`: repetir ali seria um
+     hover sem resposta. Um degrau de verdade, medido a partir dele. */
+  background-color: color-mix(in srgb, var(--text-normal) 10%, var(--axxa-hover));
+  color: var(--text-normal);
+}
+
 /* ── a página de um projeto ────────────────────────────────────────────
    Desenho da referência (a tela de projeto do app da Claude): uma fileira de
    pílulas, uma caixa contornada com a frase que explica o lugar, dois cartões

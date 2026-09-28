@@ -16,6 +16,7 @@ import { useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
 import { useSheetFull, useSheetLevel } from "./Sheet";
 import { ICON_CATALOG, iconCatalogSize, iconCategoryOf } from "../iconCatalog";
+import { peDoWizard } from "./wizard";
 
 /**
  * Rótulo + explicação + o campo. A unidade do formulário.
@@ -85,6 +86,7 @@ export function SheetTextarea({
   placeholder,
   rows = 6,
   comSpark,
+  autoFocus,
   onChange,
 }: {
   value: string;
@@ -92,6 +94,9 @@ export function SheetTextarea({
   rows?: number;
   /** Ver SheetInput: espaço pro botão da assistente. */
   comSpark?: boolean;
+  /** Abre com o teclado. É o caso do wizard: a tela é deste campo, então
+   *  chegar nela com o cursor já dentro é uma batida a menos. */
+  autoFocus?: boolean;
   onChange: (v: string) => void;
 }) {
   return (
@@ -100,6 +105,7 @@ export function SheetTextarea({
       value={value}
       placeholder={placeholder}
       rows={rows}
+      autoFocus={autoFocus}
       onChange={(e) => onChange(e.currentTarget.value)}
     />
   );
@@ -431,6 +437,117 @@ export function SheetSubmit({
         <Icon name={icon} size={18} />
         <span>{label}</span>
       </button>
+    </div>
+  );
+}
+
+/**
+ * O pé de um WIZARD: onde você está, o que falta, e para onde ir.
+ *
+ * Três coisas, nesta ordem de leitura:
+ *
+ * 1. Os PONTOS. Eles não são enfeite de progresso — são navegação: cada um é
+ *    um botão que pula direto pro passo. Sem isso o wizard seria uma jaula, e
+ *    uma jaula é exatamente o que um formulário de cinco telas não pode ser
+ *    quando você só quer trocar o ícone.
+ * 2. A linha de STATUS, que tem dois estados que nunca coexistem: o que falta
+ *    pra salvar, ou — quando já não falta nada e ainda há passos à frente — o
+ *    atalho de terminar agora. São a mesma pergunta ("posso acabar?") com as
+ *    duas respostas possíveis, então dividem o mesmo lugar.
+ * 3. Os BOTÕES. `‹ Back` só aparece a partir do segundo passo: no primeiro,
+ *    voltar é sair do formulário, e isso já é a seta da barra de cima —
+ *    repetir aqui embaixo com outro significado é como se chamam armadilhas.
+ */
+export function SheetWizardFoot({
+  passos,
+  atual,
+  onPasso,
+  problema,
+  label,
+  onSubmit,
+}: {
+  passos: readonly { id: string; label: string }[];
+  atual: number;
+  onPasso: (i: number) => void;
+  /** O que impede de salvar agora; null = pronto. */
+  problema?: string | null;
+  /** O texto do botão que CONCLUI ("Create skill"). */
+  label: string;
+  onSubmit: () => void;
+}) {
+  // Quais botões existem e o que a linha de status diz — ver wizard.ts, onde
+  // essa meia dúzia de ternários é uma função pura com testes.
+  const pe = peDoWizard({ atual, total: passos.length, problema });
+  return (
+    <div className="axxa-form-foot">
+      <div className="axxa-wiz-dots">
+        {passos.map((p, i) => (
+          <button
+            key={p.id}
+            type="button"
+            className={
+              "axxa-wiz-dot" +
+              (i === atual ? " is-on" : i < atual ? " is-done" : "")
+            }
+            aria-current={i === atual ? "step" : undefined}
+            aria-label={`${i + 1}. ${p.label}`}
+            onClick={() => onPasso(i)}
+          />
+        ))}
+      </div>
+
+      {pe.status === "problema" ? (
+        /* O que falta só aparece no ÚLTIMO passo, que é onde mora o botão de
+           concluir. "Give it a name." na tela do prompt seria um aviso sobre
+           uma pergunta que ainda não foi feita — a pessoa leria como erro do
+           que ela acabou de escrever. */
+        <p className="axxa-form-problem" role="status">
+          <Icon name="info" size={15} />
+          <span>{problema}</span>
+        </p>
+      ) : pe.status === "atalho" ? (
+        /* Já dá pra salvar e ainda sobram passos: o resto é enfeite, e ninguém
+           deve tocar "Next" três vezes pra sair de uma coisa que já está
+           pronta. É o caso de quem pediu ajuda à assistente no primeiro passo
+           e recebeu o skill inteiro preenchido de uma vez. */
+        <button type="button" className="axxa-wiz-now" onClick={onSubmit}>
+          <Icon name="check" size={15} />
+          <span>{label} now</span>
+        </button>
+      ) : null}
+
+      <div className="axxa-wiz-row">
+        {pe.back && (
+          <button
+            type="button"
+            className="axxa-wiz-back"
+            onClick={() => onPasso(atual - 1)}
+          >
+            <Icon name="chevron-left" size={18} />
+            <span>Back</span>
+          </button>
+        )}
+        <button
+          type="button"
+          className="axxa-form-submit"
+          aria-disabled={pe.primario === "submit" ? !pe.pronto : undefined}
+          onClick={() =>
+            pe.primario === "submit" ? onSubmit() : onPasso(atual + 1)
+          }
+        >
+          {pe.primario === "submit" ? (
+            <>
+              <Icon name="check" size={18} />
+              <span>{label}</span>
+            </>
+          ) : (
+            <>
+              <span>Next</span>
+              <Icon name="chevron-right" size={18} />
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

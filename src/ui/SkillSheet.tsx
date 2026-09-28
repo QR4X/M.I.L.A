@@ -37,20 +37,56 @@ import { limparRun } from "../assistant/store";
 import type { SkillSugerido } from "../assistant/parse";
 import { useAssistant } from "./useAssistant";
 
+/**
+ * Os passos da CRIAÇÃO, um por tela.
+ *
+ * A ordem é a da cabeça de quem cria, não a do arquivo: primeiro O QUE ELE
+ * ESCREVE — que é o skill inteiro —, depois como se chama, e só então os
+ * enfeites. Quem desistir no meio já tem um skill que funciona, e é por isso
+ * que o "Create" fica disponível desde o passo em que o rascunho passa a ser
+ * válido, em vez de esperar o fim da fila.
+ *
+ * Um campo por tela porque um formulário de sete blocos num celular é uma
+ * parede: a pessoa rola, vê tudo vazio de uma vez e fecha. Uma pergunta por
+ * vez ela responde.
+ */
+export const PASSOS_SKILL = [
+  { id: "body", label: "Prompt" },
+  { id: "name", label: "Name" },
+  { id: "description", label: "Description" },
+  { id: "mode", label: "Opens in" },
+  { id: "look", label: "Look" },
+] as const;
+
+export type PassoSkill = (typeof PASSOS_SKILL)[number]["id"];
+
 export function SkillForm({
   draft,
   focar,
   onDraft,
   plugin,
+  passo,
+  procurando,
+  onProcurar,
 }: {
   draft: SkillDraft;
   /** O campo do nome toma o foco (a folha acabou de abrir neste nível). */
   focar: boolean;
   onDraft: (d: SkillDraft) => void;
   plugin: AxxaPlugin;
+  /** Qual passo mostrar. `undefined` = o formulário INTEIRO, que é o modo de
+   *  EDITAR: ali a pessoa veio mexer num campo específico, e uma fila de cinco
+   *  telas pra trocar uma palavra seria um pedágio. */
+  passo?: PassoSkill;
+  /** O catálogo de ícones está aberto. Ele é um NÍVEL da folha, não um estado
+   *  deste formulário, e por isso mora lá fora: o rodapé é da folha, e um
+   *  "Back / Next" por baixo do catálogo seria um segundo voltar querendo
+   *  dizer outra coisa. */
+  procurando: boolean;
+  onProcurar: (p: boolean) => void;
 }) {
   const set = (campo: Partial<SkillDraft>) => onDraft({ ...draft, ...campo });
-  const [procurando, setProcurando] = useState(false);
+  const setProcurando = onProcurar;
   /** Qual campo está com a assistente aberta. Um de cada vez: dois painéis no
    *  mesmo formulário seriam duas conversas disputando os mesmos campos. */
   const [ajudando, setAjudando] = useState<"" | "body" | "desc">("");
@@ -109,11 +145,18 @@ export function SkillForm({
       </SheetIconCatalog>
     );
 
+  /** Este campo aparece agora? Sem `passo` (editar), todos aparecem. */
+  const mostra = (p: PassoSkill) => passo === undefined || passo === p;
+
   return (
     <>
       {/* O skill como ele vai aparecer na lista. Não é enfeite: é o que faz o
           seletor de ícone e a descrição terem sentido antes de salvar —
-          senão são dois campos que só se explicam depois. */}
+          senão são dois campos que só se explicam depois. Num wizard ele ganha
+          um segundo trabalho: é a única coisa que fica na tela de um passo pro
+          outro, e é por isso que a fila não parece cinco formulários seguidos.
+          Cada resposta muda o cartão na hora — o que se está montando está
+          sempre à vista. */}
       <div className="axxa-form-preview">
         <span
           className="axxa-thing-mark"
@@ -135,18 +178,29 @@ export function SkillForm({
         </span>
       </div>
 
-      <SheetField label="Name">
-        <SheetInput
-          value={draft.name}
-          placeholder="Weekly review"
-          autoFocus={focar}
-          onChange={(name) => set({ name })}
-        />
-      </SheetField>
+      {mostra("name") && (
+        <SheetField
+          label="Name"
+          hint={passo ? "How you'll find it in the list." : undefined}
+        >
+          <SheetInput
+            value={draft.name}
+            placeholder="Weekly review"
+            // No wizard o foco é do campo do PASSO, não sempre do nome: chegar
+            // no passo do nome com o teclado já aberto é uma tela a menos pra
+            // atravessar, e chegar no do ícone com ele aberto é meia tela de
+            // grade coberta por nada.
+            autoFocus={focar}
+            onChange={(name) => set({ name })}
+          />
+        </SheetField>
+      )}
 
-      {/* O campo que IMPORTA, e por isso vem antes dos enfeites: sem corpo o
+      {/* O campo que IMPORTA, e por isso é o PRIMEIRO passo: sem corpo o
           parser descarta a nota e o skill some da lista no mesmo segundo em
-          que foi criado. */}
+          que foi criado. E é aqui que a assistente devolve o skill INTEIRO —
+          começar por ele é o que permite uma resposta só encerrar a fila. */}
+      {mostra("body") && (
       <SheetField
         label="Prompt"
         hint="What gets written for you when you use the skill."
@@ -170,7 +224,9 @@ export function SkillForm({
           <SheetTextarea
             comSpark
             value={draft.body}
-            rows={7}
+            // Um passo só desta vez: a tela é dele, então ele usa a tela.
+            rows={passo ? 10 : 7}
+            autoFocus={focar && passo === "body"}
             placeholder={
               "Go through this week's notes and tell me:\n- what moved\n- what stalled\n- what I should drop"
             }
@@ -178,7 +234,9 @@ export function SkillForm({
           />
         </ComAssistente>
       </SheetField>
+      )}
 
+      {mostra("description") && (
       <SheetField label="Description" hint="One line, shown in the list.">
         {/* Aqui ela escreve A PARTIR do que já está na tela: o prompt acima é
             a matéria-prima, então o botão nasce ligado e o campo de entrada
@@ -202,14 +260,17 @@ export function SkillForm({
           <SheetInput
             comSpark
             value={draft.description}
+            autoFocus={focar && passo === "description"}
             placeholder="Optional"
             onChange={(description) => set({ description })}
           />
         </ComAssistente>
       </SheetField>
+      )}
 
       {/* "Opens in" e não "Mode": o que a pessoa escolhe aqui é ONDE o skill
           vai cair quando ela tocar nele. */}
+      {mostra("mode") && (
       <SheetField
         label="Opens in"
         hint="Using the skill switches to this mode."
@@ -228,29 +289,34 @@ export function SkillForm({
           ]}
         />
       </SheetField>
+      )}
 
-      {/* A cor vem ANTES do ícone, como nos projetos: ela decide como cada
-          ícone aparece, e escolher o desenho antes do tom é escolher no
-          escuro. */}
-      <SheetField label="Color">
-        <SheetSwatches
-          colors={PROJECT_COLORS}
-          value={draft.color}
-          resolve={projectColor}
-          onPick={(color) => set({ color })}
-        />
-      </SheetField>
+      {/* Cor e ícone dividem UM passo, e não porque sobraram: são a mesma
+          decisão. A cor é o que pinta o ícone (é o `tint` da grade), então
+          separá-las em duas telas seria escolher o desenho sem ver o tom e o
+          tom sem ver o desenho. A cor vem ANTES, como nos projetos. */}
+      {mostra("look") && (
+        <SheetField label="Color">
+          <SheetSwatches
+            colors={PROJECT_COLORS}
+            value={draft.color}
+            resolve={projectColor}
+            onPick={(color) => set({ color })}
+          />
+        </SheetField>
+      )}
 
-      <SheetField label="Icon">
-        <SheetIconGrid
-          icons={SKILL_ICONS}
-          value={draft.icon}
-          tint={cor}
-          onBrowse={() => setProcurando(true)}
-          onPick={(icon) => set({ icon })}
-        />
-      </SheetField>
-
+      {mostra("look") && (
+        <SheetField label="Icon">
+          <SheetIconGrid
+            icons={SKILL_ICONS}
+            value={draft.icon}
+            tint={cor}
+            onBrowse={() => setProcurando(true)}
+            onPick={(icon) => set({ icon })}
+          />
+        </SheetField>
+      )}
     </>
   );
 }
