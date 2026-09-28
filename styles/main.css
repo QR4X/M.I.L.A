@@ -5599,13 +5599,33 @@ body.is-mobile .axxa-root .axxa-history-more {
   background-color: inherit;
 }
 
-/* Teclado aberto: a gaveta já desconta `--keyboard-height` da própria altura
-   (bloco do teclado, lá em cima), então o fim da folha JÁ está encostado no
-   teclado — e a barra de gestos do Android está atrás dele. Continuar
-   reservando o safe-area ali não protege nada: vira uma faixa vazia de ~24px
-   entre o botão e o teclado, que é o que dava à barra o ar de bloco solto. */
+/* Teclado aberto: o respiro de baixo CONTINUA — e agora com um nome pro que
+   ele está fazendo.
+
+   Ele já foi cortado pra `var(--axxa-2)` aqui, com o argumento de que a gaveta
+   já desconta o teclado e o safe-area viraria faixa morta. O argumento
+   dependia de a medida publicada ser exata, e ela não é: comparando dois
+   prints do mesmo aparelho, um com a barra de ferramentas do SwiftKey aberta e
+   outro com ela fechada, a borda do app fica uns 10px DENTRO do teclado nos
+   dois casos. Com 8px de respiro, esses 10px comem os cantos de baixo do
+   botão.
+
+   E não adianta copiar o composer: ele tem o mesmo desconto e o mesmo erro —
+   só que os 10px dele caem no canto arredondado vazio do cartão, então ninguém
+   nunca viu.
+
+   Como a medida vem do sistema e não temos como corrigi-la, o que sobra é não
+   colar nada na borda. `--safe-area-inset-bottom` é o número do PRÓPRIO
+   aparelho pra "não encoste aqui" (a barra de gestos, ~24px), então ele serve
+   de folga sem ser um palpite nosso: quando a medida do teclado acerta, lê-se
+   como respiro; quando erra por alguns pixels, absorve o erro em vez de cortar
+   o botão.
+
+   O `max()` com `--axxa-3` é o piso pra aparelho sem safe-area nenhum (botão
+   de navegação em vez de gestos): 12px de folga é pouco pra ser faixa e o
+   bastante pra o canto do botão sobreviver. */
 body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
-  padding-bottom: var(--axxa-2);
+  padding-bottom: max(var(--safe-area-inset-bottom, 0px), var(--axxa-3));
 }
 
 .axxa-root .axxa-sheet-actions .axxa-form-foot,

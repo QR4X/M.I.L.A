@@ -225,8 +225,13 @@ export function SkillForm({
           <SheetTextarea
             comSpark
             value={draft.body}
-            // Um passo só desta vez: a tela é dele, então ele usa a tela.
-            rows={passo ? 10 : 7}
+            // Sete linhas em todo lugar. O wizard já teve dez, com o
+            // argumento de que a tela era dele — mas a tela dele é o que sobra
+            // ACIMA do teclado, que são uns 210px: dez linhas não cabiam nem
+            // perto, e o campo aparecia cortado no meio em toda foto. Sete
+            // também não cabem inteiras, e tudo bem: a diferença é entre um
+            // campo que rola e um campo que parece quebrado.
+            rows={7}
             autoFocus={focar && passo === "body"}
             placeholder={
               "Go through this week's notes and tell me:\n- what moved\n- what stalled\n- what I should drop"
