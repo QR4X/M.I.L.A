@@ -6282,15 +6282,107 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   resize: none;
 }
 
+/* A CARA PRÓPRIA dela.
+   Todo o resto do app é superfície neutra, tirada do tema do Obsidian. Esta
+   caixa é a única em accent — e não por enfeite: ela é o único lugar da tela
+   onde o texto não foi escrito nem por você nem pelo app, e sim por um modelo.
+   Quem olha de relance precisa saber disso sem ler nada.
+   O tom é BAIXO de propósito (6%): o suficiente pra ela não ser um cartão como
+   os outros, longe do bastante pra não competir com os botões em accent cheio
+   que moram dentro dela. */
 .axxa-root .axxa-assist {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--axxa-2);
   margin-bottom: var(--axxa-4);
   padding: var(--axxa-3);
   border-radius: var(--axxa-r);
-  background-color: var(--axxa-s1);
+  border: 1px solid
+    color-mix(in srgb, var(--interactive-accent) 38%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--interactive-accent) 6%,
+    var(--axxa-s1)
+  );
   box-shadow: var(--axxa-e1);
+  overflow: hidden;
+}
+
+/* Um brilho no topo, como se a luz viesse de dentro. É o que impede a caixa de
+   ler como "cartão colorido": superfície chapada com borda colorida é um
+   aviso; com um degradê no alto, é uma coisa acesa. */
+.axxa-root .axxa-assist::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 56px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--interactive-accent) 12%, transparent),
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* Tudo que é conteúdo fica ACIMA do brilho. */
+.axxa-root .axxa-assist > * {
+  position: relative;
+}
+
+/* Enquanto ela interroga, a borda acende mais: a caixa deixa de ser um campo
+   com um botão e passa a ser uma conversa esperando resposta. */
+.axxa-root .axxa-assist.is-grill {
+  border-color: color-mix(
+    in srgb,
+    var(--interactive-accent) 60%,
+    transparent
+  );
+}
+
+/* As PASTILHAS de resposta — responder por toque em vez de por escrito. */
+.axxa-root .axxa-assist-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--axxa-2);
+}
+
+/* Cheias, e não de contorno: elas são a resposta que a tela ESPERA, e num
+   interrogatório o que se quer é a coisa mais fácil de acertar com o polegar.
+   O contorno fica pro campo de texto ao lado, que é a saída alternativa. */
+.axxa-root button.axxa-assist-opcao {
+  flex: 0 1 auto;
+  min-height: 34px;
+  padding: 0 var(--axxa-3);
+  border-radius: var(--axxa-r-pill);
+  border: 1px solid
+    color-mix(in srgb, var(--interactive-accent) 45%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--interactive-accent) 14%,
+    transparent
+  );
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.axxa-root button.axxa-assist-opcao:hover:not(:disabled) {
+  background-color: color-mix(
+    in srgb,
+    var(--interactive-accent) 26%,
+    transparent
+  );
+}
+
+.axxa-root button.axxa-assist-opcao:disabled {
+  opacity: 0.5;
+}
+
+/* O ✨ do campo gira enquanto há rodada daquele campo em curso — é o único
+   sinal pra quem fechou o painel de que ainda tem coisa vindo. */
+.axxa-root button.axxa-assist-spark.is-busy .axxa-icon svg {
+  animation: axxa-assist-gira 900ms linear infinite;
 }
 
 .axxa-root .axxa-assist-head {

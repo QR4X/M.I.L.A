@@ -19,7 +19,7 @@
 // um projeto não apaga nota nem conversa nenhuma — some o agrupamento, e a
 // confirmação diz isso com todas as letras.
 
-import { useMemo, useReducer, useState } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import { Notice, TFile } from "obsidian";
 import type AxxaPlugin from "../main";
 import type { ChatSession } from "../core/session";
@@ -41,7 +41,8 @@ import { SheetField, SheetSubmit, SheetTextarea } from "./SheetForm";
 import { openActions } from "./menu";
 import { rankNotes, vaultNotes } from "./notePicker";
 import { exportProjectToVault } from "../core/projectExport";
-import { AssistantPanel, ComAssistente } from "./AssistantPanel";
+import { AssistantPanel, ComAssistente, useRun } from "./AssistantPanel";
+import { limparRun } from "../assistant/store";
 import { useAssistant } from "./useAssistant";
 import type { MenuAction } from "./menu";
 
@@ -92,6 +93,21 @@ export function ProjectsView({
   /** A assistente aberta no campo de instruções. */
   const [ajudandoInstrucoes, setAjudandoInstrucoes] = useState(false);
   const { indisponivel, pedirInstrucoes, alvo, modelos, escolherModelo } = useAssistant(plugin);
+  const modeloAssist = {
+    atual: alvo?.model ?? "",
+    opcoes: modelos,
+    onTrocar: (m: string) => void escolherModelo(m),
+  };
+
+  // A rodada das instruções vive fora daqui (assistant/store.ts).
+  const runInstr = useRun("instructions");
+  useEffect(() => {
+    if (runInstr.fase !== "pronto" || typeof runInstr.resultado !== "string")
+      return;
+    setInstrucoes(runInstr.resultado);
+    limparRun("instructions");
+    setAjudandoInstrucoes(false);
+  }, [runInstr.fase, runInstr.resultado]);
 
   const chats = useChatSummaries(plugin);
   const projects = plugin.settings.projects ?? [];
@@ -460,32 +476,24 @@ export function ProjectsView({
                 junto pra ser melhorado em vez de jogado fora. */}
             <ComAssistente
               aberto={ajudandoInstrucoes}
+              ocupado={runInstr.fase === "rodando"}
               onAbrir={() => setAjudandoInstrucoes(true)}
               painel={
                 <AssistantPanel
                   para="instructions"
                   indisponivel={indisponivel}
-                  modelo={{
-                    atual: alvo?.model ?? "",
-                    opcoes: modelos,
-                    onTrocar: (m) => void escolherModelo(m),
-                  }}
+                  modelo={modeloAssist}
                   onFechar={() => setAjudandoInstrucoes(false)}
-                  onPedir={async (modo, turnos) => {
-                    const r = await pedirInstrucoes(
+                  onPedir={(_modo, turnos) =>
+                    pedirInstrucoes(
                       {
                         name: aberto?.name ?? "",
                         notes: aberto?.sources ?? [],
                         atual: instrucoes ?? "",
                       },
                       turnos
-                    );
-                    if (r.draft) {
-                      setInstrucoes(r.draft);
-                      return { pronto: true };
-                    }
-                    return { pergunta: r.pergunta, erro: r.erro };
-                  }}
+                    )
+                  }
                 />
               }
             >

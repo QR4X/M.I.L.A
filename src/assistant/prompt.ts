@@ -87,8 +87,15 @@ unsure, make the most useful reasonable choice.`;
 /** Guiado: pergunta uma coisa de cada vez, e fecha. */
 const GUIADO = `You may ask up to 3 short questions before writing, one at a
 time, and only when the answer would genuinely change what you write.
-To ask: {"ask": "your question"}
+
+To ask: {"ask": "your question", "options": ["...", "...", "..."]}
+ALWAYS offer 2 to 4 options — they are how the person answers on a phone, with
+a tap instead of typing. Each one is at most 3 words, and they must be real,
+different answers to YOUR question, not "yes/no/maybe". The person can also
+type something else, so never say "or type your own" in the question.
+
 When you have enough (or after 3 questions): {"draft": { ...the fields... }}
+
 Ask about the person's purpose and habits, never about the fields themselves —
 they will review and edit everything afterwards.`;
 

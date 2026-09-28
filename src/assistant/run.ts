@@ -8,7 +8,7 @@
 // ignora o que chegar.
 
 import type { Provider, ProviderMessage } from "../providers/base";
-import { lerObjeto, lerPergunta } from "./parse";
+import { lerObjeto, lerOpcoes, lerPergunta } from "./parse";
 
 /** Uma rodada da conversa com a assistente. */
 export interface TurnoAssistente {
@@ -29,6 +29,8 @@ export interface PedidoAssistente {
 /** O que voltou: uma pergunta, um objeto pra virar rascunho, ou um problema. */
 export interface RetornoAssistente {
   pergunta?: string;
+  /** As pastilhas de resposta da pergunta acima, quando ela oferece. */
+  opcoes?: string[];
   /** O objeto cru do campo `draft` — quem chama passa pro `lerSkill`/`lerProjeto`. */
   bruto?: Record<string, unknown>;
   /** Frase pronta pra mostrar. Presente = não deu. */
@@ -80,7 +82,7 @@ export async function pedirAjuda(
     };
 
   const pergunta = lerPergunta(obj);
-  if (pergunta) return { pergunta };
+  if (pergunta) return { pergunta, opcoes: lerOpcoes(obj) };
 
   const bruto = obj.draft;
   if (bruto && typeof bruto === "object" && !Array.isArray(bruto))

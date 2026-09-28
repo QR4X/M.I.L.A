@@ -27,9 +27,11 @@ import {
   SheetInput,
   SheetSwatches,
 } from "./SheetForm";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type AxxaPlugin from "../main";
-import { AssistantPanel, ComAssistente } from "./AssistantPanel";
+import { AssistantPanel, ComAssistente, useRun } from "./AssistantPanel";
+import { limparRun } from "../assistant/store";
+import type { ProjetoSugerido } from "../assistant/parse";
 import { useAssistant } from "./useAssistant";
 
 export function ProjectForm({
@@ -55,6 +57,25 @@ export function ProjectForm({
   const [procurando, setProcurando] = useState(false);
   const [ajudando, setAjudando] = useState(false);
   const { indisponivel, pedirProjeto, alvo, modelos, escolherModelo } = useAssistant(plugin);
+  const modelo = {
+    atual: alvo?.model ?? "",
+    opcoes: modelos,
+    onTrocar: (m: string) => void escolherModelo(m),
+  };
+
+  // A rodada vive fora daqui (assistant/store.ts): fechar o painel ou a folha
+  // não cancela, e o resultado espera este formulário voltar.
+  const run = useRun("project");
+  useEffect(() => {
+    if (run.fase !== "pronto" || !run.resultado) return;
+    const d = run.resultado as ProjetoSugerido;
+    set({ name: d.name, icon: d.icon, color: d.color });
+    // Notas e instruções não cabem no rascunho — a folha guarda e aplica
+    // assim que o projeto existir.
+    onNotas?.(d.notes, d.instructions);
+    limparRun("project");
+    setAjudando(false);
+  }, [run.fase, run.resultado]);
 
   // Procurar ícone TOMA a tela. O formulário sai inteiro — cartão, nome — e
   // ficam três coisas: voltar, a cor e os ícones. A cor fica porque é ela que
@@ -103,32 +124,15 @@ export function ProjectForm({
             instruções e as notas de origem. */}
         <ComAssistente
           aberto={ajudando}
+          ocupado={run.fase === "rodando"}
           onAbrir={() => setAjudando(true)}
           painel={
             <AssistantPanel
               para="project"
               indisponivel={indisponivel}
-              modelo={{
-                atual: alvo?.model ?? "",
-                opcoes: modelos,
-                onTrocar: (m) => void escolherModelo(m),
-              }}
+              modelo={modelo}
               onFechar={() => setAjudando(false)}
-              onPedir={async (modo, turnos) => {
-                const r = await pedirProjeto(modo, turnos);
-                if (r.draft) {
-                  set({
-                    name: r.draft.name,
-                    icon: r.draft.icon,
-                    color: r.draft.color,
-                  });
-                  // Notas e instruções não cabem no rascunho — a folha
-                  // guarda e aplica assim que o projeto existir.
-                  onNotas?.(r.draft.notes, r.draft.instructions);
-                  return { pronto: true };
-                }
-                return { pergunta: r.pergunta, erro: r.erro };
-              }}
+              onPedir={(modo, turnos) => pedirProjeto(modo, turnos)}
             />
           }
         >

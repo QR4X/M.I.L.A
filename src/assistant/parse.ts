@@ -167,3 +167,24 @@ export function lerTexto(
 export function lerPergunta(obj: Record<string, unknown> | null): string {
   return obj ? texto(obj.ask, 200) : "";
 }
+
+/**
+ * As OPÇÕES da pergunta — o que transforma o interrogatório em toques.
+ *
+ * Responder por escrito três perguntas num celular é trabalho; tocar em três
+ * pastilhas é um gesto. As opções não são obrigatórias (às vezes a pergunta é
+ * mesmo aberta), e o campo de texto continua ali pra quem quiser dizer outra
+ * coisa — elas são atalho, não gaiola.
+ *
+ * Teto de cinco e de trinta caracteres: seis pastilhas numa tela de 375px
+ * viram três fileiras, e pastilha com frase dentro não se lê de relance.
+ */
+export function lerOpcoes(obj: Record<string, unknown> | null): string[] {
+  const cruas = obj && Array.isArray(obj.options) ? obj.options : [];
+  return cruas
+    .filter((o): o is string => typeof o === "string")
+    .map((o) => o.trim().slice(0, 30))
+    .filter(Boolean)
+    .filter((o, i, todas) => todas.indexOf(o) === i)
+    .slice(0, 5);
+}

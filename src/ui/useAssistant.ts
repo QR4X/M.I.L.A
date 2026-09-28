@@ -40,6 +40,8 @@ import { vaultNotes } from "./notePicker";
 /** Resultado de uma rodada, do jeito que o painel entende. */
 export interface RodadaAssistente<T> {
   pergunta?: string;
+  /** As pastilhas de resposta, quando a pergunta oferece (ver prompt.ts). */
+  opcoes?: string[];
   erro?: string;
   draft?: T;
 }
@@ -103,7 +105,7 @@ export function useAssistant(plugin: AxxaPlugin) {
         turnos
       );
       if (r.erro) return { erro: r.erro };
-      if (r.pergunta) return { pergunta: r.pergunta };
+      if (r.pergunta) return { pergunta: r.pergunta, opcoes: r.opcoes };
       const draft = lerSkill(
         r.bruto ?? null,
         permitidos,
@@ -137,7 +139,7 @@ export function useAssistant(plugin: AxxaPlugin) {
         turnos
       );
       if (r.erro) return { erro: r.erro };
-      if (r.pergunta) return { pergunta: r.pergunta };
+      if (r.pergunta) return { pergunta: r.pergunta, opcoes: r.opcoes };
       const draft = lerProjeto(
         r.bruto ?? null,
         permitidos,
@@ -171,7 +173,7 @@ export function useAssistant(plugin: AxxaPlugin) {
         : [{ quem: "pessoa" as const, texto: "Write it." }];
       const r = await rodar(sistema, comAlgo);
       if (r.erro) return { erro: r.erro };
-      if (r.pergunta) return { pergunta: r.pergunta };
+      if (r.pergunta) return { pergunta: r.pergunta, opcoes: r.opcoes };
       const texto = lerTexto(r.bruto ?? null, teto);
       return texto
         ? { draft: texto }

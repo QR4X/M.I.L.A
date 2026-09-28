@@ -30,9 +30,11 @@ import {
   SheetSwatches,
   SheetTextarea,
 } from "./SheetForm";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type AxxaPlugin from "../main";
-import { AssistantPanel, ComAssistente } from "./AssistantPanel";
+import { AssistantPanel, ComAssistente, useRun } from "./AssistantPanel";
+import { limparRun } from "../assistant/store";
+import type { SkillSugerido } from "../assistant/parse";
 import { useAssistant } from "./useAssistant";
 
 export function SkillForm({
@@ -53,6 +55,34 @@ export function SkillForm({
    *  mesmo formulário seriam duas conversas disputando os mesmos campos. */
   const [ajudando, setAjudando] = useState<"" | "body" | "desc">("");
   const { indisponivel, pedirSkill, pedirDescricao, alvo, modelos, escolherModelo } = useAssistant(plugin);
+  const modelo = {
+    atual: alvo?.model ?? "",
+    opcoes: modelos,
+    onTrocar: (m: string) => void escolherModelo(m),
+  };
+
+  // As duas rodadas deste formulário, lidas do store (assistant/store.ts). Elas
+  // vivem FORA daqui: fechar o painel ou a folha não cancela nada, e o
+  // resultado espera este formulário voltar.
+  const runBody = useRun("skill");
+  const runDesc = useRun("description");
+
+  // APLICAR é daqui, não do painel: o painel pode nem estar na tela quando a
+  // resposta chegar. Quem sabe onde o texto vai é o formulário.
+  useEffect(() => {
+    if (runBody.fase !== "pronto" || !runBody.resultado) return;
+    set(runBody.resultado as SkillSugerido);
+    limparRun("skill");
+    setAjudando("");
+  }, [runBody.fase, runBody.resultado]);
+
+  useEffect(() => {
+    if (runDesc.fase !== "pronto" || typeof runDesc.resultado !== "string")
+      return;
+    set({ description: runDesc.resultado });
+    limparRun("description");
+    setAjudando("");
+  }, [runDesc.fase, runDesc.resultado]);
   const cor = projectColor(draft.color);
 
   // Procurar ícone toma a tela, como nos projetos. Aqui nem a cor sobra: skill
@@ -124,27 +154,15 @@ export function SkillForm({
             olhando pra ele vazio que a pessoa percebe que não sabe começar. */}
         <ComAssistente
           aberto={ajudando === "body"}
+          ocupado={runBody.fase === "rodando"}
           onAbrir={() => setAjudando("body")}
           painel={
             <AssistantPanel
               para="skill"
               indisponivel={indisponivel}
-              modelo={{
-                atual: alvo?.model ?? "",
-                opcoes: modelos,
-                onTrocar: (m) => void escolherModelo(m),
-              }}
+              modelo={modelo}
               onFechar={() => setAjudando("")}
-              onPedir={async (modo, turnos) => {
-                const r = await pedirSkill(modo, turnos);
-                if (r.draft) {
-                  // PREENCHE, não salva: o resultado cai nos mesmos campos
-                  // que a pessoa já estava olhando, e ela edita o que quiser.
-                  set(r.draft);
-                  return { pronto: true };
-                }
-                return { pergunta: r.pergunta, erro: r.erro };
-              }}
+              onPedir={(modo, turnos) => pedirSkill(modo, turnos)}
             />
           }
         >
@@ -166,28 +184,17 @@ export function SkillForm({
             vira ajuste fino em vez de requisito. */}
         <ComAssistente
           aberto={ajudando === "desc"}
+          ocupado={runDesc.fase === "rodando"}
           onAbrir={() => setAjudando("desc")}
           painel={
             <AssistantPanel
               para="description"
               indisponivel={indisponivel}
-              modelo={{
-                atual: alvo?.model ?? "",
-                opcoes: modelos,
-                onTrocar: (m) => void escolherModelo(m),
-              }}
+              modelo={modelo}
               onFechar={() => setAjudando("")}
-              onPedir={async (modo, turnos) => {
-                const r = await pedirDescricao(
-                  { name: draft.name, body: draft.body },
-                  turnos
-                );
-                if (r.draft) {
-                  set({ description: r.draft });
-                  return { pronto: true };
-                }
-                return { pergunta: r.pergunta, erro: r.erro };
-              }}
+              onPedir={(_modo, turnos) =>
+                pedirDescricao({ name: draft.name, body: draft.body }, turnos)
+              }
             />
           }
         >
