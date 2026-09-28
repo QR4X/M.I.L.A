@@ -9,12 +9,19 @@
 //
 // Três coisas a separam do resto do app, e as três são de propósito:
 //
-// 1. ELA É UM MODAL ACIMA DO TECLADO, SEMPRE. Não é um bloco no meio do
-//    formulário: enquanto era, ela nascia onde o campo estava — às vezes no
-//    meio da tela, às vezes atrás do rodapé, e com o teclado aberto quase
-//    sempre embaixo dele. Aqui ela encosta na base e sobe junto com o teclado
-//    (`--keyboard-height`), como o cartão de renomear. O que ela pede é o que
-//    se digita; tem que estar onde o dedo já está.
+// 1. ELA É UM MODAL ACIMA DO TECLADO, SEMPRE — e sobe pelo MESMO mecanismo do
+//    composer do chat, que já funcionava: ela é `absolute` colada na base da
+//    `.axxa-root`, e a raiz encolhe junto com a gaveta quando o teclado abre.
+//    Sem conta nenhuma.
+//
+//    Isso custou quatro tentativas erradas, e todas erraram igual: eu tentava
+//    CALCULAR a folga (somar `--keyboard-height`, medir a sobra da tela, medir
+//    a sobra da camada) com a camada em `position: fixed`. Fixed dentro da
+//    gaveta não é fixo à tela — a gaveta tem transform —, e ela encolhe num
+//    momento diferente do aviso do viewport. Cada estado intermediário dessa
+//    dança era uma chance de a conta sair velha. O composer nunca teve esse
+//    problema porque nunca fez conta: ele só mora no fim de uma caixa que já
+//    tem o tamanho certo.
 //
 // 2. ELA TEM CARA PRÓPRIA. Tudo no app é superfície neutra tirada do tema do
 //    Obsidian. Esta caixa é a única em accent, com a borda acesa e um brilho no
@@ -114,116 +121,6 @@ const PARTE_DO_VAZIO: Record<AlvoAssistente, boolean> = {
   instructions: true,
 };
 
-/**
- * QUANTO DA PRÓPRIA CAMADA o teclado está cobrindo — medido nela, não na tela.
- *
- * Duas tentativas erradas antes desta, e as duas pelo mesmo motivo: eu estava
- * medindo a coisa errada.
- *
- *   1ª: somei `--keyboard-height` no padding. O cartão foi parar acima do topo.
- *   2ª: medi a sobra da TELA (`innerHeight` menos o `visualViewport`). Mesmo
- *       lugar, mesmo erro.
- *
- * O que faltava: a camada não é fixa à TELA. A gaveta do Obsidian tem
- * `transform`, e ancestral transformado vira o bloco de contenção de todo
- * `position: fixed` que estiver dentro. E essa gaveta JÁ encolhe com o teclado
- * (é a nossa regra `.axxa-keyboard-open`, lá no bloco do mobile). Então a
- * sobra da tela já estava descontada uma vez, e eu descontava de novo.
- *
- * Medindo no elemento, a conta vale nos dois mundos sem saber em qual estamos:
- *   - o pai já encolheu → a base da camada bate com o fim do visível → 0;
- *   - o pai não encolheu → a base fica abaixo do visível pela altura do
- *     teclado → sobe exatamente isso.
- *
- * O padding não muda o retângulo da camada (`inset: 0` manda nele), então
- * medir e aplicar não vira laço.
- */
-export function useTecladoGap(
-  alvo: { current: HTMLElement | null },
-  cartao: { current: HTMLElement | null }
-): number {
-  const [gap, setGap] = useState(0);
-  useLayoutEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const medir = () => {
-      const el = alvo.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      const bruto = Math.max(0, Math.round(r.bottom - (vv.height + vv.offsetTop)));
-
-      /**
-       * E um TETO, que é a garantia de que o pior caso não acontece.
-       *
-       * Toda a dor desta tela foi a mesma: uma folga grande demais empurrando
-       * o cartão pra fora do topo, onde ele não existe pra quem olha. A conta
-       * pode errar de novo — o Android tem mais estados intermediários do que
-       * eu consigo prever daqui —, mas o cartão não pode sumir por causa
-       * disso.
-       *
-       * O teto é o espaço que sobra depois do cartão: mais que isso e ele
-       * passa da borda de cima. Medido nos dois elementos, então vale seja
-       * qual for o bloco de contenção.
-       */
-      const alturaCartao = cartao.current?.getBoundingClientRect().height ?? 0;
-      const respiro = Math.max(
-        0,
-        Math.round(parseFloat(getComputedStyle(el).paddingBottom || "0")) - gap
-      );
-      const teto = Math.max(0, Math.round(r.height - alturaCartao - respiro));
-      setGap(Math.min(bruto, teto));
-    };
-    medir();
-    // Mais uma no quadro seguinte: o teclado do Android muda de tamanho DEPOIS
-    // do primeiro aviso (a barra de sugestões entra separada), e a primeira
-    // medida pega o estado do meio.
-    const t = window.requestAnimationFrame(medir);
-
-    /**
-     * E DE NOVO quando a própria camada mudar de tamanho — esta é a peça que
-     * faltava, e é o que fazia o cartão ir pro topo com o teclado aberto.
-     *
-     * A ordem dos acontecimentos no Android é esta: o teclado sobe, o
-     * `visualViewport` avisa na hora, e só DEPOIS o Obsidian publica
-     * `--keyboard-height` e a nossa regra encolhe a gaveta. Medindo no aviso do
-     * viewport, eu lia a camada ainda inteira (sobra = teclado) e aplicava essa
-     * folga numa camada que logo em seguida encolheu — descontando o teclado
-     * duas vezes. Ninguém remedia sozinho, porque o viewport não avisa de novo.
-     *
-     * O ResizeObserver fecha o ciclo: quando a gaveta encolhe, a camada encolhe
-     * junto e a conta refaz — e aí a sobra dá zero, que é o certo.
-     *
-     * Sem laço: o padding não muda o retângulo da camada (`inset: 0` manda
-     * nele), então medir e aplicar não se realimentam.
-     */
-    const ro = new ResizeObserver(medir);
-    if (alvo.current) ro.observe(alvo.current);
-
-    /**
-     * E mais duas medidas com atraso, por seguro.
-     *
-     * O ResizeObserver cobre o caso em que a camada encolhe junto com a
-     * gaveta. Mas a dança teclado↔gaveta no Android passa por estados
-     * intermediários (o teclado entra, a barra de sugestões entra depois, a
-     * gaveta encolhe por último), e nem todo passo emite um evento que chega
-     * até aqui. Duas leituras depois que tudo assenta custam nada e fecham a
-     * porta pro cartão ficar num lugar que já não existe mais.
-     */
-    const tardias = [120, 360].map((ms) => window.setTimeout(medir, ms));
-
-    vv.addEventListener("resize", medir);
-    vv.addEventListener("scroll", medir);
-    return () => {
-      window.cancelAnimationFrame(t);
-      for (const id of tardias) window.clearTimeout(id);
-      ro.disconnect();
-      vv.removeEventListener("resize", medir);
-      vv.removeEventListener("scroll", medir);
-    };
-  });
-  return gap;
-}
-
 /** Lê a rodada do store e re-renderiza quando ela muda. */
 export function useRun(chave: string) {
   return useSyncExternalStore(
@@ -240,9 +137,6 @@ export function AssistantPanel({
   modelo,
 }: AssistantPanelProps) {
   const run = useRun(para);
-  const camadaRef = useRef<HTMLDivElement>(null);
-  const cartaoRef = useRef<HTMLDivElement>(null);
-  const tecladoGap = useTecladoGap(camadaRef, cartaoRef);
   const [texto, setTexto] = useState("");
   /**
    * A pessoa escolheu a quarta pastilha ("Let me type") nesta pergunta.
@@ -369,13 +263,7 @@ export function AssistantPanel({
 
   const camada = (dentro: ReactNode) => {
     const layer = (
-      <div
-        ref={camadaRef}
-        className="axxa-assist-layer"
-        // A folga vem medida NA PRÓPRIA CAMADA (ver useTecladoGap): ela não é
-        // fixa à tela, é fixa à gaveta — e a gaveta já encolhe com o teclado.
-        style={{ paddingBottom: `calc(${tecladoGap}px + var(--axxa-fundo))` }}
-      >
+      <div className="axxa-assist-layer">
         {/* Tocar fora fecha — mas não cancela o que está a caminho (ver o X). */}
         <div
           className="axxa-scrim"
@@ -399,17 +287,14 @@ export function AssistantPanel({
 
   if (indisponivel)
     return camada(
-      <div className="axxa-assist" ref={cartaoRef}>
+      <div className="axxa-assist">
         {cabecalho}
         <p className="axxa-assist-note">{indisponivel}</p>
       </div>
     );
 
   return camada(
-    <div
-      ref={cartaoRef}
-      className={perguntando ? "axxa-assist is-grill" : "axxa-assist"}
-    >
+    <div className={perguntando ? "axxa-assist is-grill" : "axxa-assist"}>
       {cabecalho}
 
       {/* A pergunta dela é FALA, não rótulo: sem caixa, no tamanho do texto —

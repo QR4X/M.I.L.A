@@ -6312,21 +6312,27 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    onde saiu, e o seletor de modelo que abre de dentro dela continua por cima
    dela. */
 .axxa-root .axxa-assist-layer {
-  position: fixed;
+  /* `absolute`, não `fixed` — e é esta linha que resolve o teclado.
+     A raiz da AXXA já termina onde o conteúdo pode terminar: quando o teclado
+     abre, a gaveta encolhe (regra `.axxa-keyboard-open`, lá no bloco do
+     mobile) e a raiz encolhe junto. É assim que o composer do chat sempre
+     subiu — colado na base de uma caixa que já tem o tamanho certo, sem
+     calcular nada.
+     `fixed` era o erro: dentro da gaveta ele não é fixo à tela (transform no
+     ancestral), e a gaveta muda de altura num momento diferente do aviso do
+     viewport. Toda conta de folga que eu tentasse ali nasceria velha em algum
+     estado. */
+  position: absolute;
   inset: 0;
   z-index: 1050;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   padding: var(--axxa-3);
-  /* A folga ACIMA DO TECLADO vem por estilo inline, MEDIDA (ver
-     useTecladoGap). Somar `--keyboard-height` aqui parecia óbvio e estava
-     errado: em aparelho onde a viewport já encolhe com o teclado, o `fixed` já
-     vem limitado à parte de cima, e a soma jogava o cartão pra fora do topo da
-     tela. Este é só o piso, pro caso sem teclado. */
-  padding-bottom: var(--axxa-fundo);
-  /* O respiro do fim da tela, num lugar só — a barra de gestos do Android. */
-  --axxa-fundo: max(var(--safe-area-inset-bottom, 0px), 12px);
+  /* 15px embaixo, como o composer — e sem `safe-area`: a gaveta do Obsidian já
+     termina acima da barra de gestos, somar de novo conta duas vezes (é a
+     lição registrada na regra do composer). */
+  padding-bottom: 15px;
   /* Cartão mais alto que o espaço não pode vazar pra cima: num flex com
      `justify-content: flex-end`, o excedente sai pela BORDA DE CIMA e some
      atrás do cabeçalho. Rolando, ele ao menos existe. */
