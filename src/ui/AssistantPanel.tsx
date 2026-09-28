@@ -138,7 +138,10 @@ const PARTE_DO_VAZIO: Record<AlvoAssistente, boolean> = {
  * O padding não muda o retângulo da camada (`inset: 0` manda nele), então
  * medir e aplicar não vira laço.
  */
-export function useTecladoGap(alvo: { current: HTMLElement | null }): number {
+export function useTecladoGap(
+  alvo: { current: HTMLElement | null },
+  cartao: { current: HTMLElement | null }
+): number {
   const [gap, setGap] = useState(0);
   useLayoutEffect(() => {
     const vv = window.visualViewport;
@@ -147,17 +150,73 @@ export function useTecladoGap(alvo: { current: HTMLElement | null }): number {
       const el = alvo.current;
       if (!el) return;
       const r = el.getBoundingClientRect();
-      setGap(Math.max(0, Math.round(r.bottom - (vv.height + vv.offsetTop))));
+      const bruto = Math.max(0, Math.round(r.bottom - (vv.height + vv.offsetTop)));
+
+      /**
+       * E um TETO, que é a garantia de que o pior caso não acontece.
+       *
+       * Toda a dor desta tela foi a mesma: uma folga grande demais empurrando
+       * o cartão pra fora do topo, onde ele não existe pra quem olha. A conta
+       * pode errar de novo — o Android tem mais estados intermediários do que
+       * eu consigo prever daqui —, mas o cartão não pode sumir por causa
+       * disso.
+       *
+       * O teto é o espaço que sobra depois do cartão: mais que isso e ele
+       * passa da borda de cima. Medido nos dois elementos, então vale seja
+       * qual for o bloco de contenção.
+       */
+      const alturaCartao = cartao.current?.getBoundingClientRect().height ?? 0;
+      const respiro = Math.max(
+        0,
+        Math.round(parseFloat(getComputedStyle(el).paddingBottom || "0")) - gap
+      );
+      const teto = Math.max(0, Math.round(r.height - alturaCartao - respiro));
+      setGap(Math.min(bruto, teto));
     };
     medir();
     // Mais uma no quadro seguinte: o teclado do Android muda de tamanho DEPOIS
     // do primeiro aviso (a barra de sugestões entra separada), e a primeira
     // medida pega o estado do meio.
     const t = window.requestAnimationFrame(medir);
+
+    /**
+     * E DE NOVO quando a própria camada mudar de tamanho — esta é a peça que
+     * faltava, e é o que fazia o cartão ir pro topo com o teclado aberto.
+     *
+     * A ordem dos acontecimentos no Android é esta: o teclado sobe, o
+     * `visualViewport` avisa na hora, e só DEPOIS o Obsidian publica
+     * `--keyboard-height` e a nossa regra encolhe a gaveta. Medindo no aviso do
+     * viewport, eu lia a camada ainda inteira (sobra = teclado) e aplicava essa
+     * folga numa camada que logo em seguida encolheu — descontando o teclado
+     * duas vezes. Ninguém remedia sozinho, porque o viewport não avisa de novo.
+     *
+     * O ResizeObserver fecha o ciclo: quando a gaveta encolhe, a camada encolhe
+     * junto e a conta refaz — e aí a sobra dá zero, que é o certo.
+     *
+     * Sem laço: o padding não muda o retângulo da camada (`inset: 0` manda
+     * nele), então medir e aplicar não se realimentam.
+     */
+    const ro = new ResizeObserver(medir);
+    if (alvo.current) ro.observe(alvo.current);
+
+    /**
+     * E mais duas medidas com atraso, por seguro.
+     *
+     * O ResizeObserver cobre o caso em que a camada encolhe junto com a
+     * gaveta. Mas a dança teclado↔gaveta no Android passa por estados
+     * intermediários (o teclado entra, a barra de sugestões entra depois, a
+     * gaveta encolhe por último), e nem todo passo emite um evento que chega
+     * até aqui. Duas leituras depois que tudo assenta custam nada e fecham a
+     * porta pro cartão ficar num lugar que já não existe mais.
+     */
+    const tardias = [120, 360].map((ms) => window.setTimeout(medir, ms));
+
     vv.addEventListener("resize", medir);
     vv.addEventListener("scroll", medir);
     return () => {
       window.cancelAnimationFrame(t);
+      for (const id of tardias) window.clearTimeout(id);
+      ro.disconnect();
       vv.removeEventListener("resize", medir);
       vv.removeEventListener("scroll", medir);
     };
@@ -182,7 +241,8 @@ export function AssistantPanel({
 }: AssistantPanelProps) {
   const run = useRun(para);
   const camadaRef = useRef<HTMLDivElement>(null);
-  const tecladoGap = useTecladoGap(camadaRef);
+  const cartaoRef = useRef<HTMLDivElement>(null);
+  const tecladoGap = useTecladoGap(camadaRef, cartaoRef);
   const [texto, setTexto] = useState("");
   /**
    * A pessoa escolheu a quarta pastilha ("Let me type") nesta pergunta.
@@ -339,14 +399,17 @@ export function AssistantPanel({
 
   if (indisponivel)
     return camada(
-      <div className="axxa-assist">
+      <div className="axxa-assist" ref={cartaoRef}>
         {cabecalho}
         <p className="axxa-assist-note">{indisponivel}</p>
       </div>
     );
 
   return camada(
-    <div className={perguntando ? "axxa-assist is-grill" : "axxa-assist"}>
+    <div
+      ref={cartaoRef}
+      className={perguntando ? "axxa-assist is-grill" : "axxa-assist"}
+    >
       {cabecalho}
 
       {/* A pergunta dela é FALA, não rótulo: sem caixa, no tamanho do texto —
