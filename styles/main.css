@@ -450,6 +450,24 @@ body.theme-dark {
   --axxa-4: 16px;
   --axxa-5: 24px;
 
+  /* A FOLGA do teclado — o quanto nada nosso encosta na borda de baixo quando
+     o teclado está aberto.
+
+     Ela existe porque a altura que o sistema publica (`--keyboard-height`) não
+     bate com o teclado que se vê. Medido em dois prints do mesmo aparelho, com
+     o mesmo teclado, mudando só a barra de ferramentas do SwiftKey: a tira de
+     sugestões fica na MESMA altura nos dois, e mesmo assim o fim do app se
+     move cerca de uma barra de ferramentas — pra dentro do teclado quando ela
+     está aberta, pra longe dele quando está fechada. O erro tem os dois
+     sinais, então não existe conta que acerte a borda: nem a nossa, nem a do
+     composer, que erra igual e só disfarça melhor (os pixels perdidos dele
+     caem no canto arredondado vazio do cartão).
+
+     36px é uma fileira de barra de ferramentas de IME, que é a ordem de
+     grandeza do erro. Não é um número bonito e não deveria existir; ele existe
+     porque a alternativa é um botão cortado pela metade. */
+  --axxa-ime-slack: 36px;
+
   --axxa-r-sm: 8px;
   --axxa-r: 14px;
   --axxa-r-lg: 20px;
@@ -5599,33 +5617,20 @@ body.is-mobile .axxa-root .axxa-history-more {
   background-color: inherit;
 }
 
-/* Teclado aberto: o respiro de baixo CONTINUA — e agora com um nome pro que
-   ele está fazendo.
+/* Teclado aberto: a barra de ação para de mirar a borda.
 
-   Ele já foi cortado pra `var(--axxa-2)` aqui, com o argumento de que a gaveta
-   já desconta o teclado e o safe-area viraria faixa morta. O argumento
-   dependia de a medida publicada ser exata, e ela não é: comparando dois
-   prints do mesmo aparelho, um com a barra de ferramentas do SwiftKey aberta e
-   outro com ela fechada, a borda do app fica uns 10px DENTRO do teclado nos
-   dois casos. Com 8px de respiro, esses 10px comem os cantos de baixo do
-   botão.
+   Ela já teve 8px aqui, com o argumento de que a gaveta já descontava o
+   teclado e o safe-area viraria faixa morta. O argumento dependia de a medida
+   publicada ser exata, e ela não é — ver `--axxa-ime-slack`, onde está a
+   medição. Com o erro tendo os dois sinais, tentar encostar no teclado é uma
+   aposta que se perde metade das vezes, e quando se perde o botão vai pela
+   metade.
 
-   E não adianta copiar o composer: ele tem o mesmo desconto e o mesmo erro —
-   só que os 10px dele caem no canto arredondado vazio do cartão, então ninguém
-   nunca viu.
-
-   Como a medida vem do sistema e não temos como corrigi-la, o que sobra é não
-   colar nada na borda. `--safe-area-inset-bottom` é o número do PRÓPRIO
-   aparelho pra "não encoste aqui" (a barra de gestos, ~24px), então ele serve
-   de folga sem ser um palpite nosso: quando a medida do teclado acerta, lê-se
-   como respiro; quando erra por alguns pixels, absorve o erro em vez de cortar
-   o botão.
-
-   O `max()` com `--axxa-3` é o piso pra aparelho sem safe-area nenhum (botão
-   de navegação em vez de gestos): 12px de folga é pouco pra ser faixa e o
-   bastante pra o canto do botão sobreviver. */
+   Então a barra reserva uma fileira de barra de ferramentas e para de apostar.
+   Quando a medida acerta, lê-se como respiro; quando erra, o botão sobrevive
+   inteiro — que é a única das duas coisas que a pessoa percebe. */
 body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
-  padding-bottom: max(var(--safe-area-inset-bottom, 0px), var(--axxa-3));
+  padding-bottom: max(var(--safe-area-inset-bottom, 0px), var(--axxa-ime-slack));
 }
 
 .axxa-root .axxa-sheet-actions .axxa-form-foot,
@@ -6439,10 +6444,12 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   flex-direction: column;
   justify-content: flex-end;
   padding: var(--axxa-3);
-  /* 15px embaixo, como o composer — e sem `safe-area`: a gaveta do Obsidian já
-     termina acima da barra de gestos, somar de novo conta duas vezes (é a
-     lição registrada na regra do composer). */
-  padding-bottom: 15px;
+  /* A mesma folga do rodapé da folha, e pelo mesmo motivo: o painel só aparece
+     COM o teclado aberto, e é aí que a altura publicada discorda do teclado
+     visível por cerca de uma fileira de barra de ferramentas (ver
+     `--axxa-ime-slack`). Isto era 15px — "como o composer" —, e 15px é
+     exatamente a faixa que o erro come. */
+  padding-bottom: max(var(--safe-area-inset-bottom, 0px), var(--axxa-ime-slack));
   /* Cartão mais alto que o espaço não pode vazar pra cima: num flex com
      `justify-content: flex-end`, o excedente sai pela BORDA DE CIMA e some
      atrás do cabeçalho. Rolando, ele ao menos existe. */

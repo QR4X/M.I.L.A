@@ -115,7 +115,39 @@ describe("o painel da assistente segue o composer", () => {
     const b = bloco(".axxa-root .axxa-assist-layer {");
     expect(b).toContain("position: absolute");
     expect(b).not.toContain("--keyboard-height");
-    // E sem safe-area: a gaveta já termina acima da barra de gestos.
-    expect(b).not.toContain("safe-area-inset-bottom");
+  });
+});
+
+describe("ninguém encosta na borda de baixo com o teclado aberto", () => {
+  // A altura publicada discorda do teclado visível por cerca de uma fileira de
+  // barra de ferramentas de IME — e o erro tem os DOIS sinais, dependendo de a
+  // barra do teclado estar aberta ou fechada (a medição está no comentário de
+  // `--axxa-ime-slack`). Com o erro mudando de sinal não existe conta que
+  // acerte a borda, então a regra do app virou: ninguém encosta nela.
+  //
+  // Vale pros dois que aparecem COM o teclado aberto e têm um botão no fim.
+  const comBotaoSobreOTeclado = [
+    "body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {",
+    ".axxa-root .axxa-assist-layer {",
+  ];
+
+  it("a folga é a MESMA pros dois, e vem do token", () => {
+    // Dois números diferentes pro mesmo problema é como se descobre, seis
+    // releases depois, que um deles nunca foi atualizado.
+    for (const sel of comBotaoSobreOTeclado) {
+      const b = bloco(sel);
+      expect(b, sel).toContain(
+        "padding-bottom: max(var(--safe-area-inset-bottom, 0px), var(--axxa-ime-slack))"
+      );
+    }
+  });
+
+  it("a folga é de uma fileira de barra de ferramentas, não de um respiro", () => {
+    // Se alguém cortar isto pra 8px ou 15px "porque está sobrando espaço", o
+    // botão volta a ser cortado pela metade no aparelho — foi exatamente o que
+    // aconteceu duas vezes.
+    const m = /--axxa-ime-slack:\s*(\d+)px/.exec(CSS);
+    expect(m, "o token sumiu").toBeTruthy();
+    expect(Number(m![1])).toBeGreaterThanOrEqual(32);
   });
 });
