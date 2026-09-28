@@ -6275,6 +6275,11 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
 
 .axxa-root .axxa-textarea.axxa-has-spark {
   padding-bottom: 40px;
+  /* Sem a alcinha de redimensionar: ela mora no MESMO canto do botão da
+     assistente, e duas alças no mesmo pixel viram uma só — a pessoa mira o
+     ✨ e estica o campo, ou o contrário. O campo já cresce com o conteúdo
+     pelas linhas que tem. */
+  resize: none;
 }
 
 .axxa-root .axxa-assist {

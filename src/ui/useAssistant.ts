@@ -22,6 +22,7 @@ import {
   type SkillSugerido,
 } from "../assistant/parse";
 import {
+  idiomaDoApp,
   promptDescricao,
   promptInstrucoes,
   promptProjeto,
@@ -52,6 +53,8 @@ function icones(curtos: readonly string[]): string[] {
 
 export function useAssistant(plugin: AxxaPlugin) {
   const s = plugin.settings;
+  /** O idioma do app — e o único em que ela responde (ver prompt.ts). */
+  const idioma = idiomaDoApp(s.language);
 
   const alvo = useMemo(
     () =>
@@ -95,7 +98,7 @@ export function useAssistant(plugin: AxxaPlugin) {
     ): Promise<RodadaAssistente<SkillSugerido>> => {
       const permitidos = icones(SKILL_ICONS);
       const r = await rodar(
-        promptSkill(modo, permitidos, PROJECT_COLORS),
+        promptSkill(modo, permitidos, PROJECT_COLORS, idioma),
         turnos
       );
       if (r.erro) return { erro: r.erro };
@@ -110,7 +113,7 @@ export function useAssistant(plugin: AxxaPlugin) {
         ? { draft }
         : { erro: "The assistant did not write a prompt. Try saying more." };
     },
-    [rodar]
+    [rodar, idioma]
   );
 
   const pedirProjeto = useCallback(
@@ -129,7 +132,7 @@ export function useAssistant(plugin: AxxaPlugin) {
             .map((n) => n.path)
         : [];
       const r = await rodar(
-        promptProjeto(modo, permitidos, PROJECT_COLORS, caminhos),
+        promptProjeto(modo, permitidos, PROJECT_COLORS, caminhos, idioma),
         turnos
       );
       if (r.erro) return { erro: r.erro };
@@ -144,7 +147,7 @@ export function useAssistant(plugin: AxxaPlugin) {
         ? { draft }
         : { erro: "The assistant did not name the project. Try saying more." };
     },
-    [rodar, plugin, s.assistantSeesVault]
+    [rodar, plugin, s.assistantSeesVault, idioma]
   );
 
   /**
@@ -178,16 +181,16 @@ export function useAssistant(plugin: AxxaPlugin) {
 
   const pedirDescricao = useCallback(
     (ctx: { name: string; body: string }, turnos: TurnoAssistente[]) =>
-      pedirCampo(promptDescricao(ctx), turnos, 140),
-    [pedirCampo]
+      pedirCampo(promptDescricao({ ...ctx, idioma }), turnos, 140),
+    [pedirCampo, idioma]
   );
 
   const pedirInstrucoes = useCallback(
     (
       ctx: { name: string; notes: readonly string[]; atual: string },
       turnos: TurnoAssistente[]
-    ) => pedirCampo(promptInstrucoes(ctx), turnos, 2000),
-    [pedirCampo]
+    ) => pedirCampo(promptInstrucoes({ ...ctx, idioma }), turnos, 2000),
+    [pedirCampo, idioma]
   );
 
   return {

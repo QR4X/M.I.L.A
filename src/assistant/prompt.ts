@@ -13,15 +13,32 @@
 // formulário, não de uma conversa, e tudo que sai daqui passa pelo parse (que
 // não confia em nada — ver parse.ts).
 
+/**
+ * O idioma em que ela escreve — o do APP, não o que ela adivinhar.
+ *
+ * "Write in the same language the person used" parecia gentil e era uma porta
+ * aberta: numa frase curta, ambígua ou com um nome próprio no meio, o modelo
+ * decide sozinho — e decidiu norueguês num app que só fala dois idiomas. O
+ * texto que sai daqui vai morar no formulário e depois na lista, ao lado de
+ * tudo que o app escreve. Ou é um dos dois, ou está errado.
+ */
+export function idiomaDoApp(locale: string): string {
+  return locale === "pt-br" ? "Brazilian Portuguese" : "English";
+}
+
 /** Regras que valem pras duas — quem ela é, e como responde. */
-const BASE = `You help someone set up their AXXA workspace inside Obsidian.
+function base(idioma: string): string {
+  return `You help someone set up their AXXA workspace inside Obsidian.
 You know Obsidian well: wikilinks ([[Note]]), frontmatter, daily notes, tags,
 folders, and that a vault is someone's own writing — not a database.
 
 Rules for every answer:
 - Answer with ONE JSON object and nothing else. No prose, no code fences.
-- Write in the same language the person used.
+- Write EVERY field in ${idioma}. This is not negotiable: the app only speaks
+  ${idioma} here, and your text sits next to text the app wrote. Even if the
+  person writes to you in another language, answer in ${idioma}.
 - Be concrete. Never invent a file, folder or note that was not given to you.`;
+}
 
 /** O que um skill É aqui — a parte que não dá pra inferir de fora. */
 const SOBRE_SKILL = `A SKILL in AXXA is a saved prompt. Tapping it drops its
@@ -84,10 +101,11 @@ function listas(rotulo: string, itens: readonly string[]): string {
 export function promptSkill(
   modo: ModoAssistente,
   icones: readonly string[],
-  cores: readonly string[]
+  cores: readonly string[],
+  idioma: string
 ): string {
   return [
-    BASE,
+    base(idioma),
     SOBRE_SKILL,
     listas("icon names", icones),
     listas("color values", cores),
@@ -100,10 +118,11 @@ export function promptProjeto(
   icones: readonly string[],
   cores: readonly string[],
   /** Caminhos do vault que a pessoa autorizou a enviar. Vazio = não enviar. */
-  notas: readonly string[]
+  notas: readonly string[],
+  idioma: string
 ): string {
   const partes = [
-    BASE,
+    base(idioma),
     SOBRE_PROJETO,
     listas("icon names", icones),
     listas("color values", cores),
@@ -146,9 +165,13 @@ else. You may return {"ask": "..."} instead if one thing genuinely needs
 clarifying first — but only if the answer would really change what you write.`;
 
 /** A descrição de um skill: a linha que aparece na lista, sob o nome. */
-export function promptDescricao(ctx: { name: string; body: string }): string {
+export function promptDescricao(ctx: {
+  name: string;
+  body: string;
+  idioma: string;
+}): string {
   return [
-    BASE,
+    base(ctx.idioma),
     `Write the one-line DESCRIPTION of a skill — the line shown under its name
 in the list. It says what the skill gives you, in the fewest words that still
 mean something. Under 80 characters. Do not repeat the name. Do not start with
@@ -164,9 +187,10 @@ export function promptInstrucoes(ctx: {
   name: string;
   notes: readonly string[];
   atual: string;
+  idioma: string;
 }): string {
   const partes = [
-    BASE,
+    base(ctx.idioma),
     `Write the CUSTOM INSTRUCTIONS of a project: what the model should know in
 every chat started inside it.
 

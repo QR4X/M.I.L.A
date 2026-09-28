@@ -17,7 +17,20 @@ import { Icon } from "./Icon";
 import { useSheetFull, useSheetLevel } from "./Sheet";
 import { ICON_CATALOG, iconCatalogSize, iconCategoryOf } from "../iconCatalog";
 
-/** Rótulo + explicação + o campo. A unidade do formulário. */
+/**
+ * Rótulo + explicação + o campo. A unidade do formulário.
+ *
+ * `div`, e NÃO `label`. Um `<label>` sem `for` associa-se ao PRIMEIRO controle
+ * que tiver dentro, e manda pra ele todo toque que caia na área dele — o
+ * rótulo, a explicação, e qualquer outro controle. Enquanto cada campo tinha
+ * um controle só, isso era um atalho simpático. Quando o painel da assistente
+ * passou a morar dentro do mesmo campo, virou bug: tocar no textarea DELE
+ * devolvia o cursor pro campo de cima, e a pessoa não conseguia escrever nem
+ * apagar no painel — o cursor fugia a cada toque.
+ *
+ * O que se perde é tocar no rótulo pra focar o campo. Num celular, ninguém
+ * mira um rótulo de 12px pra abrir o teclado: mira o campo.
+ */
 export function SheetField({
   label,
   hint,
@@ -29,11 +42,11 @@ export function SheetField({
   children: ReactNode;
 }) {
   return (
-    <label className="axxa-field">
+    <div className="axxa-field">
       <span className="axxa-field-label">{label}</span>
       {hint && <span className="axxa-field-hint">{hint}</span>}
       {children}
-    </label>
+    </div>
   );
 }
 

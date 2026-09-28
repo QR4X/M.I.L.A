@@ -339,6 +339,21 @@ export function Sheet({
     let dy = 0;
     let borda: "top" | "bottom" | null = null;
 
+    /**
+     * O gesto de arrastar a folha NÃO começa dentro de um campo de texto.
+     *
+     * Escrever num celular é arrastar o dedo: pra pôr o cursor entre duas
+     * letras, pra selecionar uma palavra, pra puxar a alcinha da seleção. Cada
+     * um desses toques começava aqui, e um deles — a folha no topo da rolagem,
+     * o dedo descendo — era engolido como "puxar pra fechar": o
+     * `preventDefault` do move matava a seleção, e a folha ainda dava um pulo.
+     * Editar virava sorte.
+     */
+    const emCampoDeTexto = (alvo: EventTarget | null): boolean => {
+      const el = alvo as HTMLElement | null;
+      return !!el?.closest?.("input, textarea, [contenteditable='true']");
+    };
+
     const comecar = (y: number) => {
       const noTopo = el.scrollTop <= 0;
       const noFim = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
@@ -389,6 +404,13 @@ export function Sheet({
     };
 
     const onTouchStart = (e: TouchEvent) => {
+      if (emCampoDeTexto(e.target)) {
+        // Desarma: sem isto, um `touchmove` que saísse do campo continuaria
+        // com a borda armada do toque anterior.
+        y0 = null;
+        borda = null;
+        return;
+      }
       if (e.touches.length === 1) comecar(e.touches[0].clientY);
     };
     const onTouchMove = (e: TouchEvent) => {
@@ -397,6 +419,7 @@ export function Sheet({
     };
     // Mouse (desktop e preview): o navegador não sequestra, pointer basta.
     const onDown = (e: PointerEvent) => {
+      if (emCampoDeTexto(e.target)) return;
       if (e.pointerType !== "touch") comecar(e.clientY);
     };
     const onMove = (e: PointerEvent) => {

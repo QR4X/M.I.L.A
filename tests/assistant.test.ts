@@ -13,6 +13,7 @@ import {
   recortarJson,
 } from "../src/assistant/parse";
 import {
+  idiomaDoApp,
   promptDescricao,
   promptInstrucoes,
   promptProjeto,
@@ -239,25 +240,25 @@ describe("lerPergunta", () => {
 
 describe("os prompts", () => {
   it("o de skill leva os ícones permitidos", () => {
-    const p = promptSkill("direto", ICONES, CORES);
+    const p = promptSkill("direto", ICONES, CORES, "English");
     expect(p).toContain("graduation-cap");
     expect(p).toContain("Do not ask questions");
   });
 
   it("o guiado permite perguntar, com teto", () => {
-    expect(promptSkill("guiado", ICONES, CORES)).toMatch(/up to 3/i);
+    expect(promptSkill("guiado", ICONES, CORES, "English")).toMatch(/up to 3/i);
   });
 
   it("sem notas, ele MANDA devolver lista vazia", () => {
     // Dizer "here are the notes:" e não mandar nada convida o modelo a
     // preencher o vazio com caminhos plausíveis.
-    const p = promptProjeto("direto", ICONES, CORES, []);
+    const p = promptProjeto("direto", ICONES, CORES, [], "English");
     expect(p).toContain('"notes": []');
     expect(p).not.toContain("Notes in this vault");
   });
 
   it("com notas, elas vão exatas", () => {
-    const p = promptProjeto("direto", ICONES, CORES, ["A/b.md"]);
+    const p = promptProjeto("direto", ICONES, CORES, ["A/b.md"], "English");
     expect(p).toContain("- A/b.md");
   });
 });
@@ -266,7 +267,7 @@ describe("um campo só", () => {
   it("a descrição leva o prompt como matéria-prima", () => {
     // É o que faz ela poder escrever sem a pessoa digitar nada: o contexto já
     // está na tela.
-    const p = promptDescricao({ name: "Weekly review", body: "Go through…" });
+    const p = promptDescricao({ name: "Weekly review", body: "Go through…", idioma: "English" });
     expect(p).toContain("Weekly review");
     expect(p).toContain("Go through…");
     expect(p).toContain('{"text": "..."}');
@@ -277,6 +278,7 @@ describe("um campo só", () => {
       name: "Tese",
       notes: ["Refs/Kuhn.md"],
       atual: "",
+      idioma: "Brazilian Portuguese",
     });
     expect(p).toContain("Project: Tese");
     expect(p).toContain("- Refs/Kuhn.md");
@@ -291,13 +293,14 @@ describe("um campo só", () => {
       name: "Tese",
       notes: [],
       atual: "Sempre citar a fonte.",
+      idioma: "Brazilian Portuguese",
     });
     expect(p).toContain("Sempre citar a fonte.");
     expect(p).toMatch(/improve on it/i);
   });
 
   it("campo vazio não manda uma seção vazia", () => {
-    const p = promptInstrucoes({ name: "Tese", notes: [], atual: "   " });
+    const p = promptInstrucoes({ name: "Tese", notes: [], atual: "   ", idioma: "English" });
     expect(p).not.toMatch(/improve on it/i);
     expect(p).not.toContain("Notes already attached");
   });
@@ -307,5 +310,36 @@ describe("um campo só", () => {
     expect(lerTexto({ text: "a".repeat(500) }, 140).length).toBe(140);
     expect(lerTexto({ text: 42 }, 140)).toBe("");
     expect(lerTexto(null, 140)).toBe("");
+  });
+});
+
+describe("o idioma", () => {
+  // O app só fala dois. "Escreva no idioma da pessoa" parecia gentil e era uma
+  // porta aberta: numa frase curta o modelo decide sozinho — e decidiu
+  // norueguês num formulário onde o texto dele senta ao lado do texto do app.
+  it("o locale vira o nome do idioma", () => {
+    expect(idiomaDoApp("pt-br")).toBe("Brazilian Portuguese");
+    expect(idiomaDoApp("en-us")).toBe("English");
+    // Locale desconhecido não vira um terceiro idioma.
+    expect(idiomaDoApp("nb-no")).toBe("English");
+  });
+
+  it("todos os prompts MANDAM escrever no idioma do app", () => {
+    const todos = [
+      promptSkill("direto", ICONES, CORES, "Brazilian Portuguese"),
+      promptProjeto("direto", ICONES, CORES, [], "Brazilian Portuguese"),
+      promptDescricao({ name: "x", body: "y", idioma: "Brazilian Portuguese" }),
+      promptInstrucoes({
+        name: "x",
+        notes: [],
+        atual: "",
+        idioma: "Brazilian Portuguese",
+      }),
+    ];
+    for (const p of todos) {
+      expect(p).toContain("Write EVERY field in Brazilian Portuguese");
+      // E a porta aberta não pode voltar.
+      expect(p).not.toMatch(/same language the person used/i);
+    }
   });
 });
