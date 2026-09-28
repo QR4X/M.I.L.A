@@ -68,7 +68,17 @@ export interface ChatRef {
 }
 
 export class ChatSession {
-  private readonly t = getTranslations("en-us");
+  /**
+   * O dicionário é lido A CADA USO, não guardado na construção.
+   *
+   * A sessão vive enquanto o painel existir, e o idioma muda nas settings no
+   * meio disso. Fixando na construção, trocar pra português deixava todo erro
+   * de chat em inglês até reabrir o Obsidian — e ninguém liga uma coisa na
+   * outra.
+   */
+  private get t() {
+    return getTranslations(this.plugin.settings.language);
+  }
   private readonly abortRef = { current: null as AbortController | null };
   private readonly approveAllRef = { current: false };
   /** Projeto que vai receber o chat criado no próximo 1º envio. */

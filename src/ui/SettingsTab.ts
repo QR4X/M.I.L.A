@@ -25,6 +25,7 @@ import {
 import { EFFORT_LEVELS, EFFORT_LABELS } from "../core/effort";
 import { AXXA_HIDDEN } from "../core/vaultPaths";
 import { escolherAssistente, ehFree } from "../assistant/model";
+import { LOCALES } from "../i18n";
 import { CHAT_MODES } from "../core/session";
 import { getAllEmbeddingModels } from "../rag/types";
 import { indexVault } from "../rag/indexer";
@@ -972,6 +973,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
         });
       });
 
+    this.renderLanguage(el);
     this.renderAssistant(el);
     this.renderVoice(el);
   }
@@ -981,6 +983,30 @@ export class AxxaSettingsTab extends PluginSettingTab {
   // providers, porque não é sobre com quem você conversa — é sobre quem te
   // ajuda a montar as coisas. E tem modelo PRÓPRIO de propósito: preencher um
   // formulário não justifica o modelo caro da conversa.
+
+  // ── Idioma ─────────────────────────────────────────────────────────────────
+  // Dois, e só dois. Ele manda em duas coisas que costumam andar separadas e
+  // aqui não podem: o texto da INTERFACE e o idioma em que o MODELO responde
+  // (os prompts de sistema mudam junto). Tela em português com o modelo
+  // respondendo em inglês dentro dela seria pior que tudo em inglês.
+
+  private renderLanguage(el: HTMLElement): void {
+    const s = this.s;
+    new Setting(el)
+      .setName("Language")
+      .setDesc(
+        "Interface, chat errors — and the language the model answers in. The " +
+          "creation assistant follows it too."
+      )
+      .addDropdown((d) => {
+        for (const l of LOCALES) d.addOption(l.id, l.label);
+        d.setValue(s.language || "en-us").onChange(async (v) => {
+          s.language = v;
+          await this.save();
+          this.renderBody();
+        });
+      });
+  }
 
   private renderAssistant(el: HTMLElement): void {
     const s = this.s;

@@ -1,0 +1,149 @@
+// src/i18n/pt-br.ts
+// O dicionário em português do Brasil.
+//
+// Ele cobre o MOTOR: os erros e estados do chat, o agente (inclusive o modal de
+// aprovação), o Vault Q&A e os prompts de sistema. A casca redesenhada ainda
+// escreve em inglês direto no componente — quando ela for para o dicionário,
+// é aqui que a tradução entra.
+//
+// Uma parte disto não é rótulo de tela: `systemPrompt` e `agent.systemPrompt`
+// mandam no idioma da RESPOSTA do modelo. Traduzir a interface e deixar essas
+// duas em inglês seria a pior das combinações — a tela em português e o modelo
+// respondendo em inglês dentro dela.
+//
+// O tipo vem do EN-US: qualquer chave que nasça lá e não chegue aqui é erro de
+// compilação, não um pedaço de tela em inglês descoberto por acaso meses
+// depois.
+
+import type { Translations } from "./en-us";
+
+export const PT_BR: Translations = {
+  chat: {
+    deletedToTrash: "Conversa movida pra lixeira.",
+  },
+
+  conversations: {
+    renameSuccess: (title: string) => `Renomeada pra "${title}".`,
+    renameFailed: (msg: string) => `Não consegui renomear: ${msg}`,
+  },
+
+  agent: {
+    loopAborted:
+      "O agente ficou repetindo a mesma ação e foi parado. Tente reformular a tarefa ou dar mais contexto.",
+    thinking: "🤖 Agente pensando...",
+    systemPrompt:
+      "Você é o AXXA Agent, um assistente integrado ao Obsidian com acesso " +
+      "direto ao vault do usuário por ferramentas. Responda em português do " +
+      "Brasil. " +
+      "Pra ACHAR notas sobre um assunto ou pergunta, use vault_search PRIMEIRO " +
+      "(busca semântica) em vez de listar pastas e ler arquivo por arquivo — é " +
+      "muito mais eficiente. " +
+      "Use as ferramentas pra cumprir a tarefa pedida — ler, criar, editar, " +
+      "mover ou apagar arquivos quando o usuário pedir. Pergunte ANTES se a " +
+      "intenção estiver ambígua. " +
+      "Ao terminar, devolva uma resposta em texto resumindo o que você fez. " +
+      "Pra editar arquivos, use SEMPRE vault_read antes, pra ver o conteúdo " +
+      "exato. " +
+      "Se uma ferramenta falhar, MUDE a estratégia (caminho errado? formato? " +
+      "permissão?) antes de tentar de novo — nunca repita a MESMA chamada que " +
+      "acabou de falhar. " +
+      "Quando precisar listar muitos arquivos, prefira chamadas em paralelo " +
+      "(no mesmo turno).",
+    needsOpenAI:
+      "O modo Agente precisa de um provider com tool calling. Use OpenAI, Anthropic, Gemini, OpenRouter, Nvidia NIM ou Ollama (modelo compatível).",
+    deniedAction: "🚫 Ação negada pelo usuário",
+    maxTurnsReached: (n: number) =>
+      `O agente bateu o limite de ${n} turnos sem terminar. Tente reformular a tarefa.`,
+    unknownTool: (name: string) => `Ferramenta desconhecida: ${name}`,
+    deniedTool: (name: string) => `Negado: ${name}`,
+    loopDetectedPending: "Repetição detectada — pedindo pro agente repensar",
+    loopDetectedDone: "Repetição detectada — pedi pro agente repensar",
+    stepsSummary: (n: number) => `${n} ação${n === 1 ? "" : "ões"} do agente`,
+    confirmTitle: "Revisar mudança do agente",
+    confirmTitleIrreversible: "⚠️ Ação irreversível",
+    confirmDeny: "Negar",
+    confirmApproveAll: "Aprovar tudo",
+    confirmApprove: "Aprovar",
+    confirmDelete: "Sim, apagar",
+    confirmLabelEdit: "Editar",
+    confirmLabelCreate: "Criar",
+    confirmLabelCreateFolder: "Criar pasta",
+    confirmLabelFrom: "De",
+    confirmLabelTo: "Pra",
+    confirmLabelDelete: "Apagar",
+    confirmTruncated: (n: number) => `+${n} caracteres não mostrados`,
+    permissionLevel: "Nível de permissão do agente",
+    permissionLevelDesc:
+      "Quanto controle o agente tem sobre o vault. Apagar sempre pede confirmação, seja qual for o nível.",
+    permissionAsk: "Perguntar — confirma toda ação que mexe num arquivo",
+    permissionVault: "Vault — lê e escreve à vontade, só apagar pergunta",
+    permissionYolo: "YOLO — sem modais, exceto apagar (irreversível)",
+    diffApproval: "Mostrar o diff nas confirmações",
+    diffApprovalDesc:
+      "Quando o agente pede confirmação (conforme o nível acima), incluir o antes/depois da mudança. Desligado = uma confirmação mais simples, sem a prévia. Apagar sempre pergunta, em qualquer nível.",
+  },
+
+  vault: {
+    searching: (topK: number, effort: string) =>
+      `Procurando até ${topK} notas no vault (esforço: ${effort})...`,
+    searchDone: "Busca concluída",
+    foundContext: (count: number) =>
+      `${count} nota${count !== 1 ? "s" : ""} encontrada${count !== 1 ? "s" : ""} como contexto`,
+    foundContextSemantic: (count: number) =>
+      `${count} nota${count !== 1 ? "s" : ""} encontrada${count !== 1 ? "s" : ""} (semântica + palavra-chave)`,
+    foundContextKeyword: (count: number) =>
+      `${count} nota${count !== 1 ? "s" : ""} encontrada${count !== 1 ? "s" : ""} (palavra-chave — sem índice semântico)`,
+    foundContextKeywordFallback: (count: number) =>
+      `${count} nota${count !== 1 ? "s" : ""} encontrada${count !== 1 ? "s" : ""} (palavra-chave — a busca semântica falhou)`,
+    notFound:
+      "Nenhuma nota relevante encontrada — respondendo sem o contexto do vault",
+  },
+
+  ai: {
+    thinking: "Pensando...",
+    emptyResponse: "[Resposta vazia]",
+    errorPrefix: "[Erro]",
+    unknownError: "Erro desconhecido.",
+    failed: "Falhou",
+    interrupted: "Interrompido",
+    err: {
+      noKey: (provider: string) =>
+        `Sem chave de API pra ${provider}. Coloque a sua nas configurações pra começar.`,
+      invalidKey: (provider: string) =>
+        `Sua chave da ${provider} parece inválida ou expirada. Confira nas configurações.`,
+      rateLimit: "Limite de uso atingido. Espere alguns segundos e tente de novo.",
+      network: "A conexão falhou. Confira a internet e tente de novo.",
+      billing:
+        "O Gemini precisa de cobrança ativa na API pra esse modelo. Sua assinatura do Google AI Pro/Ultra NÃO cobre a API — ela é cobrada à parte no AI Studio. Ative a cobrança (plano pré-pago, mínimo US$ 10) e tente de novo.",
+      contextOverflow:
+        "Esta conversa não cabe mais na janela de contexto do modelo. Comece uma nova (esta fica salva), ou apague algumas mensagens/anexos antes de tentar de novo.",
+    },
+    retry: "Tentar de novo",
+    startNewChat: "Começar uma conversa nova",
+    regenNotForGeneration:
+      "Regerar não vale pra geração de mídia — mande o prompt de novo.",
+    openSettings: "Abrir as configurações",
+    openBilling: "Ativar a cobrança no AI Studio",
+    genUnsupported: (type: "image" | "audio" | "video", supported: string) => {
+      const label =
+        type === "image" ? "Imagem" : type === "audio" ? "Áudio" : "Vídeo";
+      return `Geração de ${label.toLowerCase()} ainda não é suportada no AXXA com este provider/modelo. Hoje dá pra: ${supported}.`;
+    },
+  },
+
+  systemPrompt: {
+    base:
+      "Você é o AXXA Agent, um assistente integrado ao Obsidian. " +
+      "Responda em português do Brasil, com clareza, direto ao ponto e de " +
+      "forma útil. " +
+      "Use Markdown quando fizer sentido.",
+    vaultQaSuffix:
+      "\n\nO usuário está no modo Vault Q&A — abaixo estão notas relevantes " +
+      "extraídas do vault dele. Use-as como fonte principal da resposta. " +
+      "CITE SEMPRE as notas que usou ao longo do texto, no formato [[Título]], " +
+      "usando EXATAMENTE o título mostrado no cabeçalho ### de cada bloco (o " +
+      "texto dentro de [[ ]]). Não invente notas que não estão listadas " +
+      "abaixo. Quando uma resposta vier de uma nota específica, cite logo " +
+      "depois da frase.\n\nNotas:\n\n",
+  },
+};

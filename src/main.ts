@@ -41,6 +41,7 @@ import type {
 } from "./core/effort";
 import type { RoleId, RoleModelEntry } from "./providers/modelRoles";
 import { chatIndexSignature } from "./core/chatIndex";
+import { LOCALES } from "./i18n";
 
 /** Resultado do último teste de credencial de um provider. */
 export interface ProviderStatus {
@@ -1090,8 +1091,13 @@ export default class AxxaPlugin extends Plugin {
     }
 
     this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
-    // PT-BR removido (base 1.0) — força en-us e migra quem estava salvo em pt-br.
-    this.settings.language = "en-us";
+    // O idioma volta a ser escolha (0.7.14): a linha que forçava "en-us" aqui
+    // era de quando o PT-BR tinha saído do dicionário. Com os dois de volta,
+    // ela apagava a escolha da pessoa a cada carregamento — e nada na tela
+    // explicaria por quê. Um valor que não conhecemos cai no inglês na hora de
+    // traduzir (ver i18n/index.ts), então não precisa ser consertado aqui.
+    if (!LOCALES.some((l) => l.id === this.settings.language))
+      this.settings.language = "en-us";
     // Object.assign é shallow — pra activeModels (Record por provider),
     // mescla por provider: providers não tocados pelo user mantêm defaults.
     this.settings.activeModels = {

@@ -11,12 +11,32 @@
 
 import { createContext, useContext } from "react";
 import { EN_US, type Translations } from "./en-us";
+import { PT_BR } from "./pt-br";
 
 export type { Translations } from "./en-us";
 
-// EN-US é o único locale por enquanto — PT-BR removido (i18n será refeito).
-export function getTranslations(_locale: string): Translations {
-  return EN_US;
+/** Os idiomas que o app fala. Dois, e a lista é esta — o seletor das settings
+ *  e a assistente de criação leem daqui, pra não haver um terceiro por
+ *  descuido (ver assistant/prompt.ts: idiomaDoApp). */
+export const LOCALES = [
+  { id: "en-us", label: "English" },
+  { id: "pt-br", label: "Português (Brasil)" },
+] as const;
+
+const DICIONARIOS: Record<string, Translations> = {
+  "en-us": EN_US,
+  "pt-br": PT_BR,
+};
+
+/**
+ * O dicionário do locale — EN-US pra qualquer coisa que não reconheça.
+ *
+ * Cair no inglês em vez de quebrar é de propósito: `language` vem das
+ * settings, que são um JSON que a pessoa pode editar na mão, e um locale
+ * digitado errado não pode derrubar o app.
+ */
+export function getTranslations(locale: string): Translations {
+  return DICIONARIOS[locale] ?? EN_US;
 }
 
 /** Context React — AxxaApp envolve toda a árvore com o locale ativo. */

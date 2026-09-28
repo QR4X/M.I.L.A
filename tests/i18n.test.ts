@@ -2,15 +2,14 @@ import { describe, it, expect } from "vitest";
 import { getTranslations } from "../src/i18n";
 import { EN_US } from "../src/i18n/en-us";
 
-// EN-US virou o ÚNICO locale (PT-BR removido na base 1.0). getTranslations ignora
-// o param e sempre devolve EN_US; users salvos em "pt-br" caem no EN sem quebrar.
+// O dicionário INGLÊS, olhado sozinho. O roteamento entre os dois locales e a
+// paridade de chaves moram em i18n.dois.test.ts — aqui é só garantir que o EN
+// continua sendo o EN. (Até 0.7.13 este arquivo afirmava que EN era o ÚNICO
+// locale; o PT-BR voltou em 0.7.14, com seletor nas settings.)
 
-describe("i18n — EN-US único", () => {
-  it("getTranslations sempre retorna EN_US, qualquer locale (inclui pt-br legado)", () => {
+describe("i18n — o dicionário inglês", () => {
+  it("é o que sai pro locale en-us", () => {
     expect(getTranslations("en-us")).toBe(EN_US);
-    expect(getTranslations("pt-br")).toBe(EN_US);
-    expect(getTranslations("")).toBe(EN_US);
-    expect(getTranslations("qualquer-coisa")).toBe(EN_US);
   });
 
   it("o dicionário mantém as seções principais + funções tipadas", () => {
