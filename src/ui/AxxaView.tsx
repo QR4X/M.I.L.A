@@ -16,7 +16,7 @@ import type AxxaPlugin from "../main";
 import { ChatSession } from "../core/session";
 import { App } from "./App";
 import { isDrawerOnScreen, isRightDrawer } from "./fullscreenScope";
-import { buildLayoutReport } from "./layoutReport";
+import { buildLayoutReport, gravarTeclado } from "./layoutReport";
 import { hapticsOn, setHapticsEnabled } from "./haptics";
 
 export const VIEW_TYPE_AXXA = "axxa-os-ai-agent";
@@ -156,6 +156,12 @@ export class AxxaView extends ItemView {
   /** Relatório do layout no aparelho (comando "Copy mobile layout report"). */
   layoutReport(): string {
     return buildLayoutReport(this.containerEl);
+  }
+
+  /** Gravação do layout enquanto o teclado muda (comando "Record keyboard
+   *  layout"). Ver gravarTeclado em layoutReport.ts. */
+  gravarTeclado(ms: number, aoTerminar: (texto: string) => void): void {
+    gravarTeclado(this.containerEl, ms, aoTerminar);
   }
 
   private setupKeyboardObserver(): void {

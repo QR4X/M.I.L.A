@@ -880,6 +880,35 @@ export default class AxxaPlugin extends Plugin {
       },
     });
 
+    // Gravador do teclado: 20s de linhas, uma por mudança de altura. Um relatório
+    // de foto única não serve pra isso — rodar o comando abre a paleta, e a
+    // paleta tira o foco do campo que tinha aberto o teclado.
+    this.addCommand({
+      id: "record-keyboard-layout",
+      name: "Record keyboard layout (20s)",
+      callback: () => {
+        const view = this.app.workspace
+          .getLeavesOfType(VIEW_TYPE_AXXA)
+          .map((leaf) => leaf.view)
+          .find((v): v is AxxaView => v instanceof AxxaView);
+        if (!view) {
+          new Notice("Open the AXXA panel first.");
+          return;
+        }
+        new Notice(
+          "Recording for 20s: open the form, tap the field, then show and hide the keyboard toolbar.",
+          8000
+        );
+        view.gravarTeclado(20000, (texto) => {
+          console.log(texto);
+          navigator.clipboard.writeText(texto).then(
+            () => new Notice("Keyboard recording copied — paste it in the chat.", 8000),
+            () => new Notice("Recording in the console (clipboard blocked).")
+          );
+        });
+      },
+    });
+
     // Settings tab — aparece em Settings -> Community Plugins -> AXXA OS.
     this.settingsTab = new AxxaSettingsTab(this.app, this);
     this.addSettingTab(this.settingsTab);
