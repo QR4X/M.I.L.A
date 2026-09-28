@@ -5870,7 +5870,9 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
 .axxa-root .axxa-tile-meta {
   display: flex;
   align-items: center;
-  gap: var(--axxa-1);
+  /* O mesmo vão da fileira de cima: sem isto os dois TEXTOS também saem
+     desalinhados, mesmo com os desenhos já na mesma coluna. */
+  gap: var(--axxa-2);
   padding: 0 var(--axxa-3);
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
@@ -6412,24 +6414,41 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
 }
 
 /* O nome do skill com o brasão dele, no cartão da galeria. Em coluna de duas,
-   o desenho é o que se acha antes de ler — e é por isso que a cor existe. */
+   o desenho é o que se acha antes de ler — e é por isso que a cor existe.
+
+   O rodapé do cartão são DUAS FILEIRAS com a mesma forma: desenho, depois
+   texto. Elas precisam ser duas COLUNAS, não duas linhas cada uma com seu
+   próprio recuo — e era isso que estava errado: o brasão pousava em x=1
+   (centro 14) e o ícone do modo em x=13 (centro 22), oito píxeis de
+   desencontro num cartão de 200. A cura é o recuo morar na FILEIRA e a caixa
+   do ícone ser a mesma nas duas. */
 .axxa-root .axxa-tile-head {
   display: flex;
   align-items: center;
   gap: var(--axxa-2);
   min-width: 0;
+  /* O mesmo recuo do meta, e o 38 à direita é o lugar do ⋯. */
+  padding: var(--axxa-1) 38px 0 var(--axxa-3);
 }
 
-/* O brasão miúdo do cartão: 26px, do tamanho do que cabe ao lado de um nome
-   sem empurrá-lo pra segunda linha. */
-.axxa-root .axxa-tile-head .axxa-thing-mark.is-dense {
-  width: 26px;
-  height: 26px;
-}
-
+/* Dentro da fileira o nome não tem recuo próprio: quem recua é ela. */
 .axxa-root .axxa-tile-head .axxa-tile-name {
   min-width: 0;
+  padding: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* A CAIXA do desenho, igual nas duas fileiras: 26px, glifo centrado. O brasão
+   já tinha; o ícone do modo era um glifo solto, e glifo solto se apoia na
+   borda esquerda em vez de no centro da coluna. */
+.axxa-root .axxa-tile-head .axxa-thing-mark.is-dense,
+.axxa-root .axxa-tile-meta > .axxa-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
 }

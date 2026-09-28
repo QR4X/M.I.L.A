@@ -305,7 +305,7 @@ export function SkillsView({
                         name={
                           isChatMode(s.mode) ? MODULES[s.mode].icon : "sparkles"
                         }
-                        size={14}
+                        size={16}
                       />
                       <span>
                         {s.mtime
