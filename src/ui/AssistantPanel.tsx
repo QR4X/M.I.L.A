@@ -264,11 +264,31 @@ export function AssistantPanel({
    * então `fixed` volta a ser fixo de verdade, e o CSS continua no escopo
    * `.axxa-root` de sempre.
    */
+  /**
+   * O campo toma o foco ao abrir — e é isso que chama o teclado.
+   *
+   * Sem isto, tocar no ✨ abria um cartão com um campo esperando um SEGUNDO
+   * toque pra começar a escrever. Pior no meio de um formulário: se o teclado
+   * já estava em pé por causa de outro campo, ele continuava lá, apontando pra
+   * lugar nenhum — o cursor tinha ido embora e o teclado ficou.
+   *
+   * `useLayoutEffect` e não `useEffect`: o foco precisa acontecer no mesmo
+   * quadro em que o cartão aparece, senão o WebView já decidiu o que fazer com
+   * o teclado e a chamada chega tarde.
+   */
+  const campoRef = useRef<HTMLTextAreaElement>(null);
   const ancora = useRef<HTMLSpanElement>(null);
   const [raiz, setRaiz] = useState<HTMLElement | null>(null);
   useLayoutEffect(() => {
     setRaiz(ancora.current?.closest<HTMLElement>(".axxa-root") ?? null);
   }, []);
+
+  // `raiz` na lista NÃO é enfeite: no primeiro render ela é null, então o
+  // portal não existe e o campo também não — o foco cairia num ref vazio. Ele
+  // só tem onde pousar no render seguinte, quando a camada finalmente montou.
+  useLayoutEffect(() => {
+    campoRef.current?.focus({ preventScroll: true });
+  }, [raiz, perguntando, digitando]);
 
   const camada = (dentro: ReactNode) => {
     const layer = (
@@ -352,6 +372,7 @@ export function AssistantPanel({
       {(!perguntando || digitando) && (
       <div className="axxa-assist-box">
         <textarea
+          ref={campoRef}
           className="axxa-assist-campo"
           value={texto}
           rows={perguntando ? 2 : 3}

@@ -6340,6 +6340,16 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    aparecer POR DENTRO do texto dela. */
 .axxa-root .axxa-assist-layer .axxa-assist {
   margin-bottom: 0;
+  /* O cartão CABE no que sobrou, sempre. Com altura livre, ele ficava maior
+     que o espaço acima do teclado e a camada rolava — e o que ficava à vista
+     era o TOPO dele: o título, e os botões cortados embaixo. Quem espera não
+     precisa do título; precisa do botão.
+     Encolhe pelo campo de texto (ver `.axxa-assist-campo`), que é a única
+     parte elástica: o cabeçalho, as pastilhas e as ações são do tamanho que
+     são. */
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
   background-color: color-mix(
     in srgb,
     var(--interactive-accent) 7%,
@@ -6555,10 +6565,18 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   background-color: var(--axxa-hover);
 }
 
+/* A caixa é quem cede espaço quando aperta. */
+.axxa-root .axxa-assist-layer .axxa-assist-box {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
 /* O campo perde a borda e o fundo: quem os tem agora é a caixa. */
 .axxa-root .axxa-assist-campo {
   width: 100%;
-  min-height: 60px;
+  flex: 1 1 auto;
+  /* Duas linhas é o piso: menos que isso não é um campo, é uma fresta. */
+  min-height: 44px;
   padding: var(--axxa-1) var(--axxa-2);
   border: none;
   border-radius: 0;
