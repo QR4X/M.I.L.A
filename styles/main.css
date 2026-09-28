@@ -450,24 +450,6 @@ body.theme-dark {
   --axxa-4: 16px;
   --axxa-5: 24px;
 
-  /* A FOLGA do teclado — o quanto nada nosso encosta na borda de baixo quando
-     o teclado está aberto.
-
-     Ela existe porque a altura que o sistema publica (`--keyboard-height`) não
-     bate com o teclado que se vê. Medido em dois prints do mesmo aparelho, com
-     o mesmo teclado, mudando só a barra de ferramentas do SwiftKey: a tira de
-     sugestões fica na MESMA altura nos dois, e mesmo assim o fim do app se
-     move cerca de uma barra de ferramentas — pra dentro do teclado quando ela
-     está aberta, pra longe dele quando está fechada. O erro tem os dois
-     sinais, então não existe conta que acerte a borda: nem a nossa, nem a do
-     composer, que erra igual e só disfarça melhor (os pixels perdidos dele
-     caem no canto arredondado vazio do cartão).
-
-     36px é uma fileira de barra de ferramentas de IME, que é a ordem de
-     grandeza do erro. Não é um número bonito e não deveria existir; ele existe
-     porque a alternativa é um botão cortado pela metade. */
-  --axxa-ime-slack: 36px;
-
   --axxa-r-sm: 8px;
   --axxa-r: 14px;
   --axxa-r-lg: 20px;
@@ -3644,34 +3626,55 @@ body.is-mobile .axxa-root .axxa-drawer-layer {
   z-index: 1000;
 }
 
-/* Teclado aberto: a camada deixa de ser `fixed` e vira `absolute` DENTRO da
-   `.axxa-root` — que é a caixa onde o composer mora.
+/* Teclado aberto: a folha vira o COMPOSER.
 
-   Esta é a terceira tentativa, e as duas primeiras erraram do mesmo jeito:
-   cada uma inventou uma conta pra chegar no topo do teclado. A 0.7.30 repetia
-   a fórmula da gaveta (`100dvh - --keyboard-height`) na própria camada, e no
-   aparelho o botão ficou uns 37px atrás do teclado — a altura da barra de
-   ferramentas do SwiftKey, que a medida publicada não inclui. Qualquer conta
-   nossa herda o erro da medida.
+   O composer acompanha o teclado perfeitamente nos dois estados da barra do
+   SwiftKey (prints de 28/09, 20:12). A folha, no mesmo aparelho, andava ao
+   CONTRÁRIO — medido quadro a quadro num vídeo: 100ms depois de a barra do
+   teclado sumir, o botão SUBIA uma fileira. Nenhuma das seis tentativas
+   anteriores reproduziu isso no preview, onde a folha sempre acertou.
 
-   Então a camada para de ter conta. `.axxa-root` é o fim da coluna onde o
-   composer é o último item em fluxo: se o composer pousa no lugar certo — e
-   pousa, há quinze releases —, esta camada pousa no mesmo lugar, porque é
-   literalmente a mesma borda. Não há número pra errar.
+   O composer não tem conta nenhuma: ele é o último item de uma coluna flex, e
+   pousa onde a coluna acaba. A folha tinha duas coisas que ele não tem, e as
+   duas saem daqui com o teclado aberto:
 
-   Só com o teclado ABERTO. Fechado a camada continua `fixed` (regra logo
-   acima), que é o que a faz encostar no fundo de verdade passando por cima do
-   respiro da navbar — a lição da 0.2.37, escrita ali. Com o teclado aberto não
-   há navbar: ela está debaixo do teclado, e é justamente aí que a borda da
-   raiz passa a ser a borda certa.
+   · altura em PORCENTAGEM com TRANSIÇÃO (`min-height/max-height: 94%`, 260ms).
+     O valor declarado nunca muda quando o teclado muda — quem muda é o pai —,
+     e é exatamente o tipo de cálculo que um motor pode resolver contra a caixa
+     errada. Aqui ela é um item flex que ocupa o que sobra, e ponto;
+   · a dependência da classe no BODY. A gaveta — que é o que o composer segue —
+     encolhe pela classe NA GAVETA (`.workspace-drawer.axxa-keyboard-open`, lá
+     no bloco do teclado). As duas classes são postas juntas pelo mesmo
+     observer, mas "juntas" não é "o mesmo sinal": aqui vale qualquer uma.
 
-   `height: auto` desfaz a conta da 0.7.30; `inset: 0` volta a valer inteiro
-   porque agora ele é o retângulo da raiz. */
+   Fechado o teclado a camada continua `fixed` (regra logo acima), que é o que
+   a faz passar por cima do respiro da navbar e encostar no fundo — a lição da
+   0.2.37. Com o teclado aberto não há navbar, e a borda da raiz é a certa. */
+.workspace-drawer.axxa-keyboard-open .axxa-root .axxa-sheet-layer,
+.workspace-drawer.axxa-keyboard-open .axxa-root .axxa-drawer-layer,
 body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-layer,
 body.is-mobile.axxa-keyboard-open .axxa-root .axxa-drawer-layer {
   position: absolute;
   inset: 0;
   height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A folha dentro da camada: um item flex que vai até o fim da coluna, como o
+   composer. O vão de cima é MARGEM fixa, não porcentagem (margem em % mede a
+   LARGURA, e a altura aqui é a coisa que não pode depender de conta). O
+   `transform` continua — é ele que abre, fecha e segue o dedo —, mas a
+   transição de altura sai: não há altura pra animar. */
+.workspace-drawer.axxa-keyboard-open .axxa-root .axxa-sheet-layer .axxa-sheet,
+body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-layer .axxa-sheet {
+  position: relative;
+  inset: auto;
+  flex: 1 1 auto;
+  margin-top: var(--axxa-5);
+  min-height: 0;
+  max-height: none;
+  transition: transform var(--axxa-sheet-ms) ease-in-out;
 }
 
 .axxa-root .axxa-drawer-layer.is-open {
@@ -5617,20 +5620,18 @@ body.is-mobile .axxa-root .axxa-history-more {
   background-color: inherit;
 }
 
-/* Teclado aberto: a barra de ação para de mirar a borda.
+/* Teclado aberto: o MESMO respiro do composer (`var(--axxa-2)`, ver a regra
+   dele). A barra de gestos está atrás do teclado, então o safe-area aqui seria
+   uma faixa vazia entre o botão e o teclado.
 
-   Ela já teve 8px aqui, com o argumento de que a gaveta já descontava o
-   teclado e o safe-area viraria faixa morta. O argumento dependia de a medida
-   publicada ser exata, e ela não é — ver `--axxa-ime-slack`, onde está a
-   medição. Com o erro tendo os dois sinais, tentar encostar no teclado é uma
-   aposta que se perde metade das vezes, e quando se perde o botão vai pela
-   metade.
-
-   Então a barra reserva uma fileira de barra de ferramentas e para de apostar.
-   Quando a medida acerta, lê-se como respiro; quando erra, o botão sobrevive
-   inteiro — que é a única das duas coisas que a pessoa percebe. */
-body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
-  padding-bottom: max(var(--safe-area-inset-bottom, 0px), var(--axxa-ime-slack));
+   Isto passou uma versão valendo 36px, com a teoria de que a altura do
+   teclado publicada era curta e o composer errava igual, só que disfarçado.
+   Os prints do composer provaram o contrário: ele acerta nos dois estados da
+   barra do SwiftKey. Quem errava era a folha, e o conserto é ela ser o
+   composer (regra da camada, mais acima) — não uma folga que esconde o erro. */
+body.axxa-keyboard-open .axxa-root .axxa-sheet-actions,
+.workspace-drawer.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
+  padding-bottom: var(--axxa-2);
 }
 
 .axxa-root .axxa-sheet-actions .axxa-form-foot,
@@ -6442,17 +6443,22 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   z-index: 1050;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  /* SEM `justify-content: flex-end`. Quem empurra o cartão pro fundo é o
+     `margin-top: auto` dele (regra logo abaixo), e a diferença apareceu no
+     aparelho: esta camada ROLA (`overflow-y: auto`), e num contêiner que rola
+     o motor pode aplicar o alinhamento "seguro" — quando ele acha que o
+     conteúdo transborda, `flex-end` vira `start` pra nada sumir pela borda de
+     cima. No preview o cartão pousava embaixo; no vídeo do celular (28/09,
+     22.5s) ele abriu no TOPO da tela. Margem automática não tem essa
+     exceção: sobra espaço, ela o come por cima; falta, ela vira zero e o
+     cartão começa no topo e rola — que é o comportamento certo nos dois casos. */
   padding: var(--axxa-3);
-  /* A mesma folga do rodapé da folha, e pelo mesmo motivo: o painel só aparece
-     COM o teclado aberto, e é aí que a altura publicada discorda do teclado
-     visível por cerca de uma fileira de barra de ferramentas (ver
-     `--axxa-ime-slack`). Isto era 15px — "como o composer" —, e 15px é
-     exatamente a faixa que o erro come. */
-  padding-bottom: max(var(--safe-area-inset-bottom, 0px), var(--axxa-ime-slack));
-  /* Cartão mais alto que o espaço não pode vazar pra cima: num flex com
-     `justify-content: flex-end`, o excedente sai pela BORDA DE CIMA e some
-     atrás do cabeçalho. Rolando, ele ao menos existe. */
+  /* 15px embaixo, como o composer — e sem `safe-area`: a gaveta do Obsidian já
+     termina acima da barra de gestos, somar de novo conta duas vezes (é a
+     lição registrada na regra do composer). */
+  padding-bottom: 15px;
+  /* Cartão mais alto que o espaço não pode sumir: rolando, ele ao menos
+     existe. */
   overflow-y: auto;
 }
 
@@ -6462,6 +6468,9 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    com transparente); flutuando sobre a folha, translúcida deixava o formulário
    aparecer POR DENTRO do texto dela. */
 .axxa-root .axxa-assist-layer .axxa-assist {
+  /* É ESTA margem que põe o cartão colado no fundo — ver a camada, logo
+     acima, sobre por que não é `justify-content: flex-end`. */
+  margin-top: auto;
   margin-bottom: 0;
   /* O cartão CABE no que sobrou, sempre. Com altura livre, ele ficava maior
      que o espaço acima do teclado e a camada rolava — e o que ficava à vista

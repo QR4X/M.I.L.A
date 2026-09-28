@@ -62,21 +62,47 @@ describe("a única conta de teclado", () => {
   it("as camadas da folha entram na CAIXA do composer, sem conta própria", () => {
     // Com o teclado aberto elas deixam de ser `fixed` e viram `absolute` dentro
     // da `.axxa-root` — a mesma caixa onde o composer é o último item em fluxo.
-    // Se o composer pousa no lugar certo, elas pousam no mesmo lugar, porque é
-    // literalmente a mesma borda.
-    //
-    // A versão anterior repetia a fórmula da gaveta aqui, e no aparelho o botão
-    // ficou uns 37px atrás do teclado: a barra do SwiftKey não entra na medida
-    // publicada, e qualquer conta nossa herda o erro dela. A borda da raiz não
-    // tem esse problema porque não é uma conta.
     const b = bloco(
-      "body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-layer"
+      ".workspace-drawer.axxa-keyboard-open .axxa-root .axxa-sheet-layer"
     );
     expect(b).toContain("position: absolute");
     expect(b).not.toContain("--keyboard-height");
     // `height: auto` desfaz a conta que esta regra já teve — sem ele, uma
     // altura antiga sobreviveria à troca de mecanismo.
     expect(b).toContain("height: auto");
+    // E é uma COLUNA, como a do composer: quem decide onde a folha acaba é o
+    // fim dela, não um número.
+    expect(b).toContain("display: flex");
+    expect(b).toContain("flex-direction: column");
+  });
+
+  it("presa ao MESMO sinal que encolhe a gaveta, não só ao do body", () => {
+    // A gaveta — que é o que o composer segue — encolhe pela classe NA GAVETA.
+    // A folha dependia só da classe no body. O mesmo observer põe as duas, mas
+    // "juntas" não é "o mesmo sinal", e o composer nunca dependeu do body.
+    const regra = CSS.slice(
+      CSS.indexOf("/* Teclado aberto: a folha vira o COMPOSER."),
+      CSS.indexOf("{", CSS.indexOf("/* Teclado aberto: a folha vira o COMPOSER."))
+    );
+    expect(regra).toContain(".workspace-drawer.axxa-keyboard-open .axxa-root .axxa-sheet-layer");
+    expect(regra).toContain("body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-layer");
+  });
+
+  it("a folha é um item flex SEM altura calculada e sem transição de altura", () => {
+    // Foi isto que o vídeo do aparelho mostrou: 100ms depois de a barra do
+    // SwiftKey sumir, o botão SUBIA — a folha andava ao contrário do composer.
+    // As duas coisas que ela tinha e ele não: `min/max-height: 94%` e uma
+    // transição de 260ms nessas alturas. Aqui, nenhuma das duas.
+    const b = bloco(
+      ".workspace-drawer.axxa-keyboard-open .axxa-root .axxa-sheet-layer .axxa-sheet"
+    );
+    expect(b).toContain("flex: 1 1 auto");
+    expect(b).toContain("min-height: 0");
+    expect(b).toContain("max-height: none");
+    expect(b).not.toMatch(/\d+%/);
+    // O transform continua animado (abre, fecha, segue o dedo); altura não.
+    expect(b).toMatch(/transition:\s*transform[^;]*;/);
+    expect(b).not.toMatch(/transition:[^;]*(min-height|max-height)/);
   });
 
   it("a lista de quem desconta o teclado é ESTA, e ela é curta", () => {
@@ -118,36 +144,38 @@ describe("o painel da assistente segue o composer", () => {
   });
 });
 
-describe("ninguém encosta na borda de baixo com o teclado aberto", () => {
-  // A altura publicada discorda do teclado visível por cerca de uma fileira de
-  // barra de ferramentas de IME — e o erro tem os DOIS sinais, dependendo de a
-  // barra do teclado estar aberta ou fechada (a medição está no comentário de
-  // `--axxa-ime-slack`). Com o erro mudando de sinal não existe conta que
-  // acerte a borda, então a regra do app virou: ninguém encosta nela.
-  //
-  // Vale pros dois que aparecem COM o teclado aberto e têm um botão no fim.
-  const comBotaoSobreOTeclado = [
-    "body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {",
-    ".axxa-root .axxa-assist-layer {",
-  ];
-
-  it("a folga é a MESMA pros dois, e vem do token", () => {
-    // Dois números diferentes pro mesmo problema é como se descobre, seis
-    // releases depois, que um deles nunca foi atualizado.
-    for (const sel of comBotaoSobreOTeclado) {
-      const b = bloco(sel);
-      expect(b, sel).toContain(
-        "padding-bottom: max(var(--safe-area-inset-bottom, 0px), var(--axxa-ime-slack))"
-      );
-    }
+describe("os respiros de baixo são OS DO COMPOSER", () => {
+  // O composer acerta nos dois estados da barra do teclado — é a referência, e
+  // os números dele são a régua. Uma versão chegou a usar 36px aqui, com a
+  // teoria de que a medida do teclado era curta e o composer errava igual; os
+  // prints dele provaram o contrário. Folga maior não conserta uma folha que
+  // anda ao contrário: só esconde.
+  it("o rodapé da folha usa o respiro do composer com o teclado aberto", () => {
+    const b = bloco("body.axxa-keyboard-open .axxa-root .axxa-sheet-actions,");
+    expect(b).toContain("padding-bottom: var(--axxa-2)");
+    // O composer, com o teclado aberto, usa exatamente este número.
+    const c = bloco("body.is-mobile .axxa-keyboard-open .axxa-composer,");
+    expect(c).toContain("padding-bottom: var(--axxa-2)");
   });
 
-  it("a folga é de uma fileira de barra de ferramentas, não de um respiro", () => {
-    // Se alguém cortar isto pra 8px ou 15px "porque está sobrando espaço", o
-    // botão volta a ser cortado pela metade no aparelho — foi exatamente o que
-    // aconteceu duas vezes.
-    const m = /--axxa-ime-slack:\s*(\d+)px/.exec(CSS);
-    expect(m, "o token sumiu").toBeTruthy();
-    expect(Number(m![1])).toBeGreaterThanOrEqual(32);
+  it("o painel da assistente usa os 15px do composer", () => {
+    const b = bloco(".axxa-root .axxa-assist-layer {");
+    expect(b).toContain("padding-bottom: 15px");
+    expect(CSS).not.toContain("--axxa-ime-slack:");
+  });
+
+  it("o cartão da assistente desce por margem, não por `justify-content`", () => {
+    // A camada ROLA, e num contêiner que rola o motor pode trocar `flex-end`
+    // por `start` quando acha que há transbordo — no aparelho o cartão abriu no
+    // TOPO da tela. `margin-top: auto` não tem essa exceção.
+    // Sem os comentários: o da própria regra explica por que NÃO é flex-end,
+    // e um teste que lê comentário acusa a explicação.
+    const camada = bloco(".axxa-root .axxa-assist-layer {").replace(
+      /\/\*[\s\S]*?\*\//g,
+      ""
+    );
+    expect(camada).not.toMatch(/justify-content:\s*flex-end/);
+    const cartao = bloco(".axxa-root .axxa-assist-layer .axxa-assist {");
+    expect(cartao).toContain("margin-top: auto");
   });
 });
