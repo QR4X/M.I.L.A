@@ -239,11 +239,7 @@ export function SkillsView({
       // ali a tela é dele, e a fila continua onde parou quando se volta.
       progress={
         criando && !procurando ? (
-          <SheetProgress
-            passos={PASSOS_SKILL}
-            atual={passo}
-            onPasso={setPasso}
-          />
+          <SheetProgress atual={passo} total={PASSOS_SKILL.length} />
         ) : undefined
       }
       // Criar mora na BARRA: é o que a folha oferece, não o que ela conclui.

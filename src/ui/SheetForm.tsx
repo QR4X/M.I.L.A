@@ -452,44 +452,45 @@ export function SheetSubmit({
  * que é o estado normal de um formulário no celular, o pé é a única faixa que
  * sobra, e ali cada milímetro é do botão.
  *
- * É uma fita SEGMENTADA, não uma barra que enche: com seis passos, um traço
- * contínuo em 83% diz "falta pouco"; seis segmentos com um apagado dizem
- * "falta um". A segunda é a informação que a pessoa quer.
+ * É um traço CONTÍNUO, sem divisões. Ela já foi segmentada, com cada pedaço
+ * sendo um botão que pulava pro passo — e a conta que eu fiz ali estava
+ * invertida: contar passos é trabalho de quem projeta a fila, não de quem a
+ * atravessa. Quem está preenchendo quer saber se falta muito, e isso um traço
+ * que anda responde sem pedir que ninguém conte nada. Voltar continua existindo
+ * onde sempre esteve, no `‹ Back` do pé.
  *
- * E cada segmento é um BOTÃO: toca e pula pro passo. Sem isso o wizard vira
- * jaula — e quem só quer trocar o ícone de um rascunho atravessaria a fila
- * inteira pra chegar nele.
+ * Contínuo também é o que aguenta a fila mudar de tamanho: seis divisões
+ * viravam sete, e a fita mudava de desenho por causa de um campo novo. A
+ * largura não muda de desenho nunca.
  */
 export function SheetProgress({
-  passos,
   atual,
-  onPasso,
+  total,
 }: {
-  passos: readonly { id: string; label: string }[];
+  /** Índice do passo atual. */
   atual: number;
-  onPasso: (i: number) => void;
+  /** Quantos passos a fila tem. */
+  total: number;
 }) {
+  // Chegar num passo já CONTA: no primeiro a fita mostra um sexto, não zero —
+  // zero diria que nada aconteceu, e abrir o formulário é a primeira coisa que
+  // aconteceu. No último ela enche, antes de concluir, porque não há mais
+  // tela pela frente.
+  const passos = Math.max(total, 1);
+  const feito = Math.min(Math.max(atual + 1, 1), passos);
   return (
     <div
       className="axxa-wiz-bar"
-      role="group"
-      aria-label={`Step ${Math.min(atual + 1, passos.length)} of ${
-        passos.length
-      }`}
+      role="progressbar"
+      aria-valuemin={1}
+      aria-valuemax={passos}
+      aria-valuenow={feito}
+      aria-label={`Step ${feito} of ${passos}`}
     >
-      {passos.map((p, i) => (
-        <button
-          key={p.id}
-          type="button"
-          className={
-            "axxa-wiz-seg" +
-            (i === atual ? " is-on" : i < atual ? " is-done" : "")
-          }
-          aria-current={i === atual ? "step" : undefined}
-          aria-label={`${i + 1}. ${p.label}`}
-          onClick={() => onPasso(i)}
-        />
-      ))}
+      <span
+        className="axxa-wiz-fill"
+        style={{ width: `${(feito / passos) * 100}%` }}
+      />
     </div>
   );
 }

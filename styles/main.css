@@ -5709,62 +5709,42 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    endereço da tela — "New skill · Color" e a fita respondem à mesma pergunta,
    e ela se faz antes de olhar o campo.
 
-   Ela já foi uma fileira de pontos no PÉ. Além de estar longe do título, o pé
-   é a única faixa que sobra com o teclado aberto, e ali o espaço é do botão. */
+   Ela já foi uma fileira de pontos no PÉ (longe do título, e ocupando a única
+   faixa que sobra com o teclado aberto), e depois uma fita dividida em
+   segmentos tocáveis. Agora é um traço CONTÍNUO: contar passos é trabalho de
+   quem projeta a fila, não de quem a atravessa — quem preenche quer saber se
+   falta muito, e uma largura que anda responde isso sem pedir que ninguém
+   conte nada. */
 
 .axxa-root .axxa-wiz-bar {
   flex: 0 0 auto;
-  display: flex;
-  /* Segmentos de larguras IGUAIS: a fita mede passos, não o tamanho de cada
-     um. Um passo de uma pergunta e um de uma grade de ícones custam o mesmo
-     toque, e é o toque que a pessoa está contando. */
-  gap: 3px;
   /* SANGRA até a borda da folha, como o rodapé faz: a folha tem
-     `padding: … var(--axxa-3)`, e uma fita que morre 12px antes do canto vira
-     um objeto pousado ali em vez do fio que atravessa a tela. */
-  margin: 0 calc(-1 * var(--axxa-3));
-  /* O respiro do toque vai no PADDING do contêiner, não na altura dos
-     segmentos: o desenho continua de 4px e o alvo fica com 14. */
-  padding: var(--axxa-1) var(--axxa-3) var(--axxa-2);
+     `padding: … var(--axxa-3)`, e um fio que morre 12px antes do canto vira um
+     objeto pousado ali em vez do fio que atravessa a tela. Sem padding lateral
+     de volta, de propósito: aqui não há alvo de toque a proteger, e o traço
+     indo de borda a borda é o que o faz medir A TELA. */
+  margin: var(--axxa-1) calc(-1 * var(--axxa-3)) var(--axxa-3);
+  height: 3px;
+  /* O trilho não é `--axxa-line`: no escuro ela quase some, e um progresso sem
+     trilho visível não diz quanto FALTA — só quanto andou. A mistura mantém os
+     dois legíveis no claro e no escuro. */
+  background-color: color-mix(in srgb, var(--text-normal) 12%, transparent);
+  /* Sem cantos: o fio nasce e morre nas bordas da folha, e arredondar a ponta
+     de uma coisa que está cortada pela borda é desenhar um detalhe que
+     ninguém vê. */
+  overflow: hidden;
 }
 
-.axxa-root button.axxa-wiz-seg {
-  /* Todos crescem igual e podem encolher a zero: com onze passos numa tela de
-     320px, `flex-basis: 0` é o que mantém a fita cabendo em vez de estourar. */
-  flex: 1 1 0;
-  min-width: 0;
-  height: 14px;
-  padding: 0;
-  border-radius: 0;
-  background-color: transparent;
-  box-shadow: none;
-  /* O traço é o ::before, não o botão: pintar os 14px daria uma fileira de
-     tijolos, e a fita deixaria de ser um fio. */
-  position: relative;
-}
-
-.axxa-root button.axxa-wiz-seg::before {
-  content: "";
-  position: absolute;
-  inset: 50% 0 auto 0;
-  height: 4px;
-  transform: translateY(-50%);
-  border-radius: 999px;
-  background-color: var(--axxa-line);
-  transition: background-color 140ms ease;
-}
-
-/* O passo JÁ respondido fica com a cor do app, mais fraca: a fita conta o que
-   foi feito, não só onde você está. */
-.axxa-root button.axxa-wiz-seg.is-done::before {
-  background-color: color-mix(in srgb, var(--interactive-accent) 50%, transparent);
-}
-
-/* O atual é o accent CHEIO — a cabeça da fita. É o que diferencia "andei até
-   aqui" de "estou aqui", que num traço de 4px é diferença de cor, não de
-   forma. */
-.axxa-root button.axxa-wiz-seg.is-on::before {
+.axxa-root .axxa-wiz-fill {
+  display: block;
+  height: 100%;
   background-color: var(--interactive-accent);
+  /* Só a ponta DIREITA é arredondada: é ela que avança, e é o único lugar onde
+     o traço realmente termina — a esquerda encosta na borda da tela. */
+  border-radius: 0 999px 999px 0;
+  /* A mesma curva e o mesmo tempo da folha: trocar de passo é um movimento só,
+     e a fita faz parte dele em vez de pular pro valor novo. */
+  transition: width var(--axxa-sheet-ms) ease-in-out;
 }
 
 /* ── o pé do WIZARD ────────────────────────────────────────────────────
