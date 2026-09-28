@@ -115,37 +115,53 @@ const PARTE_DO_VAZIO: Record<AlvoAssistente, boolean> = {
 };
 
 /**
- * QUANTO do viewport de layout o teclado está cobrindo, medido — não
- * adivinhado.
+ * QUANTO DA PRÓPRIA CAMADA o teclado está cobrindo — medido nela, não na tela.
  *
- * A primeira tentativa somou `--keyboard-height` direto no padding, e o cartão
- * foi parar ACIMA do topo da tela. O motivo: nesse aparelho a viewport JÁ
- * encolhe quando o teclado abre, então o `fixed` já vinha limitado à parte de
- * cima — e a gente subtraía o teclado uma segunda vez.
+ * Duas tentativas erradas antes desta, e as duas pelo mesmo motivo: eu estava
+ * medindo a coisa errada.
  *
- * `visualViewport` resolve os dois casos com uma conta só, porque ele descreve
- * o que está REALMENTE visível:
- *   - viewport que encolhe → `innerHeight` também encolheu → a sobra dá 0, e o
- *     cartão fica onde já estava certo;
- *   - viewport que não encolhe (o teclado entra por cima) → a sobra é a altura
- *     do teclado, e o cartão sobe exatamente isso.
- * Um valor fixo nunca acertaria os dois; medir acerta sem saber qual é.
+ *   1ª: somei `--keyboard-height` no padding. O cartão foi parar acima do topo.
+ *   2ª: medi a sobra da TELA (`innerHeight` menos o `visualViewport`). Mesmo
+ *       lugar, mesmo erro.
+ *
+ * O que faltava: a camada não é fixa à TELA. A gaveta do Obsidian tem
+ * `transform`, e ancestral transformado vira o bloco de contenção de todo
+ * `position: fixed` que estiver dentro. E essa gaveta JÁ encolhe com o teclado
+ * (é a nossa regra `.axxa-keyboard-open`, lá no bloco do mobile). Então a
+ * sobra da tela já estava descontada uma vez, e eu descontava de novo.
+ *
+ * Medindo no elemento, a conta vale nos dois mundos sem saber em qual estamos:
+ *   - o pai já encolheu → a base da camada bate com o fim do visível → 0;
+ *   - o pai não encolheu → a base fica abaixo do visível pela altura do
+ *     teclado → sobe exatamente isso.
+ *
+ * O padding não muda o retângulo da camada (`inset: 0` manda nele), então
+ * medir e aplicar não vira laço.
  */
-export function useTecladoGap(): number {
+export function useTecladoGap(alvo: { current: HTMLElement | null }): number {
   const [gap, setGap] = useState(0);
   useLayoutEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const medir = () =>
-      setGap(Math.max(0, Math.round(window.innerHeight - (vv.height + vv.offsetTop))));
+    const medir = () => {
+      const el = alvo.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setGap(Math.max(0, Math.round(r.bottom - (vv.height + vv.offsetTop))));
+    };
     medir();
+    // Mais uma no quadro seguinte: o teclado do Android muda de tamanho DEPOIS
+    // do primeiro aviso (a barra de sugestões entra separada), e a primeira
+    // medida pega o estado do meio.
+    const t = window.requestAnimationFrame(medir);
     vv.addEventListener("resize", medir);
     vv.addEventListener("scroll", medir);
     return () => {
+      window.cancelAnimationFrame(t);
       vv.removeEventListener("resize", medir);
       vv.removeEventListener("scroll", medir);
     };
-  }, []);
+  });
   return gap;
 }
 
@@ -165,7 +181,8 @@ export function AssistantPanel({
   modelo,
 }: AssistantPanelProps) {
   const run = useRun(para);
-  const tecladoGap = useTecladoGap();
+  const camadaRef = useRef<HTMLDivElement>(null);
+  const tecladoGap = useTecladoGap(camadaRef);
   const [texto, setTexto] = useState("");
   /**
    * A pessoa escolheu a quarta pastilha ("Let me type") nesta pergunta.
@@ -293,10 +310,10 @@ export function AssistantPanel({
   const camada = (dentro: ReactNode) => {
     const layer = (
       <div
+        ref={camadaRef}
         className="axxa-assist-layer"
-        // A folga vem MEDIDA (ver useTecladoGap), não de uma variável: somar
-        // `--keyboard-height` onde a viewport já encolheu joga o cartão pra
-        // fora do topo da tela.
+        // A folga vem medida NA PRÓPRIA CAMADA (ver useTecladoGap): ela não é
+        // fixa à tela, é fixa à gaveta — e a gaveta já encolhe com o teclado.
         style={{ paddingBottom: `calc(${tecladoGap}px + var(--axxa-fundo))` }}
       >
         {/* Tocar fora fecha — mas não cancela o que está a caminho (ver o X). */}
