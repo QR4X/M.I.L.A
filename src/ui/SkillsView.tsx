@@ -34,6 +34,7 @@ import { Sheet, SheetSearch } from "./Sheet";
 import { Segmented } from "./Segmented";
 import { projectColor } from "../projects";
 import { SheetProgress, SheetSubmit, SheetWizardFoot } from "./SheetForm";
+import { peDoWizard } from "./wizard";
 import { SkillForm, PASSOS_SKILL } from "./SkillSheet";
 import { openActions } from "./menu";
 import { MODULES, relativeShort } from "./modules";
@@ -267,7 +268,20 @@ export function SkillsView({
         fecharNivel();
         onClose();
       }}
-      onBack={noFormulario ? fecharNivel : undefined}
+      // A seta da barra é o ÚNICO voltar da tela, e ela anda pra trás: num
+      // wizard, o que está atrás é o passo anterior — sair só quando não há
+      // degrau nenhum atrás (ver `voltar` em wizard.ts). Ter uma seta que sai
+      // do formulário enquanto um botão no pé recua um passo era pedir pra
+      // pessoa perder o que digitou no toque errado.
+      onBack={
+        !noFormulario
+          ? undefined
+          : criando &&
+              peDoWizard({ atual: passo, total: PASSOS_SKILL.length }).voltar ===
+                "passo"
+            ? () => setPasso(passo - 1)
+            : fecharNivel
+      }
       // Nasce GRANDE. Skills é um acervo em grade de dois: do tamanho do
       // conteúdo, uma fileira e meia aparecia, e a primeira coisa a fazer era
       // arrastar a folha pra poder olhar. Um acervo se percorre com o olho.

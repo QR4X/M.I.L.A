@@ -5748,10 +5748,11 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
 }
 
 /* ── o pé do WIZARD ────────────────────────────────────────────────────
-   Onde você ESTÁ é da fita, lá em cima. Aqui embaixo fica o que falta e pra
-   onde ir. Reaproveita `.axxa-form-foot` de propósito: é o mesmo lugar do
-   mesmo botão, e mudar a casca entre criar e editar ensinaria que são duas
-   coisas diferentes. */
+   Onde você ESTÁ é da fita, lá em cima. VOLTAR é a seta da barra, que é onde
+   se procura por ele em qualquer tela do app. Aqui embaixo sobra o que falta e
+   o botão que anda pra frente — e por isso ele não tem classe própria: é o
+   mesmo `.axxa-form-submit` de largura inteira que o formulário de editar usa.
+   Criar e editar não mudam de casca no caminho. */
 
 /* Já dá pra salvar e ainda sobram passos. Discreto de propósito: é uma saída,
    não o caminho — quem quiser os enfeites toca "Next" e não repara nisto. */
@@ -5771,43 +5772,6 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
 
 .axxa-root button.axxa-wiz-now:hover {
   background-color: var(--axxa-hover);
-  color: var(--text-normal);
-}
-
-.axxa-root .axxa-wiz-row {
-  display: flex;
-  align-items: center;
-  gap: var(--axxa-2);
-}
-
-/* `Next` manda: ele fica com o que sobrar da fileira, e no primeiro passo —
-   onde não há Back — ocupa a largura inteira, que é exatamente o desenho que
-   o formulário de editar tem. A fila não muda de casca no caminho. */
-.axxa-root .axxa-wiz-row .axxa-form-submit {
-  flex: 1 1 auto;
-  width: auto;
-}
-
-/* Voltar é texto com contorno: ele precisa ser achável sem competir com o que
-   a tela quer que você faça. */
-.axxa-root button.axxa-wiz-back {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--axxa-1);
-  min-height: 48px;
-  padding: 0 var(--axxa-4) 0 var(--axxa-3);
-  border-radius: 999px;
-  background-color: var(--axxa-hover);
-  color: var(--text-normal);
-  font-weight: var(--font-semibold);
-  box-shadow: none;
-}
-
-.axxa-root button.axxa-wiz-back:hover {
-  /* `--axxa-hover` JÁ é `--background-modifier-hover`: repetir ali seria um
-     hover sem resposta. Um degrau de verdade, medido a partir dele. */
-  background-color: color-mix(in srgb, var(--text-normal) 10%, var(--axxa-hover));
   color: var(--text-normal);
 }
 

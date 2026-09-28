@@ -20,12 +20,17 @@ const pe = (atual: number, problema: string | null = null, total = TOTAL) =>
   peDoWizard({ atual, total, problema });
 
 describe("os botões da fila", () => {
-  it("no primeiro passo não há 'Back'", () => {
-    // Voltar do primeiro passo é SAIR do formulário, e isso já é a seta da
-    // barra de cima. Dois voltares na mesma tela querendo dizer coisas
-    // diferentes é como se chamam armadilhas.
-    expect(pe(0).back).toBe(false);
-    expect(pe(1).back).toBe(true);
+  it("a seta de cima RECUA um passo, e só sai quando não há passo atrás", () => {
+    // Há um voltar só na tela: a seta da barra. Ela anda pra trás, que é o que
+    // qualquer pessoa espera de uma seta apontando pra esquerda — e no
+    // primeiro passo, onde não há degrau atrás, sair É andar pra trás.
+    //
+    // Isto já foi um `‹ Back` no pé enquanto a seta saía do formulário. Dois
+    // voltares na mesma tela querendo dizer coisas diferentes é como se
+    // chamam armadilhas, e um toque errado custava o que a pessoa digitou.
+    expect(pe(0).voltar).toBe("sair");
+    expect(pe(1).voltar).toBe("passo");
+    expect(pe(ULTIMO).voltar).toBe("passo");
   });
 
   it("o do meio avança, o último conclui", () => {
@@ -38,7 +43,7 @@ describe("os botões da fila", () => {
   it("uma fila de UM passo é um formulário comum: conclui e não volta", () => {
     const p = pe(0, null, 1);
     expect(p.primario).toBe("submit");
-    expect(p.back).toBe(false);
+    expect(p.voltar).toBe("sair");
   });
 
   it("um índice além do fim não inventa um passo que não existe", () => {

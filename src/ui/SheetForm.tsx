@@ -501,15 +501,20 @@ export function SheetProgress({
  * Onde você ESTÁ não é assunto daqui — é da fita lá em cima (SheetProgress).
  * Aqui embaixo fica só o que falta e para onde ir.
  *
- * Duas coisas, nesta ordem de leitura:
+ * VOLTAR também não é daqui. Ele já existe: é a seta da barra de cima, que é
+ * onde se procura por ele em qualquer tela do app. Este pé chegou a ter um
+ * `‹ Back` ao lado do "Next" enquanto aquela seta saía do formulário — dois
+ * voltares na mesma tela querendo dizer coisas diferentes, que é exatamente a
+ * armadilha que o comentário aqui avisava. Hoje quem anda pra trás é a seta
+ * (ver `voltar` em wizard.ts), e aqui embaixo só se anda pra frente.
+ *
+ * Sobram duas coisas, nesta ordem de leitura:
  *
  * 1. A linha de STATUS, que tem dois estados que nunca coexistem: o que falta
  *    pra salvar, ou — quando já não falta nada e ainda há passos à frente — o
  *    atalho de terminar agora. São a mesma pergunta ("posso acabar?") com as
  *    duas respostas possíveis, então dividem o mesmo lugar.
- * 2. Os BOTÕES. `‹ Back` só aparece a partir do segundo passo: no primeiro,
- *    voltar é sair do formulário, e isso já é a seta da barra de cima —
- *    repetir aqui embaixo com outro significado é como se chamam armadilhas.
+ * 2. O BOTÃO, que ocupa a largura inteira: avança a fila, ou conclui.
  */
 export function SheetWizardFoot({
   atual,
@@ -555,38 +560,26 @@ export function SheetWizardFoot({
         </button>
       ) : null}
 
-      <div className="axxa-wiz-row">
-        {pe.back && (
-          <button
-            type="button"
-            className="axxa-wiz-back"
-            onClick={() => onPasso(atual - 1)}
-          >
-            <Icon name="chevron-left" size={18} />
-            <span>Back</span>
-          </button>
+      <button
+        type="button"
+        className="axxa-form-submit"
+        aria-disabled={pe.primario === "submit" ? !pe.pronto : undefined}
+        onClick={() =>
+          pe.primario === "submit" ? onSubmit() : onPasso(atual + 1)
+        }
+      >
+        {pe.primario === "submit" ? (
+          <>
+            <Icon name="check" size={18} />
+            <span>{label}</span>
+          </>
+        ) : (
+          <>
+            <span>Next</span>
+            <Icon name="chevron-right" size={18} />
+          </>
         )}
-        <button
-          type="button"
-          className="axxa-form-submit"
-          aria-disabled={pe.primario === "submit" ? !pe.pronto : undefined}
-          onClick={() =>
-            pe.primario === "submit" ? onSubmit() : onPasso(atual + 1)
-          }
-        >
-          {pe.primario === "submit" ? (
-            <>
-              <Icon name="check" size={18} />
-              <span>{label}</span>
-            </>
-          ) : (
-            <>
-              <span>Next</span>
-              <Icon name="chevron-right" size={18} />
-            </>
-          )}
-        </button>
-      </div>
+      </button>
     </div>
   );
 }
