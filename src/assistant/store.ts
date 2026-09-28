@@ -37,6 +37,9 @@ export interface Run {
    *  conhece os formatos — quem pediu sabe o que pediu. */
   resultado: unknown;
   erro: string;
+  /** Quando esta rodada começou — o relógio da espera sai daqui, e ele
+   *  sobrevive ao painel fechar junto com o resto. */
+  inicio: number;
 }
 
 const PARADA: Run = {
@@ -46,6 +49,7 @@ const PARADA: Run = {
   opcoes: [],
   resultado: null,
   erro: "",
+  inicio: 0,
 };
 
 const runs = new Map<string, Run>();
@@ -97,6 +101,7 @@ export function comecarRodada(
 ): void {
   por(chave, {
     fase: "rodando",
+    inicio: Date.now(),
     turnos,
     pergunta: "",
     opcoes: [],

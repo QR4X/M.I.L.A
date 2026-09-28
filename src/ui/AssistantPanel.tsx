@@ -28,6 +28,7 @@ import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { Icon } from "./Icon";
 import { useSheetFull } from "./Sheet";
 import { openActions } from "./menu";
+import { ThinkingGlyph, ThinkingInline } from "./Thinking";
 import {
   assinar,
   comecarRodada,
@@ -228,33 +229,41 @@ export function AssistantPanel({
           onChange={(e) => setTexto(e.currentTarget.value)}
         />
         <div className="axxa-assist-acoes">
-          {/* O guiado some depois da primeira pergunta: a conversa já está
-              acontecendo, e dois botões ali só ofereceriam sair dela pelo
-              meio. */}
-          {!perguntando && !partirDoVazio && (
-            <button
-              type="button"
-              className="axxa-assist-guiado"
-              disabled={ocupado || !texto.trim()}
-              onClick={() => responder(texto, "guiado")}
-            >
-              <Icon name="message-circle-question" size={15} />
-              <span>Grill me</span>
-            </button>
+          {/* Enquanto escreve, a fileira de ações dá lugar à ESPERA — a mesma
+              das conversas: o asterisco que respira, o relógio e o verbo que
+              troca. Um botão desligado escrito "Writing…" não diz há quanto
+              tempo, e é essa a única pergunta de quem espera. */}
+          {ocupado ? (
+            <ThinkingInline since={run.inicio} />
+          ) : (
+            <>
+              {/* O guiado some depois da primeira pergunta: a conversa já está
+                  acontecendo, e dois botões ali só ofereceriam sair dela pelo
+                  meio. */}
+              {!perguntando && !partirDoVazio && (
+                <button
+                  type="button"
+                  className="axxa-assist-guiado"
+                  disabled={!texto.trim()}
+                  onClick={() => responder(texto, "guiado")}
+                >
+                  <Icon name="message-circle-question" size={15} />
+                  <span>Grill me</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className="axxa-assist-cta"
+                disabled={!texto.trim() && !partirDoVazio && !perguntando}
+                onClick={() =>
+                  responder(texto, perguntando ? "guiado" : "direto")
+                }
+              >
+                <Icon name="sparkles" size={16} />
+                <span>{perguntando ? "Send" : "Write it"}</span>
+              </button>
+            </>
           )}
-          <button
-            type="button"
-            className="axxa-assist-cta"
-            disabled={
-              ocupado || (!texto.trim() && !partirDoVazio && !perguntando)
-            }
-            onClick={() => responder(texto, perguntando ? "guiado" : "direto")}
-          >
-            <Icon name={ocupado ? "loader" : "sparkles"} size={16} />
-            <span>
-              {ocupado ? "Writing…" : perguntando ? "Send" : "Write it"}
-            </span>
-          </button>
         </div>
       </div>
 
@@ -311,7 +320,9 @@ export function AssistantSpark({
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
     >
-      <Icon name={ocupado ? "loader" : "sparkles"} size={16} />
+      {/* O mesmo glifo das conversas: quem fechou o painel vê no campo o
+          mesmo desenho que veria se tivesse ficado. */}
+      {ocupado ? <ThinkingGlyph /> : <Icon name="sparkles" size={16} />}
     </button>
   );
 }

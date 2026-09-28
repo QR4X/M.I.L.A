@@ -46,8 +46,14 @@ export function elapsedLabel(ms: number): string {
   return `${m}m ${String(resto).padStart(2, "0")}s`;
 }
 
-/** O asterisco que respira. Três formas empilhadas, cada uma com a sua vez. */
-function Glyph() {
+/**
+ * O asterisco que respira. Três formas empilhadas, cada uma com a sua vez.
+ *
+ * Exportado porque a espera é a MESMA em toda parte: o chat esperando o modelo
+ * e a assistente escrevendo um skill são a mesma coisa acontecendo, e duas
+ * animações diferentes pra isso ensinariam que são coisas diferentes.
+ */
+export function ThinkingGlyph() {
   return (
     <span className="axxa-thinking-glyph" aria-hidden="true">
       <svg viewBox="0 0 24 24" className="axxa-glyph-a">
@@ -120,7 +126,7 @@ export function ThinkingLine({
       disabled={count === 0}
       onClick={onOpen}
     >
-      <Glyph />
+      <ThinkingGlyph />
       <span className="axxa-thinking-label">
         <span className="axxa-thinking-time">{elapsedLabel(passado)}</span>
         <span className="axxa-thinking-dot"> · </span>
@@ -128,5 +134,33 @@ export function ThinkingLine({
       </span>
       {count > 0 && <Icon name="chevron-right" size={15} />}
     </button>
+  );
+}
+
+/**
+ * A mesma espera, sem o botão em volta.
+ *
+ * O `Thinking` de cima é um BOTÃO: ele abre a folha dos passos do agente. Onde
+ * não há passos pra abrir — a assistente escrevendo um skill — sobra o que
+ * importa: o glifo, o relógio e o verbo. O relógio é o que responde "travou?"
+ * sem ninguém precisar perguntar.
+ */
+export function ThinkingInline({ since }: { since: number }) {
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    setAgora(Date.now());
+    const t = window.setInterval(() => setAgora(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [since]);
+  const passado = Math.max(0, agora - since);
+  return (
+    <span className="axxa-thinking is-inline">
+      <ThinkingGlyph />
+      <span className="axxa-thinking-label">
+        <span className="axxa-thinking-time">{elapsedLabel(passado)}</span>
+        <span className="axxa-thinking-dot"> · </span>
+        {verbAt(passado)}…
+      </span>
+    </span>
   );
 }

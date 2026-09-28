@@ -4717,6 +4717,20 @@ body.is-mobile .axxa-root .axxa-history-more {
    o tempo decorrido e o verbo da vez. Tudo em ACENTO: é a cor que diz "sou
    eu trabalhando", e ela não compete com o texto da conversa porque a linha
    é pequena e some assim que a resposta começa. */
+/* A espera SEM o botão em volta — a assistente escrevendo um skill. Mesmo
+   glifo, mesmo relógio, mesmo verbo; o que sai é só o alvo de toque, porque
+   ali não há folha de passos pra abrir. Um tico menor: ela mora dentro de uma
+   caixa, não no fio da conversa. */
+.axxa-root .axxa-thinking.is-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--axxa-2);
+  min-width: 0;
+  color: var(--text-accent);
+  font-family: var(--font-text);
+  font-size: var(--font-ui-small);
+}
+
 .axxa-root button.axxa-thinking {
   align-self: flex-start;
   display: inline-flex;
@@ -6379,10 +6393,13 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   opacity: 0.5;
 }
 
-/* O ✨ do campo gira enquanto há rodada daquele campo em curso — é o único
-   sinal pra quem fechou o painel de que ainda tem coisa vindo. */
-.axxa-root button.axxa-assist-spark.is-busy .axxa-icon svg {
-  animation: axxa-assist-gira 900ms linear infinite;
+/* No campo, quem espera é o MESMO glifo das conversas: quem fechou o painel vê
+   ali o desenho que veria se tivesse ficado. Ele é um pouco menor que os 17px
+   do fio da conversa — a caixa aqui é de 32. */
+.axxa-root button.axxa-assist-spark.is-busy .axxa-thinking-glyph {
+  width: 16px;
+  height: 16px;
+  color: var(--interactive-accent);
 }
 
 .axxa-root .axxa-assist-head {
