@@ -54,10 +54,11 @@ export function SkillForm({
   /** Qual campo está com a assistente aberta. Um de cada vez: dois painéis no
    *  mesmo formulário seriam duas conversas disputando os mesmos campos. */
   const [ajudando, setAjudando] = useState<"" | "body" | "desc">("");
-  const { indisponivel, pedirSkill, pedirDescricao, alvo, modelos, escolherModelo } = useAssistant(plugin);
+  const { indisponivel, pedirSkill, pedirDescricao, alvo, modelos, livres, escolherModelo } = useAssistant(plugin);
   const modelo = {
     atual: alvo?.model ?? "",
     opcoes: modelos,
+    livres,
     onTrocar: (m: string) => void escolherModelo(m),
   };
 

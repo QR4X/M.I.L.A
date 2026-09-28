@@ -92,10 +92,11 @@ export function ProjectsView({
   const [instrucoes, setInstrucoes] = useState<string | null>(null);
   /** A assistente aberta no campo de instruções. */
   const [ajudandoInstrucoes, setAjudandoInstrucoes] = useState(false);
-  const { indisponivel, pedirInstrucoes, alvo, modelos, escolherModelo } = useAssistant(plugin);
+  const { indisponivel, pedirInstrucoes, alvo, modelos, livres, escolherModelo } = useAssistant(plugin);
   const modeloAssist = {
     atual: alvo?.model ?? "",
     opcoes: modelos,
+    livres,
     onTrocar: (m: string) => void escolherModelo(m),
   };
 

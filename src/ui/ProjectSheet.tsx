@@ -56,10 +56,11 @@ export function ProjectForm({
   const cor = projectColor(draft.color);
   const [procurando, setProcurando] = useState(false);
   const [ajudando, setAjudando] = useState(false);
-  const { indisponivel, pedirProjeto, alvo, modelos, escolherModelo } = useAssistant(plugin);
+  const { indisponivel, pedirProjeto, alvo, modelos, livres, escolherModelo } = useAssistant(plugin);
   const modelo = {
     atual: alvo?.model ?? "",
     opcoes: modelos,
+    livres,
     onTrocar: (m: string) => void escolherModelo(m),
   };
 

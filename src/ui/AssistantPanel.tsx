@@ -30,6 +30,7 @@ import { useSheetFull } from "./Sheet";
 import { openActions } from "./menu";
 import { ThinkingGlyph, ThinkingInline } from "./Thinking";
 import { prettyModelName } from "../providers/modelDescriptions";
+import { modelLogo } from "../providers/modelLogo";
 import {
   assinar,
   comecarRodada,
@@ -68,6 +69,8 @@ export interface AssistantPanelProps {
   modelo?: {
     atual: string;
     opcoes: string[];
+    /** Quais da lista são grátis — a etiqueta sai daqui. */
+    livres?: string[];
     onTrocar: (model: string) => void;
   };
 }
@@ -152,15 +155,22 @@ export function AssistantPanel({
           onClick={(e) =>
             openActions(
               e as unknown as MouseEvent,
+              // O logo de QUEM FEZ o modelo, não um símbolo de preço: numa
+              // lista de nomes parecidos, a marca é o que se acha com o olho.
+              // O grátis continua dito — na etiqueta, onde é informação e não
+              // identidade.
               modelo.opcoes.map((m) => ({
-                label: prettyModelName(m),
-                icon: m.endsWith(":free") ? "gift" : "credit-card",
+                label: modelo.livres?.includes(m)
+                  ? `${prettyModelName(m)} · free`
+                  : prettyModelName(m),
+                icon: modelLogo(m),
                 checked: m === modelo.atual,
                 run: () => modelo.onTrocar(m),
               }))
             )
           }
         >
+          <Icon name={modelLogo(modelo.atual)} size={14} />
           <span>{prettyModelName(modelo.atual)}</span>
           <Icon name="chevron-down" size={14} />
         </button>

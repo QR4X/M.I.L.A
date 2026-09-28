@@ -85,6 +85,7 @@ import {
   SheetTile,
   SheetTiles,
 } from "./Sheet";
+import { modelLogo } from "../providers/modelLogo";
 import {
   rankNotes,
   readNote,
@@ -1798,6 +1799,15 @@ function ModelRow({
     <SheetRow
       title={prettyModelName(model)}
       note={card.goodFor ?? card.description}
+      /* O logo de QUEM FEZ o modelo.
+         Esta lista nasceu SEM ícone de propósito — na época, o que havia pra
+         pôr ali era um lucide genérico, e ícone genérico numa lista é
+         decoração: ocupa a coluna e não responde nada. Com os logos de marca
+         (ver providers/modelLogo.ts) ele deixa de ser enfeite e vira a única
+         coisa que se acha sem ler, numa lista onde os nomes são todos parecidos
+         ("Sonnet 4.6", "Sonnet 4", "Haiku 4.5"). Onde não temos a marca, cai no
+         brasão da família, que também diz algo. */
+      icon={modelLogo(model)}
       selected={selected}
       action={
         onFavorito

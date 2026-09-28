@@ -239,9 +239,16 @@ export function useAssistant(plugin: AxxaPlugin) {
     [plugin, s]
   );
 
+  /** Quais dos listados são grátis — o painel etiqueta com isto. */
+  const livres = useMemo(
+    () => modelos.filter((m) => ehFree(m, s.freeModels?.openrouter ?? [])),
+    [modelos, s.freeModels]
+  );
+
   return {
     alvo,
     modelos,
+    livres,
     escolherModelo,
     indisponivel,
     pedirSkill,
