@@ -3626,16 +3626,42 @@ body.is-mobile .axxa-root .axxa-drawer-layer {
   z-index: 1000;
 }
 
-/* Teclado aberto: a folha precisa CABER acima dele (regra da 0.2.37 em
-   `.axxa-plus-sheet`). Hoje é cinto de segurança — abrir uma folha tira o foco
-   do campo, então o teclado já desce —, mas uma folha aberta com teclado no ar
-   estouraria o topo sem isto.
-   O `padding-bottom: var(--keyboard-height)` que a 0.2.37 punha no overlay NÃO
-   vem junto de propósito: lá o overlay podia ancorar no viewport; aqui a
-   cadeia da gaveta já desconta o teclado, e somar de novo é o double-count que
-   jogava o sheet pro topo (bug 0.1.246, documentado lá mesmo). */
-body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet {
-  max-height: calc(100vh - var(--keyboard-height, 0px) - 16px);
+/* Teclado aberto: a CAMADA termina onde o teclado começa — é ela que decide
+   onde fica o fim da folha, e o fim da folha é onde mora o botão.
+   
+   Isto é o mecanismo do COMPOSER, e por isso funciona: o composer não faz
+   conta nenhuma de teclado. Ele está no fim de uma coluna cuja altura é
+   `calc(100dvh - var(--keyboard-height))` — a regra da gaveta, lá no bloco do
+   teclado. A mesma altura, escrita aqui, dá à camada o mesmo fim.
+
+   Por que ALTURA e não `bottom`: esta camada é `fixed`, e de quem ela é
+   `fixed` depende da versão do Obsidian. Medido no preview (app.css do
+   desktop), `.workspace-drawer` tem `contain: content` — que estabelece bloco
+   contenedor pra descendente fixo —, então a camada já nascia com o fim da
+   gaveta (512 de 812, com 300 de teclado) e o botão aparecia. No APARELHO não:
+   o comentário da regra `fixed` logo acima é a prova, e ele é de lá — "fixed
+   cobre o viewport inteiro e encosta no fundo". Lá a camada ia até 812, e o
+   botão ficava atrás do teclado. `bottom: var(--keyboard-height)` acertaria um
+   mundo e erraria o outro por 300px.
+
+   `dvh` é a unidade que não se importa: ela mede o VIEWPORT, contida ou não.
+   Com `top: 0` (do `inset: 0`), altura `100dvh - teclado` põe o fim no mesmo
+   lugar nos dois mundos. E é a MESMA conta da gaveta — o que for verdade pra
+   ela é verdade aqui, que é o mais perto de "não ter conta própria" que dá
+   pra chegar.
+
+   `bottom: auto` explícito: com top, height e bottom todos definidos a regra
+   fica sobre-restrita e o navegador descarta um deles. Escrito, não sorteado.
+
+   Some daqui o `max-height` que esta regra tinha antes (`100vh - teclado -
+   16px`): com a camada do tamanho certo, os tamanhos da folha são
+   porcentagens DELA (62% e 94%) e encolhem sozinhos. Duas contas pro mesmo
+   fim é como o double-count da 0.1.246 voltava. */
+body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-layer,
+body.is-mobile.axxa-keyboard-open .axxa-root .axxa-drawer-layer {
+  bottom: auto;
+  height: calc(100vh - var(--keyboard-height, 0px));
+  height: calc(100dvh - var(--keyboard-height, 0px));
 }
 
 .axxa-root .axxa-drawer-layer.is-open {
