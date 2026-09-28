@@ -9,24 +9,30 @@
 //
 // Três coisas a separam do resto do app, e as três são de propósito:
 //
-// 1. ELA TEM CARA PRÓPRIA. Tudo no app é superfície neutra tirada do tema do
+// 1. ELA É UM MODAL ACIMA DO TECLADO, SEMPRE. Não é um bloco no meio do
+//    formulário: enquanto era, ela nascia onde o campo estava — às vezes no
+//    meio da tela, às vezes atrás do rodapé, e com o teclado aberto quase
+//    sempre embaixo dele. Aqui ela encosta na base e sobe junto com o teclado
+//    (`--keyboard-height`), como o cartão de renomear. O que ela pede é o que
+//    se digita; tem que estar onde o dedo já está.
+//
+// 2. ELA TEM CARA PRÓPRIA. Tudo no app é superfície neutra tirada do tema do
 //    Obsidian. Esta caixa é a única em accent, com a borda acesa e um brilho no
 //    topo. Não é enfeite: ela é o único lugar da tela onde o texto não foi
 //    escrito por você nem pelo app — foi escrito por um modelo. Quem olha de
 //    relance precisa saber disso sem ler nada.
 //
-// 2. ELA PERGUNTA COM PASTILHAS. Responder três perguntas por escrito num
+// 3. ELA PERGUNTA COM PASTILHAS. Responder três perguntas por escrito num
 //    celular é trabalho; tocar em três pastilhas é um gesto. O campo continua
 //    ali pra quem quiser dizer outra coisa — as opções são atalho, não gaiola.
 //
-// 3. ELA NÃO PARA QUANDO VOCÊ SAI. O estado da rodada vive fora do React (ver
+// 4. ELA NÃO PARA QUANDO VOCÊ SAI. O estado da rodada vive fora do React (ver
 //    assistant/store.ts): fechar o painel, a folha ou trocar de nível não
 //    cancela nada. Num modelo free uma volta leva de cinco a vinte segundos, e
 //    ninguém fica olhando um botão por vinte segundos.
 
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { Icon } from "./Icon";
-import { useSheetFull } from "./Sheet";
 import { openActions } from "./menu";
 import { ThinkingGlyph, ThinkingInline } from "./Thinking";
 import { prettyModelName } from "../providers/modelDescriptions";
@@ -116,11 +122,6 @@ export function AssistantPanel({
   onFechar,
   modelo,
 }: AssistantPanelProps) {
-  // A folha vai pro tamanho grande: o painel abre ABAIXO do campo, e num campo
-  // que já estava no meio da tela ele nasce atrás do rodapé — a pessoa toca no
-  // botão e o que aparece é meia caixa cortada.
-  useSheetFull();
-
   const run = useRun(para);
   const [texto, setTexto] = useState("");
   const ocupado = run.fase === "rodando";
@@ -192,15 +193,30 @@ export function AssistantPanel({
     </div>
   );
 
+  /** O véu e a camada: ela é um modal, não um bloco do formulário. */
+  const camada = (dentro: ReactNode) => (
+    <div className="axxa-assist-layer">
+      {/* Tocar fora fecha — mas não cancela o que está a caminho (ver o X). */}
+      <div
+        className="axxa-scrim"
+        onClick={() => {
+          if (run.fase !== "rodando") limparRun(para);
+          onFechar();
+        }}
+      />
+      {dentro}
+    </div>
+  );
+
   if (indisponivel)
-    return (
+    return camada(
       <div className="axxa-assist">
         {cabecalho}
         <p className="axxa-assist-note">{indisponivel}</p>
       </div>
     );
 
-  return (
+  return camada(
     <div className={perguntando ? "axxa-assist is-grill" : "axxa-assist"}>
       {cabecalho}
 

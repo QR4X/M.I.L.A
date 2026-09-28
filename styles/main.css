@@ -3658,7 +3658,10 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet {
    fazia o papel do véu. Com a folha na cor do canvas, sem isto ela colava
    na página. */
 .axxa-root .axxa-drawer-layer.is-open .axxa-scrim,
-.axxa-root .axxa-sheet-layer.is-open .axxa-scrim {
+.axxa-root .axxa-sheet-layer.is-open .axxa-scrim,
+/* A da assistente não tem estado "fechada": ela só existe aberta (o React a
+   monta e desmonta), então o véu já nasce em pé. */
+.axxa-root .axxa-assist-layer .axxa-scrim {
   opacity: 1;
 }
 
@@ -6294,6 +6297,48 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
      ✨ e estica o campo, ou o contrário. O campo já cresce com o conteúdo
      pelas linhas que tem. */
   resize: none;
+}
+
+/* A CAMADA dela — um modal, não um bloco do formulário.
+   Enquanto era bloco, ela nascia onde o campo estava: às vezes no meio da
+   tela, às vezes atrás do rodapé, e com o teclado aberto quase sempre embaixo
+   dele. O que ela pede é o que se digita, então tem que estar onde o dedo já
+   está.
+   `fixed` e não `absolute`: a `.axxa-root` para onde o painel do Obsidian
+   para, e no celular isso é acima da base real da tela — foi a mesma caçada da
+   folha (ver o bloco `body.is-mobile` do sheet-layer). Só `fixed` encosta no
+   fundo de verdade.
+   z-index entre a folha (1000) e o balão de menu (1100): ela cobre a folha de
+   onde saiu, e o seletor de modelo que abre de dentro dela continua por cima
+   dela. */
+.axxa-root .axxa-assist-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* A folga ACIMA DO TECLADO. Fechado, `--keyboard-height` é 0 e sobra o
+     respiro da safe-area — a mesma conta do cartão de renomear. */
+  padding: var(--axxa-3);
+  padding-bottom: calc(
+    var(--keyboard-height, 0px) + max(var(--safe-area-inset-bottom, 0px), 12px)
+  );
+}
+
+/* Dentro da camada ela não tem margem própria: quem separa do fundo é o
+   padding da camada. E o fundo passa a ser OPACO: como bloco do formulário ela
+   pousava numa superfície e podia ser translúcida (`--axxa-s1` é uma mistura
+   com transparente); flutuando sobre a folha, translúcida deixava o formulário
+   aparecer POR DENTRO do texto dela. */
+.axxa-root .axxa-assist-layer .axxa-assist {
+  margin-bottom: 0;
+  background-color: color-mix(
+    in srgb,
+    var(--interactive-accent) 7%,
+    color-mix(in srgb, var(--text-normal) 6%, var(--axxa-canvas))
+  );
+  box-shadow: var(--axxa-e2);
 }
 
 /* A CARA PRÓPRIA dela.
