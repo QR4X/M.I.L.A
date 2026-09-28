@@ -114,6 +114,41 @@ const PARTE_DO_VAZIO: Record<AlvoAssistente, boolean> = {
   instructions: true,
 };
 
+/**
+ * QUANTO do viewport de layout o teclado está cobrindo, medido — não
+ * adivinhado.
+ *
+ * A primeira tentativa somou `--keyboard-height` direto no padding, e o cartão
+ * foi parar ACIMA do topo da tela. O motivo: nesse aparelho a viewport JÁ
+ * encolhe quando o teclado abre, então o `fixed` já vinha limitado à parte de
+ * cima — e a gente subtraía o teclado uma segunda vez.
+ *
+ * `visualViewport` resolve os dois casos com uma conta só, porque ele descreve
+ * o que está REALMENTE visível:
+ *   - viewport que encolhe → `innerHeight` também encolheu → a sobra dá 0, e o
+ *     cartão fica onde já estava certo;
+ *   - viewport que não encolhe (o teclado entra por cima) → a sobra é a altura
+ *     do teclado, e o cartão sobe exatamente isso.
+ * Um valor fixo nunca acertaria os dois; medir acerta sem saber qual é.
+ */
+export function useTecladoGap(): number {
+  const [gap, setGap] = useState(0);
+  useLayoutEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const medir = () =>
+      setGap(Math.max(0, Math.round(window.innerHeight - (vv.height + vv.offsetTop))));
+    medir();
+    vv.addEventListener("resize", medir);
+    vv.addEventListener("scroll", medir);
+    return () => {
+      vv.removeEventListener("resize", medir);
+      vv.removeEventListener("scroll", medir);
+    };
+  }, []);
+  return gap;
+}
+
 /** Lê a rodada do store e re-renderiza quando ela muda. */
 export function useRun(chave: string) {
   return useSyncExternalStore(
@@ -130,6 +165,7 @@ export function AssistantPanel({
   modelo,
 }: AssistantPanelProps) {
   const run = useRun(para);
+  const tecladoGap = useTecladoGap();
   const [texto, setTexto] = useState("");
   /**
    * A pessoa escolheu a quarta pastilha ("Let me type") nesta pergunta.
@@ -236,7 +272,13 @@ export function AssistantPanel({
 
   const camada = (dentro: ReactNode) => {
     const layer = (
-      <div className="axxa-assist-layer">
+      <div
+        className="axxa-assist-layer"
+        // A folga vem MEDIDA (ver useTecladoGap), não de uma variável: somar
+        // `--keyboard-height` onde a viewport já encolheu joga o cartão pra
+        // fora do topo da tela.
+        style={{ paddingBottom: `calc(${tecladoGap}px + var(--axxa-fundo))` }}
+      >
         {/* Tocar fora fecha — mas não cancela o que está a caminho (ver o X). */}
         <div
           className="axxa-scrim"

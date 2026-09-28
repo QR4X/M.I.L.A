@@ -6318,12 +6318,19 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  /* A folga ACIMA DO TECLADO. Fechado, `--keyboard-height` é 0 e sobra o
-     respiro da safe-area — a mesma conta do cartão de renomear. */
   padding: var(--axxa-3);
-  padding-bottom: calc(
-    var(--keyboard-height, 0px) + max(var(--safe-area-inset-bottom, 0px), 12px)
-  );
+  /* A folga ACIMA DO TECLADO vem por estilo inline, MEDIDA (ver
+     useTecladoGap). Somar `--keyboard-height` aqui parecia óbvio e estava
+     errado: em aparelho onde a viewport já encolhe com o teclado, o `fixed` já
+     vem limitado à parte de cima, e a soma jogava o cartão pra fora do topo da
+     tela. Este é só o piso, pro caso sem teclado. */
+  padding-bottom: var(--axxa-fundo);
+  /* O respiro do fim da tela, num lugar só — a barra de gestos do Android. */
+  --axxa-fundo: max(var(--safe-area-inset-bottom, 0px), 12px);
+  /* Cartão mais alto que o espaço não pode vazar pra cima: num flex com
+     `justify-content: flex-end`, o excedente sai pela BORDA DE CIMA e some
+     atrás do cabeçalho. Rolando, ele ao menos existe. */
+  overflow-y: auto;
 }
 
 /* Dentro da camada ela não tem margem própria: quem separa do fundo é o
