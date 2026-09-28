@@ -19,12 +19,30 @@ const r = (n) => Math.round(n * 1e4) / 1e4;
 // verdade (OpenAI, OpenRouter, Ollama são preto/branco), fica o currentColor —
 // pintar de verde ou roxo seria inventar uma marca que não existe.
 const WANTED = [
+  // Os PROVIDERS (a casa com quem se fala).
   { file: "openai.svg", id: "logo-openai" },
   { file: "claude-color.svg", id: "logo-anthropic" },
   { file: "gemini-color.svg", id: "logo-gemini" },
   { file: "openrouter.svg", id: "logo-openrouter" },
   { file: "nvidia-color.svg", id: "logo-nvidia" },
   { file: "ollama.svg", id: "logo-ollama" },
+  // Os FABRICANTES dos modelos (quem fez o que roda pelo OpenRouter).
+  //
+  // Eles ficavam de fora "por teto de bundle". O custo real, MEDIDO: +14,6KB
+  // cru e +5,6KB gzip pros nove — não é de graça, e vale. O que se comprava
+  // com essa economia era uma lista de modelos onde metade dos nomes não tinha
+  // rosto: "Llama 3.3", "Deepseek Chat" e "Mixtral" apareciam com um lucide
+  // genérico, que é o mesmo que aparecer sem nada.
+  { file: "meta-color.svg", id: "logo-meta" },
+  { file: "deepseek-color.svg", id: "logo-deepseek" },
+  { file: "mistral-color.svg", id: "logo-mistral" },
+  { file: "qwen-color.svg", id: "logo-qwen" },
+  { file: "zai.svg", id: "logo-zai" },
+  { file: "bytedance-color.svg", id: "logo-bytedance" },
+  // Os de GERAÇÃO de mídia — modelos como qualquer outro na hora de escolher.
+  { file: "flux.svg", id: "logo-flux" },
+  { file: "stability-color.svg", id: "logo-stability" },
+  { file: "nanobanana-color.svg", id: "logo-nanobanana" },
 ];
 const disponiveis = new Set(readdirSync(SRC).map((f) => f.toLowerCase()));
 const files = WANTED.filter((w) => {
