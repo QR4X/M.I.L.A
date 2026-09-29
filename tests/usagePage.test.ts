@@ -258,6 +258,35 @@ describe("o desenho da página de uso", () => {
     );
   });
 
+  it("cada dimensão é UMA fileira, que rola de lado — nunca quebra", () => {
+    // Quebrando, cada modelo novo empurrava a página e a mesma dimensão virava
+    // duas, três linhas.
+    const b = bloco(".axxa-root .axxa-usage-dim .axxa-choices {");
+    expect(b).toContain("flex-wrap: nowrap");
+    expect(b).toContain("overflow-x: auto");
+    // Sangra até a borda da tela e devolve o respiro por dentro: a pílula
+    // cortada na beirada é o aviso de que tem mais.
+    expect(b).toContain("margin: 0 calc(var(--axxa-gutter) * -1)");
+    expect(b).toContain("padding: 0 var(--axxa-gutter)");
+    // Sem degradê: ele apagava justamente a pílula que avisava.
+    expect(b).not.toMatch(/mask-image/);
+  });
+
+  it("o rótulo do quadro nunca corta — sem espaço, sai o ícone", () => {
+    // "RECEIV…" num telefone de 360px. Quem decide é a largura do QUADRO
+    // (container query), não a da tela: a página também abre numa barra
+    // lateral estreita.
+    expect(bloco(".axxa-root .axxa-usage.is-hero .axxa-mod {")).toContain(
+      "container-type: inline-size"
+    );
+    const i = SEM_COMENTARIO.search(/@container \(max-width: [\d.]+px\)/);
+    expect(i, "a regra do quadro estreito sumiu").toBeGreaterThan(-1);
+    // Até o fim da regra de dentro — a primeira `}` depois da `@container`.
+    const regra = SEM_COMENTARIO.slice(i, SEM_COMENTARIO.indexOf("}", i));
+    expect(regra).toContain(".axxa-mod-title.has-icon .axxa-icon");
+    expect(regra).toContain("display: none");
+  });
+
   it("as listas esticam — o bloco de seção encolhe os filhos", () => {
     // Encolhida, a tabela perdia a borda direita e o valor colava no nome.
     expect(CSS).toContain(

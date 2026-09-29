@@ -1323,12 +1323,29 @@ body.theme-dark {
 .axxa-root .axxa-mod-title.has-icon {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   /* O `size` do <Icon> vira atributo do SVG, e o CSS do Obsidian
      (`svg.svg-icon { width: var(--icon-size) }`) passa por cima de atributo.
      Quem manda no tamanho é o token: com os 18px de sempre, "PER CHAT"
-     cortava num quadro de telefone. */
-  --icon-size: 14px;
+     cortava num quadro de telefone; com 14, cortava num de 360px. */
+  --icon-size: 12px;
+}
+
+/* Cada quadro do total é um CONTÊINER: é a largura DELE, e não a da tela,
+   que decide se o ícone cabe — a mesma página abre numa barra lateral
+   estreita do desktop, onde a tela é larga e o quadro não. */
+.axxa-root .axxa-usage.is-hero .axxa-mod {
+  container-type: inline-size;
+}
+
+/* Estreito demais pra ícone E palavra: o ícone sai e a palavra fica inteira.
+   A conta: "RECEIVED" e "PER CHAT" pedem ~60px; com o ícone (12) e o vão
+   (3), 75. Palavra cortada ("RECEIV…") não diz nada; sem a seta, ela ainda
+   diz tudo. */
+@container (max-width: 74.99px) {
+  .axxa-root .axxa-mod-title.has-icon .axxa-icon {
+    display: none;
+  }
 }
 
 .axxa-root .axxa-mod-title.has-icon > span:last-child {
@@ -1366,9 +1383,27 @@ body.theme-dark {
    três, e sobra uma o tempo todo. */
 .axxa-root .axxa-usage-dim button.axxa-choice {
   flex: 0 0 auto;
-  /* 10px de lado, e não 12: com 12, três providers passavam da largura de um
-     telefone por 3px e o terceiro caía sozinho na fileira de baixo. */
+  /* 10px de lado, e não os 12 das folhas: numa fileira que rola, cada pílula
+     mais estreita é mais uma À VISTA antes de precisar do dedo. */
   padding: 0 10px;
+}
+
+/* UMA fileira por dimensão, que rola de lado — nunca quebra. Quebrando, cada
+   modelo novo empurrava a página pra baixo e a mesma dimensão virava duas,
+   três linhas (com os modelos de verdade de alguém, mais). É o mesmo
+   mecanismo das abas da folha de modelos (`.axxa-sheet-tabs`), que já rolam
+   assim no aparelho.
+   A fileira SANGRA até a borda da tela — margem negativa, e o mesmo respiro
+   devolvido por dentro: a pílula cortada SECA na beirada é o que diz "tem
+   mais pro lado", sem seta e sem ponto. Com degradê nas bordas, a pílula que
+   espiava ficava apagada justamente onde ela era o aviso. */
+.axxa-root .axxa-usage-dim .axxa-choices {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  margin: 0 calc(var(--axxa-gutter) * -1);
+  padding: 0 var(--axxa-gutter);
+  scroll-padding: 0 var(--axxa-gutter);
 }
 
 .axxa-root .axxa-usage-dim-label {
