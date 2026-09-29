@@ -33,6 +33,7 @@ import {
   type ProjectDraft,
 } from "../projects";
 import { ChatList, useChatSummaries } from "./ChatList";
+import { resumoDoProjeto } from "./projectSummary";
 import { ConfirmModal } from "./modals";
 import { Icon } from "./Icon";
 import {
@@ -757,12 +758,15 @@ export function ProjectsView({
       {nivel === "lista" && (
         <div className="axxa-sheet-stack">
           {projects.length > 0 ? (
-            <div className="axxa-things">
-              {projects.map((p) => (
-                <div key={p.id} className="axxa-thing-wrap">
+            <div className="axxa-proj-cards">
+              {projects.map((p) => {
+                const info = resumoDoProjeto(p, chats);
+                const jaAqui = !!escolhaPara && p.chatIds.includes(escolhaPara);
+                return (
+                <div key={p.id} className="axxa-proj-card-wrap">
                   <button
                     type="button"
-                    className="axxa-thing"
+                    className="axxa-proj-card"
                     onClick={() => {
                       // No modo escolha a linha faz o que a pessoa veio
                       // fazer: põe a conversa ali e fecha. Abrir o projeto
@@ -782,38 +786,65 @@ export function ProjectsView({
                       setAbertoId(p.id);
                     }}
                   >
-                    <span
-                      className="axxa-thing-mark"
-                      style={{ color: projectColor(p.color) }}
-                      aria-hidden="true"
-                    >
-                      <Icon name={p.icon} size={20} />
-                    </span>
-                    <span className="axxa-thing-text">
-                      <span className="axxa-thing-name">{p.name}</span>
-                      <span className="axxa-thing-note">
-                        {escolhaPara && p.chatIds.includes(escolhaPara)
-                          ? "Already here"
-                          : `${p.sources.length} note${
-                              p.sources.length === 1 ? "" : "s"
-                            } · ${p.chatIds.length} chat${
-                              p.chatIds.length === 1 ? "" : "s"
-                            }`}
+                    <span className="axxa-proj-card-head">
+                      <span
+                        className="axxa-thing-mark is-big"
+                        style={{ color: projectColor(p.color) }}
+                        aria-hidden="true"
+                      >
+                        <Icon name={p.icon} size={22} />
+                      </span>
+                      <span className="axxa-proj-card-title">
+                        <span className="axxa-proj-card-name">{p.name}</span>
+                        <span
+                          className={
+                            jaAqui
+                              ? "axxa-proj-card-when is-here"
+                              : "axxa-proj-card-when"
+                          }
+                        >
+                          {jaAqui ? "This chat is already here" : info.quando}
+                        </span>
                       </span>
                     </span>
-                    <Icon
-                      name="chevron-right"
-                      size={18}
-                      className="axxa-module-chev"
-                    />
+                    {/* DO QUE SE TRATA — em duas linhas reservadas sempre,
+                        pra todo cartão ter a mesma altura (o mesmo motivo dos
+                        cartões de skill: lista que muda de altura a cada
+                        item se lê torta). */}
+                    <span
+                      className={
+                        info.sobre
+                          ? "axxa-proj-card-about"
+                          : "axxa-proj-card-about is-empty"
+                      }
+                    >
+                      {/* Curta de propósito: numa lista de projetos novos ela se repete em
+                          cartão após cartão, e uma frase comprida repetida vira
+                          ruído. O itálico apagado já diz que é dica. */}
+                      {info.sobre ?? "No instructions yet"}
+                    </span>
+                    <span className="axxa-proj-card-meta">
+                      <span className="axxa-proj-card-stat">
+                        <Icon name="file-text" size={14} />
+                        {p.sources.length === 1
+                          ? "1 note"
+                          : `${p.sources.length} notes`}
+                      </span>
+                      <span className="axxa-proj-card-stat">
+                        <Icon name="message-circle" size={14} />
+                        {info.conversas === 1
+                          ? "1 chat"
+                          : `${info.conversas} chats`}
+                      </span>
+                    </span>
                   </button>
                   {!escolhaPara && (
                   <button
                     type="button"
-                    className="axxa-icon-btn axxa-history-more"
+                    className="axxa-icon-btn axxa-proj-card-more"
                     aria-label={`Actions for ${p.name}`}
                     onClick={(e) =>
-                      /* Sem "Open": tocar na linha já abre o projeto, e
+                      /* Sem "Open": tocar no cartão já abre o projeto, e
                          gastar a primeira posição do menu repetindo o gesto
                          mais óbvio da tela é desperdiçar o lugar que o polegar
                          alcança primeiro. */
@@ -824,7 +855,8 @@ export function ProjectsView({
                   </button>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="axxa-home-empty">

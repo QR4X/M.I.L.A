@@ -5243,40 +5243,141 @@ body.is-mobile .axxa-root .axxa-history-more {
   font-size: var(--font-ui-small);
 }
 
-.axxa-root .axxa-things {
+/* ── o CARTÃO de projeto ─────────────────────────────────────────────────
+   Era uma linha: brasão, nome, "N notes · M chats" e um chevron. Dizia quanto
+   o projeto tinha, mas não DO QUE ele era nem se ainda estava vivo — pra
+   saber, era preciso abrir. O cartão responde às três perguntas que se faz
+   olhando uma lista de projetos (ver `resumoDoProjeto`):
+
+     está vivo?        → embaixo do nome, quando foi a última conversa
+     do que se trata?  → a 1ª linha das instruções (ou a última conversa)
+     quanto já tem?    → notas e conversas, no pé
+
+   Sem chevron: um cartão inteiro já é o alvo do toque, e a seta na ponta só
+   repetia isso num lugar que o nome precisava. */
+.axxa-root .axxa-proj-cards {
   display: flex;
   flex-direction: column;
-  /* Oito, não quatro: a linha já é alta (brasão de 36px), e com quatro o que
-     separava dois projetos era menos do que separa o ícone do texto DENTRO de
-     um deles — a lista lia como um bloco só. */
-  gap: var(--axxa-2);
+  gap: var(--axxa-3);
 }
 
-/* A linha e o ⋯ são dois botões lado a lado — botão dentro de botão não
-   existe, e são duas ações diferentes: uma usa a coisa, a outra fala sobre
-   ela. */
-.axxa-root .axxa-thing-wrap {
+/* O cartão e o ⋯ são dois botões — botão dentro de botão não existe, e são
+   duas ações diferentes: uma abre o projeto, a outra fala sobre ele. */
+.axxa-root .axxa-proj-card-wrap {
+  position: relative;
+}
+
+.axxa-root button.axxa-proj-card {
   display: flex;
-  align-items: center;
-  gap: var(--axxa-1);
-  border-radius: var(--axxa-r);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--axxa-3);
+  width: 100%;
+  padding: var(--axxa-4);
+  border-radius: var(--axxa-r-lg);
+  /* A mesma superfície dos cartões de skill: os dois são peças de acervo, e
+     na mesma casa têm que parecer da mesma família. */
+  background-color: var(--axxa-s1);
+  border: 1px solid var(--axxa-hairline);
+  box-shadow: var(--axxa-e1);
+  text-align: left;
 }
 
-.axxa-root .axxa-thing-wrap:hover {
+.axxa-root button.axxa-proj-card:hover {
   background-color: var(--axxa-hover);
 }
 
-.axxa-root button.axxa-thing {
-  flex: 1 1 auto;
-  min-width: 0;
+.axxa-root .axxa-proj-card-head {
   display: flex;
   align-items: center;
   gap: var(--axxa-3);
-  padding: var(--axxa-2);
-  border-radius: var(--axxa-r);
+  min-width: 0;
+  /* O lugar do ⋯, no canto de cima: o nome corta antes de chegar nele. */
+  padding-right: 32px;
+}
+
+.axxa-root .axxa-proj-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.axxa-root .axxa-proj-card-name {
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.axxa-root .axxa-proj-card-when {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* No modo "Add to project": a conversa já mora aqui. Na cor do app, porque é
+   a informação que decide o toque. */
+.axxa-root .axxa-proj-card-when.is-here {
+  color: var(--interactive-accent);
+}
+
+/* Do que se trata. DUAS linhas reservadas sempre — com uma, com duas ou com a
+   dica —, pra todo cartão ter a mesma altura: a mesma regra dos cartões de
+   skill, pelo mesmo motivo (lista que muda de altura a cada item se lê
+   torta). */
+.axxa-root .axxa-proj-card-about {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-height: calc(2 * 1.45em);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+/* Sem instruções e sem conversa: a dica fica mais apagada que um texto de
+   verdade, pra não se passar por conteúdo do projeto. */
+.axxa-root .axxa-proj-card-about.is-empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.axxa-root .axxa-proj-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--axxa-4);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.axxa-root .axxa-proj-card-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--axxa-1);
+  white-space: nowrap;
+}
+
+.axxa-root .axxa-proj-card-stat .axxa-icon {
+  color: var(--text-faint);
+}
+
+/* O ⋯ no canto de cima, na altura do NOME — como nos cartões de skill, ele
+   mora onde o texto já corta antes de chegar. */
+.axxa-root button.axxa-proj-card-more {
+  position: absolute;
+  top: calc(var(--axxa-4) + 24px - 16px);
+  right: var(--axxa-2);
+  width: 32px;
+  height: 32px;
   background-color: transparent;
-  box-shadow: none;
-  text-align: left;
+  color: var(--text-faint);
 }
 
 /* Brasão quadrado, como o da conversa — mas com FUNDO: lá dentro mora um
@@ -5303,11 +5404,6 @@ body.is-mobile .axxa-root .axxa-history-more {
   width: 48px;
   height: 48px;
   border-radius: var(--axxa-r);
-}
-
-.axxa-root .axxa-thing.is-dense .axxa-thing-mark {
-  width: 30px;
-  height: 30px;
 }
 
 .axxa-root .axxa-thing-text {
