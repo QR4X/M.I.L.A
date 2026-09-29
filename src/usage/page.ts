@@ -9,6 +9,9 @@
 
 import type { ChatUsageRow, UsageAggregate, UsageBucket } from "./aggregate";
 import type { Opcao, UsageFilter } from "./filters";
+// UM formatador de data pra tela de uso inteira: o eixo do gráfico e a faixa
+// do cabeçalho dizem "Sep 11" pelo mesmo caminho.
+import { diaCurto } from "./timeline";
 
 /**
  * A unidade da página: dinheiro quando houve dinheiro, tokens quando não.
@@ -167,19 +170,6 @@ export function mediaPorConversa(total: UsageBucket): number | null {
   return valorNa(total, metricaDa(total)) / total.chats;
 }
 
-const MESES = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-/** "2026-09-11" → "Sep 11" (ou "Sep 11, 2025", quando o ano precisa ser dito). */
-function dia(iso: string, comAno: boolean): string {
-  const [a, m, d] = iso.split("-").map(Number);
-  if (!a || !m || !d) return iso;
-  const s = `${MESES[m - 1]} ${d}`;
-  return comAno ? `${s}, ${a}` : s;
-}
-
 /**
  * O que o recorte cobre DE FATO: da primeira à última conversa dentro dele.
  *
@@ -195,9 +185,9 @@ export function faixaDeDatas(
   fim: string | null
 ): string {
   if (!inicio || !fim) return "";
-  if (inicio === fim) return dia(inicio, false);
+  if (inicio === fim) return diaCurto(inicio);
   const viraAno = inicio.slice(0, 4) !== fim.slice(0, 4);
-  return `${dia(inicio, viraAno)} – ${dia(fim, false)}`;
+  return `${diaCurto(inicio, viraAno)} – ${diaCurto(fim)}`;
 }
 
 /** Quantos valores estão marcados nos filtros de lista (o período não conta:

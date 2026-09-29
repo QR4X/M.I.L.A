@@ -54,6 +54,15 @@ import {
   type Fatia,
   type Metrica,
 } from "../usage/page";
+import {
+  janelaDoGrafico,
+  passoDe,
+  picoDa,
+  serieDoTempo,
+  diasEntre,
+  type Coluna,
+  type Passo,
+} from "../usage/timeline";
 import { Sheet, SheetNote, SheetSearch } from "./Sheet";
 import { moduleIcon, moduleLabel, relativeShort } from "./modules";
 import { PROVIDERS } from "../core/providersMeta";
@@ -74,6 +83,13 @@ const TOPO = 10;
 /** A partir de quantas opções a lista inteira ganha busca. Com poucas, o
  *  campo seria uma linha a mais pra ler antes de chegar no que se procura. */
 const BUSCA_A_PARTIR = 8;
+
+/** Como o passo do gráfico se chama na tela. */
+const PASSO: Record<Passo, string> = {
+  day: "Daily",
+  week: "Weekly",
+  month: "Monthly",
+};
 
 /** Os filtros de lista: o que cada dimensão marca, como se chama e se desenha. */
 type Dimensao = "providers" | "models" | "modes";
@@ -164,6 +180,14 @@ export function UsageView({
     [chats, f, lista]
   );
   const mLista = metricaDa(aggLista.total);
+
+  // A série do gráfico: o mesmo `byDay` do recorte, no passo que couber.
+  const serie = useMemo(() => {
+    const j = janelaDoGrafico(f.days, agg.byDay);
+    if (!j) return { colunas: [] as Coluna[], passo: "day" as Passo };
+    const passo = passoDe(diasEntre(j.de, j.ate));
+    return { colunas: serieDoTempo(agg.byDay, j.de, j.ate, passo), passo };
+  }, [agg, f.days]);
   const achadas = buscarOpcoes(naLista.ops, buscaLista, naLista.nome);
   const relatorio = relatorioDe(
     achadas,
@@ -326,6 +350,15 @@ export function UsageView({
             />
           </div>
         </section>
+
+        {/* Os MESMOS dois números do cartão acima, agora ao longo do tempo:
+            ele diz quanto, e isto diz quando. Por isso vem colado nele, e não
+            no fim da página com as tabelas.
+            Com uma coluna só não há série — um gráfico de uma barra é o total
+            desenhado de novo, e o total já está logo ali em cima. */}
+        {serie.colunas.length > 1 && picoDa(serie.colunas) > 0 && (
+          <GraficoNoTempo colunas={serie.colunas} passo={serie.passo} />
+        )}
 
         {visiveis.length > 0 && (
           <section className="axxa-home-block axxa-usage-filters">
@@ -492,6 +525,125 @@ export function UsageView({
 /** "1 chat", "13 chats". */
 function contagem(n: number): string {
   return n === 1 ? "1 chat" : `${n} chats`;
+}
+
+/**
+ * O gráfico de tokens no tempo: uma coluna por dia (ou semana, ou mês), com o
+ * que ENTROU embaixo e o que SAIU em cima.
+ *
+ * Empilhado, e não dois gráficos lado a lado, porque as duas séries são
+ * partes da mesma coisa: a coluna inteira é o que aquele dia custou em
+ * tokens, e a divisão diz de quem foi. Com duas escalas separadas, a altura
+ * de uma não poderia ser comparada com a da outra — e é justamente isso que
+ * se quer olhar.
+ *
+ * As duas cores são a MESMA do app em dois tons, não duas cores diferentes:
+ * é uma medida só partida em duas, o acento é escolhido por quem usa (e pode
+ * ser qualquer um), e tom claro/escuro é o canal que sobrevive a qualquer
+ * daltonismo. Quem diz qual é qual é a legenda, que está sempre lá.
+ */
+function GraficoNoTempo({
+  colunas,
+  passo,
+}: {
+  colunas: Coluna[];
+  passo: Passo;
+}) {
+  /** A coluna que a linha de baixo está lendo. Enquanto ninguém escolhe, é a
+   *  mais alta: é ela que define a altura de todas as outras, então é a que
+   *  explica o desenho. Chave que não existe mais (o período mudou debaixo da
+   *  escolha) volta sozinha pro pico. */
+  const [escolhida, setEscolhida] = useState<string | null>(null);
+  const pico = picoDa(colunas);
+  const alta = colunas.reduce((a, b) => (b.total > a.total ? b : a));
+  const alvo = colunas.find((c) => c.inicio === escolhida) ?? alta;
+
+  return (
+    <section className="axxa-home-block" aria-label="Tokens over time">
+      <div className="axxa-home-headrow">
+        <span className="axxa-section-label">Over time</span>
+        <span className="axxa-chart-step">{PASSO[passo]}</span>
+      </div>
+      <div className="axxa-chart">
+        {/* A legenda existe SEMPRE: dois tons da mesma cor se distinguem, mas
+            só ela diz qual dos dois é o quê. */}
+        <div className="axxa-chart-legend">
+          <span className="axxa-chart-key">
+            <span className="axxa-chart-swatch is-in" aria-hidden="true" />
+            Sent
+          </span>
+          <span className="axxa-chart-key">
+            <span className="axxa-chart-swatch is-out" aria-hidden="true" />
+            Received
+          </span>
+          {/* O topo da escala. Sem ele, altura é só forma: dá pra comparar as
+              colunas entre si e com mais nada. */}
+          <span className="axxa-chart-peak">peak {formatCompact(pico)}</span>
+        </div>
+        <div
+          className="axxa-chart-plot"
+          role="group"
+          aria-label={`Tokens per ${passo}`}
+        >
+          {colunas.map((c) => (
+            <button
+              key={c.inicio}
+              type="button"
+              className={
+                c.inicio === alvo.inicio
+                  ? "axxa-chart-col is-on"
+                  : "axxa-chart-col"
+              }
+              aria-pressed={c.inicio === alvo.inicio}
+              // O mesmo texto da linha de baixo: no computador sai ao passar o
+              // mouse, no leitor de tela sai ao chegar na coluna, e no celular
+              // o toque leva ele pra linha — o número nunca depende do hover.
+              aria-label={`${c.titulo}: ${formatCompact(c.entrada)} sent, ${formatCompact(c.saida)} received`}
+              title={`${c.titulo} · ${formatCompact(c.entrada)} sent · ${formatCompact(c.saida)} received`}
+              onClick={() => setEscolhida(c.inicio)}
+            >
+              {/* A pilha é separada da coluna porque a coluna é o ALVO DO
+                  DEDO (toda a altura, toda a faixa) e a pilha é o desenho —
+                  que tem largura de teto pra não virar um bloco gordo quando
+                  são poucas. */}
+              <span className="axxa-chart-stack">
+                <span
+                  className="axxa-chart-air"
+                  style={{ flexGrow: Math.max(pico - c.total, 0) }}
+                />
+                {c.saida > 0 && (
+                  <span
+                    className="axxa-chart-bar is-out"
+                    style={{ flexGrow: c.saida }}
+                  />
+                )}
+                {c.entrada > 0 && (
+                  <span
+                    className="axxa-chart-bar is-in"
+                    style={{ flexGrow: c.entrada }}
+                  />
+                )}
+              </span>
+            </button>
+          ))}
+        </div>
+        {/* As pontas do eixo. Rótulo em toda coluna não caberia, e não é o que
+            se lê num gráfico deste tamanho: o que se lê é a forma, e o de
+            quando ela começa e termina. */}
+        <div className="axxa-chart-axis">
+          <span>{colunas[0].rotulo}</span>
+          <span>{colunas[colunas.length - 1].rotulo}</span>
+        </div>
+        <p className="axxa-chart-readout">
+          <span className="axxa-chart-when">{alvo.titulo}</span>
+          <span className="axxa-usage-sep">·</span>
+          {formatCompact(alvo.entrada)} sent
+          <span className="axxa-usage-sep">·</span>
+          {formatCompact(alvo.saida)} received
+        </p>
+      </div>
+    </section>
+  );
 }
 
 /**

@@ -1561,6 +1561,180 @@ body.theme-dark {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── o gráfico no tempo ────────────────────────────────────────────────
+   Uma coluna por dia (ou semana, ou mês), com o que entrou embaixo e o que
+   saiu em cima. Mesmo cartão das tabelas: é a mesma conta, desenhada.
+
+   As duas séries são DOIS TONS DA MESMA COR, não duas cores. Três motivos, e
+   nenhum é gosto: elas são partes de uma medida só (a coluna inteira é o
+   total do dia); o acento é escolhido por quem usa e pode ser qualquer cor,
+   então uma segunda cor fixa um dia colidiria com ele; e claro/escuro é o
+   único canal que sobrevive a qualquer daltonismo. Quem nomeia é a legenda. */
+.axxa-root .axxa-chart {
+  display: flex;
+  flex-direction: column;
+  /* O bloco de seção encolhe os filhos pro próprio conteúdo (é pra AÇÃO —
+     ver `.axxa-home-block`). Sem esticar, o cartão mudava de LARGURA a cada
+     toque, porque quem mandava nele era o tamanho do texto da linha de
+     leitura: escolher uma semana vazia encolhia o gráfico inteiro. */
+  align-self: stretch;
+  min-width: 0;
+  gap: var(--axxa-2);
+  padding: var(--axxa-3);
+  border-radius: var(--axxa-r);
+  background-color: var(--axxa-s1);
+  border: 1px solid var(--axxa-hairline);
+  box-shadow: var(--axxa-e1);
+  /* O que SAI é o mesmo acento puxado pro TEXTO do tema — a mesma mistura que
+     o brasão de um projeto usa. No escuro o texto é claro e o tom sobe; no
+     claro ele é escuro e o tom desce: nos dois, ele se AFASTA do cartão.
+     Puxar pro fundo (o primeiro palpite) fazia o contrário — medido no
+     escuro, a barra ficava a 1,03:1 contra o cartão, ou seja, sumia em todo
+     dia que só teve resposta. */
+  --axxa-serie-in: var(--interactive-accent);
+  --axxa-serie-out: color-mix(
+    in srgb,
+    var(--interactive-accent) 50%,
+    var(--text-normal)
+  );
+}
+
+.axxa-root .axxa-chart-step,
+.axxa-root .axxa-chart-peak {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.axxa-root .axxa-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--axxa-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.axxa-root .axxa-chart-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* O topo da escala vai pra ponta: ele é do gráfico todo, não de uma série. */
+.axxa-root .axxa-chart-peak {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.axxa-root .axxa-chart-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.axxa-root .axxa-chart-swatch.is-in {
+  background-color: var(--axxa-serie-in);
+}
+
+.axxa-root .axxa-chart-swatch.is-out {
+  background-color: var(--axxa-serie-out);
+}
+
+/* O piso é um fio, não uma caixa: eixo é referência, não moldura. */
+.axxa-root .axxa-chart-plot {
+  display: flex;
+  align-items: flex-end;
+  /* O vão entre colunas vizinhas é a cor do cartão aparecendo — é ele que
+     separa, não um contorno em volta de cada uma. */
+  gap: 2px;
+  height: 96px;
+  padding-bottom: var(--axxa-1);
+  border-bottom: 1px solid var(--axxa-hairline);
+}
+
+.axxa-root button.axxa-chart-col {
+  /* A coluna INTEIRA é o alvo do toque — a faixa toda, do piso ao topo —,
+     mesmo quando a barra lá dentro é um fio de três pixels. */
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  background-color: transparent;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+/* A escolhida se marca por um traço no PÉ, na cor do app — nunca trocando a
+   cor da barra (cor de série é identidade, e identidade que muda com o toque
+   deixa de ser identidade) e nunca pintando a faixa inteira: um retângulo da
+   altura do quadro, mesmo fraquinho, lê como mais uma barra — e era a mais
+   alta de todas. O traço é pequeno, nítido, e não tem como ser confundido
+   com dado. */
+.axxa-root button.axxa-chart-col.is-on {
+  box-shadow: inset 0 -2px 0 var(--interactive-accent);
+}
+
+.axxa-root .axxa-chart-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* Teto de 24px: com sete colunas num painel largo, a barra vira um bloco —
+     e bloco gordo é o desenho gritando mais alto que o dado. */
+  width: min(100%, 24px);
+  height: 100%;
+  margin: 0 auto;
+}
+
+/* As alturas saem do FLEX, não de porcentagem: assim o vão de 2px entre as
+   duas partes sai de dentro da coluna em vez de empurrar a mais alta pra fora
+   do quadro. O ar em cima é o que falta pro pico. */
+.axxa-root .axxa-chart-air,
+.axxa-root .axxa-chart-bar {
+  flex-basis: 0;
+  min-height: 0;
+}
+
+.axxa-root .axxa-chart-bar {
+  /* Dia de pouquíssimo uso continua aparecendo: zero e quase-zero são coisas
+     diferentes, e a coluna que some diz a errada. */
+  min-height: 2px;
+  background-color: var(--axxa-serie-in);
+}
+
+.axxa-root .axxa-chart-bar.is-out {
+  background-color: var(--axxa-serie-out);
+}
+
+/* A ponta de cima é arredondada; a de baixo encosta reta no piso. */
+.axxa-root .axxa-chart-stack > .axxa-chart-bar:first-of-type {
+  border-radius: 4px 4px 0 0;
+}
+
+/* O vão de 2px entre as duas partes — a mesma cor do cartão, como entre as
+   colunas vizinhas. */
+.axxa-root .axxa-chart-bar.is-out:has(+ .axxa-chart-bar.is-in) {
+  margin-bottom: 2px;
+}
+
+.axxa-root .axxa-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+/* A linha que lê a coluna escolhida — e, antes de qualquer toque, a mais
+   alta. É ela que dá o número exato sem pedir um mouse que no celular não
+   existe. */
+.axxa-root .axxa-chart-readout {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.axxa-root .axxa-chart-when {
+  color: var(--text-normal);
+}
+
 /* O cabeçalho do relatório do "See all": DE QUÊ são os números — o período,
    os filtros que ainda valem, quantas conversas e o total. Uma linha de
    apoio, como a de baixo do número grande. */
