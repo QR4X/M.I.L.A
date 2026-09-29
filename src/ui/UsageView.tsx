@@ -39,16 +39,20 @@ import {
   type UsageFilter,
 } from "../usage/filters";
 import {
+  A_VISTA,
+  buscarOpcoes,
   conversasDoTopo,
   faixaDeDatas,
   marcados,
   mediaPorConversa,
   metricaDa,
   modelosDaPagina,
+  opcoesAVista,
   valeFiltrar,
   type Metrica,
   type ModeloNaPagina,
 } from "../usage/page";
+import { Sheet, SheetGroup, SheetNote, SheetRow, SheetSearch } from "./Sheet";
 import { moduleIcon, moduleLabel, relativeShort } from "./modules";
 import { PROVIDERS } from "../core/providersMeta";
 import { prettyModelName } from "../providers/modelDescriptions";
@@ -64,6 +68,10 @@ const PERIODOS = [
 
 /** Quantas conversas a lista do topo mostra. */
 const TOPO = 10;
+
+/** A partir de quantas opções a lista inteira ganha busca. Com poucas, o
+ *  campo seria uma linha a mais pra ler antes de chegar no que se procura. */
+const BUSCA_A_PARTIR = 8;
 
 /** Os filtros de lista: o que cada dimensão marca, como se chama e se desenha. */
 type Dimensao = "providers" | "models" | "modes";
@@ -88,6 +96,12 @@ export function UsageView({
 }) {
   const chats = useChatSummaries(plugin);
   const [salvando, setSalvando] = useState(false);
+  /** A lista inteira de uma dimensão (o "See all"). A dimensão fica guardada
+   *  mesmo com a folha fechada: ela desce DESLIZANDO, e o conteúdo tem que
+   *  continuar lá durante a descida em vez de sumir no primeiro quadro. */
+  const [lista, setLista] = useState<Dimensao>("models");
+  const [listaAberta, setListaAberta] = useState(false);
+  const [buscaLista, setBuscaLista] = useState("");
 
   // As opções saem das conversas INTEIRAS, não do recorte: se elas
   // encolhessem junto, marcar um provider apagaria os outros da lista e não
@@ -106,6 +120,8 @@ export function UsageView({
   const dimensoes: Array<{
     chave: Dimensao;
     titulo: string;
+    /** O título da lista inteira ("Models"). */
+    plural: string;
     ops: Opcao[];
     nome: (id: string) => string;
     icone: (id: string) => string;
@@ -113,16 +129,39 @@ export function UsageView({
     {
       chave: "providers",
       titulo: "Provider",
+      plural: "Providers",
       ops: porProvider,
       nome: (id) => PROVIDERS.find((p) => p.id === id)?.name ?? id,
       icone: providerIcon,
     },
     // O nome do APP, nunca o id da API: "claude-sonnet-4-6" é como o
     // provider chama; no resto do app ele é "Sonnet 4.6".
-    { chave: "models", titulo: "Model", ops: porModelo, nome: prettyModelName, icone: modelLogo },
-    { chave: "modes", titulo: "Mode", ops: porModo, nome: moduleLabel, icone: moduleIcon },
+    {
+      chave: "models",
+      titulo: "Model",
+      plural: "Models",
+      ops: porModelo,
+      nome: prettyModelName,
+      icone: modelLogo,
+    },
+    {
+      chave: "modes",
+      titulo: "Mode",
+      plural: "Modes",
+      ops: porModo,
+      nome: moduleLabel,
+      icone: moduleIcon,
+    },
   ];
   const visiveis = dimensoes.filter((d) => valeFiltrar(d.ops, f[d.chave]));
+  const naLista = dimensoes.find((d) => d.chave === lista) ?? dimensoes[1];
+  const achadas = buscarOpcoes(naLista.ops, buscaLista, naLista.nome);
+
+  const verTodos = (d: Dimensao) => {
+    setLista(d);
+    setBuscaLista("");
+    setListaAberta(true);
+  };
 
   const salvarRelatorio = async () => {
     setSalvando(true);
@@ -276,9 +315,23 @@ export function UsageView({
             </div>
             {visiveis.map((d) => (
               <div key={d.chave} className="axxa-usage-dim">
-                <span className="axxa-usage-dim-label">{d.titulo}</span>
+                {/* As TRÊS mais usadas à vista; o resto mora na lista do "See
+                    all" — o mesmo "See all N ›" da home, na linha do nome. */}
+                <div className="axxa-usage-dim-head">
+                  <span className="axxa-usage-dim-label">{d.titulo}</span>
+                  {d.ops.length > A_VISTA && (
+                    <button
+                      type="button"
+                      className="axxa-home-filter is-accent"
+                      onClick={() => verTodos(d.chave)}
+                    >
+                      <span>See all {d.ops.length}</span>
+                      <Icon name="chevron-right" size={16} />
+                    </button>
+                  )}
+                </div>
                 <div className="axxa-choices" role="group" aria-label={d.titulo}>
-                  {d.ops.map((o) => {
+                  {opcoesAVista(d.ops, f[d.chave]).map((o) => {
                     const on = f[d.chave].includes(o.id);
                     const nome = d.nome(o.id);
                     return (
@@ -288,9 +341,7 @@ export function UsageView({
                         className={on ? "axxa-choice is-on" : "axxa-choice"}
                         aria-pressed={on}
                         // Lido em voz alta, "GPT 5 13" não diz o que é o 13.
-                        aria-label={`${nome}, ${o.count} ${
-                          o.count === 1 ? "chat" : "chats"
-                        }`}
+                        aria-label={`${nome}, ${contagem(o.count)}`}
                         onClick={() =>
                           setF({ ...f, [d.chave]: alternar(f[d.chave], o.id) })
                         }
@@ -348,8 +399,52 @@ export function UsageView({
           </>
         )}
       </div>
+
+      {/* A lista INTEIRA de uma dimensão — a folha do app, com as linhas da
+          folha de modelos (logo, nome, quantas conversas, o check). Marcar
+          aqui é o mesmo que tocar na pílula: a página atrás já muda, e a
+          folha fica aberta pra marcar mais de um. */}
+      <Sheet
+        title={naLista.plural}
+        open={listaAberta}
+        onClose={() => setListaAberta(false)}
+      >
+        {naLista.ops.length > BUSCA_A_PARTIR && (
+          <SheetSearch
+            value={buscaLista}
+            placeholder={`Search ${naLista.plural.toLowerCase()}`}
+            found={achadas.length}
+            onChange={setBuscaLista}
+          />
+        )}
+        <SheetGroup>
+          {achadas.map((o) => (
+            <SheetRow
+              key={o.id}
+              icon={naLista.icone(o.id)}
+              title={naLista.nome(o.id)}
+              note={contagem(o.count)}
+              selected={f[naLista.chave].includes(o.id)}
+              onClick={() =>
+                setF({
+                  ...f,
+                  [naLista.chave]: alternar(f[naLista.chave], o.id),
+                })
+              }
+            />
+          ))}
+          {achadas.length === 0 && (
+            <SheetNote>Nothing matches that search.</SheetNote>
+          )}
+        </SheetGroup>
+      </Sheet>
     </div>
   );
+}
+
+/** "1 chat", "13 chats". */
+function contagem(n: number): string {
+  return n === 1 ? "1 chat" : `${n} chats`;
 }
 
 /**

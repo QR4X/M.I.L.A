@@ -2,8 +2,11 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  A_VISTA,
+  buscarOpcoes,
   conversasDoTopo,
   faixaDeDatas,
+  opcoesAVista,
   marcados,
   mediaPorConversa,
   metricaDa,
@@ -211,6 +214,55 @@ describe("os filtros que valem a pena", () => {
     ).toBe(3);
   });
 
+  const ops = [
+    { id: "gpt-5", count: 13 },
+    { id: "claude-sonnet-4-6", count: 7 },
+    { id: "gpt-4o", count: 6 },
+    { id: "gemini-2.5-flash", count: 1 },
+    { id: "llama3.2", count: 1 },
+  ];
+
+  it("à vista ficam as TRÊS mais usadas — o resto é do See all", () => {
+    expect(A_VISTA).toBe(3);
+    expect(opcoesAVista(ops, []).map((o) => o.id)).toEqual([
+      "gpt-5",
+      "claude-sonnet-4-6",
+      "gpt-4o",
+    ]);
+    // Com três ou menos, tudo — e nada de "See all".
+    expect(opcoesAVista(ops.slice(0, 2), [])).toHaveLength(2);
+  });
+
+  it("marcada fora das três volta pra fileira, NA FRENTE", () => {
+    // No fim, ela caía cortada na beirada — o filtro recém-ligado era a
+    // única pílula invisível.
+    expect(opcoesAVista(ops, ["llama3.2"]).map((o) => o.id)).toEqual([
+      "llama3.2",
+      "gpt-5",
+      "claude-sonnet-4-6",
+      "gpt-4o",
+    ]);
+    // Marcada DENTRO das três não se mexe, nem duplica.
+    expect(opcoesAVista(ops, ["gpt-4o"]).map((o) => o.id)).toEqual([
+      "gpt-5",
+      "claude-sonnet-4-6",
+      "gpt-4o",
+    ]);
+  });
+
+  it("a busca da lista acha pelo nome do app E pelo id", () => {
+    const nome = (id: string) =>
+      ({ "claude-sonnet-4-6": "Sonnet 4.6", "gpt-5": "GPT 5" })[id] ?? id;
+    expect(buscarOpcoes(ops, "sonnet 4.6", nome).map((o) => o.id)).toEqual([
+      "claude-sonnet-4-6",
+    ]);
+    expect(buscarOpcoes(ops, "CLAUDE", nome).map((o) => o.id)).toEqual([
+      "claude-sonnet-4-6",
+    ]);
+    expect(buscarOpcoes(ops, "  ", nome)).toHaveLength(ops.length);
+    expect(buscarOpcoes(ops, "mistral", nome)).toEqual([]);
+  });
+
   it("uma opção só não filtra nada — a não ser que esteja marcada", () => {
     expect(valeFiltrar([{ id: "openai", count: 9 }], [])).toBe(false);
     expect(valeFiltrar([{ id: "openai", count: 9 }], ["openai"])).toBe(true);
@@ -319,6 +371,15 @@ describe("o desenho da página de uso", () => {
       expect(b, sel).toContain("var(--text-muted)");
       expect(b, sel).not.toContain("var(--text-faint)");
     }
+  });
+
+  it("a fileira mostra as três; o See all abre a lista inteira numa folha", () => {
+    expect(VIEW).toContain("opcoesAVista(d.ops, f[d.chave])");
+    expect(VIEW).toMatch(/d\.ops\.length > A_VISTA/);
+    expect(VIEW).toContain("See all {d.ops.length}");
+    // A lista é a folha do app, com as linhas da folha de modelos.
+    expect(VIEW).toMatch(/<Sheet\b/);
+    expect(VIEW).toMatch(/<SheetRow\b/);
   });
 
   it("modelo se chama pelo nome do APP, na página e no cartão", () => {

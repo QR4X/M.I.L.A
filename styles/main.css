@@ -1376,6 +1376,18 @@ body.theme-dark {
   gap: 6px;
 }
 
+/* O nome da dimensão e, na ponta, o "See all N ›" — a mesma linha de seção da
+   home ("Pick up where you left … See all 12 ›"), em miniatura. A altura é a
+   do botão MESMO onde ele não aparece: com e sem "See all", as três fileiras
+   ficam no mesmo compasso. */
+.axxa-root .axxa-usage-dim-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--axxa-2);
+  min-height: 24px;
+}
+
 /* Aqui as pílulas ficam do TAMANHO delas. Justificadas (como nas folhas),
    uma que sobrasse sozinha na fileira virava uma barra da largura da tela —
    o "Gemini ¹" parecia o botão principal da página. Nas folhas são dez

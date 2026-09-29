@@ -152,6 +152,47 @@ export function marcados(f: UsageFilter): number {
   return f.providers.length + f.models.length + f.modes.length;
 }
 
+/** Quantas opções de cada filtro ficam à vista na página. */
+export const A_VISTA = 3;
+
+/**
+ * As pílulas que a fileira mostra: as TRÊS mais usadas, sempre — e as
+ * marcadas que não estão entre elas.
+ *
+ * O resto mora na lista do "See all". Mas o que foi marcado lá volta pra cá:
+ * um filtro ligado que não aparece na página é um filtro esquecido — o total
+ * muda e nada na tela diz por quê.
+ *
+ * E volta NA FRENTE. No fim da fileira ela caía depois das três, cortada na
+ * beirada da tela: o filtro que a pessoa acabou de ligar era a única pílula
+ * que não dava pra ver. As três não saem do lugar entre si.
+ */
+export function opcoesAVista(
+  ops: readonly Opcao[],
+  selecionados: readonly string[],
+  n: number = A_VISTA
+): Opcao[] {
+  const fora = ops.filter((o, i) => i >= n && selecionados.includes(o.id));
+  return [...fora, ...ops.slice(0, n)];
+}
+
+/**
+ * A busca da lista inteira: pelo nome que a pessoa VÊ ("Sonnet 4.6") e pelo
+ * id ("claude-sonnet-4-6") — quem digita pode ter qualquer um dos dois na
+ * cabeça.
+ */
+export function buscarOpcoes(
+  ops: readonly Opcao[],
+  termo: string,
+  nome: (id: string) => string
+): Opcao[] {
+  const t = termo.trim().toLowerCase();
+  if (!t) return [...ops];
+  return ops.filter(
+    (o) => nome(o.id).toLowerCase().includes(t) || o.id.toLowerCase().includes(t)
+  );
+}
+
 /**
  * Vale mostrar esta dimensão?
  *
