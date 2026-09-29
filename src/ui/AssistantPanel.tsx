@@ -73,12 +73,23 @@ export type AlvoAssistente =
   | "skill"
   | "project"
   | "description"
-  | "instructions";
+  | "instructions"
+  | "notes";
 
 export interface AssistantPanelProps {
   /** O que a assistente vai montar — muda o convite, o exemplo e a CHAVE da
    *  rodada no store (uma por tipo; ver store.ts). */
   para: AlvoAssistente;
+  /**
+   * A chave da rodada no store, quando ela não pode ser a de `para`.
+   *
+   * É o caso das instruções no WIZARD de projeto: a tela de instruções de um
+   * projeto já criado também escuta a rodada "instructions", e aplica o
+   * resultado abrindo o nível dela. Com a mesma chave, escrever as instruções
+   * durante a criação jogaria a folha nesse nível no instante em que o projeto
+   * fosse salvo. Mesmo texto, mesmo pedido — só outra caixa de correio.
+   */
+  chave?: string;
   /** null = pronta. Com texto, o painel só explica o que falta. */
   indisponivel: string | null;
   /** Faz a chamada. O painel não espera por ela — quem espera é o store. */
@@ -100,6 +111,7 @@ const CONVITE: Record<AlvoAssistente, string> = {
   project: "What is this project about?",
   description: "Anything to steer it? (optional)",
   instructions: "Anything to steer it? (optional)",
+  notes: "Anything to look for? (optional)",
 };
 
 const EXEMPLO: Record<AlvoAssistente, string> = {
@@ -107,6 +119,25 @@ const EXEMPLO: Record<AlvoAssistente, string> = {
   project: "My master's thesis on Kuhn and scientific revolutions",
   description: "Optional — it writes from the prompt above",
   instructions: "Optional — it writes from the project and its notes",
+  notes: "Optional — it looks at the project's name and instructions",
+};
+
+/** O título do painel e o verbo do botão. Achar notas não é escrever — um
+ *  "Write it" que devolve uma lista de arquivos promete uma coisa e faz outra. */
+const TITULO: Record<AlvoAssistente, string> = {
+  skill: "Write it for me",
+  project: "Write it for me",
+  description: "Write it for me",
+  instructions: "Write it for me",
+  notes: "Find notes for me",
+};
+
+const VERBO: Record<AlvoAssistente, string> = {
+  skill: "Write it",
+  project: "Write it",
+  description: "Write it",
+  instructions: "Write it",
+  notes: "Find them",
 };
 
 /**
@@ -119,6 +150,8 @@ const PARTE_DO_VAZIO: Record<AlvoAssistente, boolean> = {
   project: false,
   description: true,
   instructions: true,
+  // O projeto na tela (nome, instruções) JÁ é a entrada.
+  notes: true,
 };
 
 /** Lê a rodada do store e re-renderiza quando ela muda. */
@@ -131,12 +164,14 @@ export function useRun(chave: string) {
 
 export function AssistantPanel({
   para,
+  chave: chaveDada,
   indisponivel,
   onPedir,
   onFechar,
   modelo,
 }: AssistantPanelProps) {
-  const run = useRun(para);
+  const chave = chaveDada ?? para;
+  const run = useRun(chave);
   const [texto, setTexto] = useState("");
   /**
    * A pessoa escolheu a quarta pastilha ("Let me type") nesta pergunta.
@@ -163,13 +198,13 @@ export function AssistantPanel({
     setDigitando(false);
     // Dispara e esquece: o resultado chega pelo store, e o store sobrevive a
     // este componente sair da tela.
-    comecarRodada(para, proximos, (t) => onPedir(modo, t));
+    comecarRodada(chave, proximos, (t) => onPedir(modo, t));
   };
 
   const cabecalho = (
     <div className="axxa-assist-head">
       <Icon name="sparkles" size={16} />
-      <span>Write it for me</span>
+      <span>{TITULO[para]}</span>
       {/* Quem escreve, e a troca — no lugar onde se percebe que precisa
           trocar. */}
       {modelo && modelo.opcoes.length > 1 && (
@@ -208,7 +243,7 @@ export function AssistantPanel({
           // Fechar não cancela: o que está a caminho continua e o resultado
           // espera o formulário. Só a pergunta pendente some junto — ela só
           // faz sentido com o painel aberto.
-          if (run.fase !== "rodando") limparRun(para);
+          if (run.fase !== "rodando") limparRun(chave);
           onFechar();
         }}
       >
@@ -268,7 +303,7 @@ export function AssistantPanel({
         <div
           className="axxa-scrim"
           onClick={() => {
-            if (run.fase !== "rodando") limparRun(para);
+            if (run.fase !== "rodando") limparRun(chave);
             onFechar();
           }}
         />
@@ -393,7 +428,7 @@ export function AssistantPanel({
                 }
               >
                 <Icon name="sparkles" size={16} />
-                <span>{perguntando ? "Send" : "Write it"}</span>
+                <span>{perguntando ? "Send" : VERBO[para]}</span>
               </button>
             </>
           )}
@@ -474,6 +509,7 @@ export function ComAssistente({
   onAbrir,
   painel,
   ocupado,
+  titulo,
 }: {
   children: ReactNode;
   aberto: boolean;
@@ -481,12 +517,17 @@ export function ComAssistente({
   /** O painel, renderizado LOGO ABAIXO do campo quando aberto. */
   painel: ReactNode;
   ocupado?: boolean;
+  /** O nome do ✨ pra leitor de tela — "Find notes for me" no campo de busca
+   *  de notas, onde "Write it for me" diria outra coisa. */
+  titulo?: string;
 }) {
   return (
     <>
       <span className="axxa-spark-wrap">
         {children}
-        {!aberto && <AssistantSpark onClick={onAbrir} ocupado={ocupado} />}
+        {!aberto && (
+          <AssistantSpark onClick={onAbrir} ocupado={ocupado} titulo={titulo} />
+        )}
       </span>
       {aberto && painel}
     </>

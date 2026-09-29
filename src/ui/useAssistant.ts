@@ -16,6 +16,7 @@ import {
   motivoIndisponivel,
 } from "../assistant/model";
 import {
+  lerNotas,
   lerProjeto,
   lerSkill,
   lerTexto,
@@ -26,6 +27,7 @@ import {
   idiomaDoApp,
   promptDescricao,
   promptInstrucoes,
+  promptNotas,
   promptProjeto,
   promptSkill,
   TETO_NOTAS,
@@ -204,6 +206,54 @@ export function useAssistant(plugin: AxxaPlugin) {
   );
 
   /**
+   * Procura NOTAS do vault pra um projeto — o "me ajuda a coletar".
+   *
+   * Só com a chave `assistantSeesVault` ligada: a matéria-prima aqui é o nome
+   * das notas da pessoa, e isso só sai do aparelho com o consentimento dela.
+   * Desligada, devolve a frase que diz isso em vez de um erro genérico — o
+   * passo de Notas mostra o botão que liga, bem ao lado.
+   */
+  const pedirNotas = useCallback(
+    async (
+      ctx: { name: string; instructions: string; escolhidas: readonly string[] },
+      turnos: TurnoAssistente[]
+    ): Promise<RodadaAssistente<string[]>> => {
+      if (!s.assistantSeesVault)
+        return {
+          erro: "Let the assistant see your note names first (below) — it never reads what is inside them.",
+        };
+      const caminhos = vaultNotes(plugin.app)
+        .sort((a, b) => b.mtime - a.mtime)
+        .slice(0, TETO_NOTAS)
+        .map((n) => n.path);
+      const comAlgo = turnos.length
+        ? turnos
+        : [{ quem: "pessoa" as const, texto: "Find them." }];
+      const r = await rodar(
+        promptNotas({ ...ctx, caminhos, idioma }),
+        comAlgo
+      );
+      if (r.erro) return { erro: r.erro };
+      if (r.pergunta) return { pergunta: r.pergunta, opcoes: r.opcoes };
+      const notas = lerNotas(r.bruto ?? null, caminhos, ctx.escolhidas);
+      return notas.length
+        ? { draft: notas }
+        : {
+            erro: "No note in the vault fits yet — try naming the project, or saying what it is about.",
+          };
+    },
+    [rodar, plugin, s.assistantSeesVault, idioma]
+  );
+
+  /** Liga a chave que deixa a assistente ver os NOMES das notas (nunca o
+   *  conteúdo). É um toque da pessoa, no passo de Notas — a mesma chave das
+   *  settings, só que onde se percebe que precisa dela. */
+  const deixarVerNotas = useCallback(async () => {
+    s.assistantSeesVault = true;
+    await plugin.saveSettings();
+  }, [plugin, s]);
+
+  /**
    * Os modelos que dá pra usar aqui, e o que está em uso.
    *
    * Isto existe pra o painel poder TROCAR de modelo sem mandar a pessoa pras
@@ -255,6 +305,8 @@ export function useAssistant(plugin: AxxaPlugin) {
     pedirProjeto,
     pedirDescricao,
     pedirInstrucoes,
+    pedirNotas,
+    deixarVerNotas,
     veOVault: s.assistantSeesVault,
   };
 }

@@ -35,9 +35,28 @@ import {
 import { ChatList, useChatSummaries } from "./ChatList";
 import { ConfirmModal } from "./modals";
 import { Icon } from "./Icon";
-import { Sheet, SheetGroup, SheetNote, SheetRow, SheetSearch } from "./Sheet";
-import { ProjectForm } from "./ProjectSheet";
-import { SheetField, SheetSubmit, SheetTextarea } from "./SheetForm";
+import {
+  Sheet,
+  SheetGroup,
+  SheetNote,
+  SheetRow,
+  SheetSearch,
+  useSheetDefault,
+} from "./Sheet";
+import {
+  EXTRAS_VAZIOS,
+  PASSOS_PROJETO,
+  ProjectForm,
+  type ExtrasProjeto,
+} from "./ProjectSheet";
+import { peDoWizard } from "./wizard";
+import {
+  SheetField,
+  SheetProgress,
+  SheetSubmit,
+  SheetTextarea,
+  SheetWizardFoot,
+} from "./SheetForm";
 import { openActions } from "./menu";
 import { rankNotes, vaultNotes } from "./notePicker";
 import { exportProjectToVault } from "../core/projectExport";
@@ -84,6 +103,12 @@ export function ProjectsView({
   const [draft, setDraft] = useState<ProjectDraft | null>(null);
   /** Id do projeto em edição — null quando é criação. */
   const [editandoId, setEditandoId] = useState<string | null>(null);
+  /** O passo do wizard de CRIAÇÃO (índice em PASSOS_PROJETO). Mora aqui, e não
+   *  no formulário, pelo mesmo motivo do de skills: quem anda na fila é o
+   *  rodapé, e o rodapé é da folha. */
+  const [passo, setPasso] = useState(0);
+  /** O catálogo de ícones do formulário está aberto — um nível da folha. */
+  const [procurando, setProcurando] = useState(false);
   /** Está no nível das notas? E, dentro dele, escolhendo uma do vault? */
   const [vendoNotas, setVendoNotas] = useState(false);
   const [escolhendo, setEscolhendo] = useState(false);
@@ -121,25 +146,31 @@ export function ProjectsView({
 
   const criar = () => {
     setEditandoId(null);
+    setPasso(0);
+    setProcurando(false);
+    setExtras(EXTRAS_VAZIOS);
     setDraft(PROJECT_DRAFT_VAZIO);
   };
 
   const editar = (p: Project) => {
     setEditandoId(p.id);
+    setProcurando(false);
+    setExtras(EXTRAS_VAZIOS);
     setDraft({ name: p.name, icon: p.icon, color: p.color });
   };
 
   /**
-   * O que a assistente sugeriu ALÉM do rascunho: notas de origem e instruções.
+   * As NOTAS e as INSTRUÇÕES do projeto sendo feito.
    *
    * Elas não cabem no `ProjectDraft` (que é nome/ícone/cor) porque só existem
    * depois que o projeto existe — fonte é caminho anexado a um id, e instrução
    * é campo do projeto, não do formulário. Ficam aqui esperando o `salvar`.
+   *
+   * Criando, elas são escolhidas à vista nos passos do wizard (a assistente
+   * ajuda nos dois). Editando, só recebem o que o ✨ do nome sugerir — e isso
+   * SOMA ao que o projeto já tinha, nunca troca.
    */
-  const [sugerido, setSugerido] = useState<{
-    notes: string[];
-    instructions: string;
-  } | null>(null);
+  const [extras, setExtras] = useState<ExtrasProjeto>(EXTRAS_VAZIOS);
 
   const problema = draft
     ? projectProblema(draft, projects, editandoId ?? undefined)
@@ -161,10 +192,8 @@ export function ProjectsView({
                 // ela não sabe o que você anexou antes dela, e apagar fonte
                 // por conta própria seria a coisa mais cara que ela poderia
                 // fazer aqui.
-                sources: sugerido
-                  ? [...new Set([...x.sources, ...sugerido.notes])]
-                  : x.sources,
-                instructions: sugerido?.instructions || x.instructions,
+                sources: [...new Set([...x.sources, ...extras.notes])],
+                instructions: extras.instructions.trim() || x.instructions,
               }
             : x
         )
@@ -175,8 +204,8 @@ export function ProjectsView({
         name: nome,
         icon: draft.icon,
         color: draft.color,
-        sources: sugerido?.notes ?? [],
-        instructions: sugerido?.instructions || undefined,
+        sources: extras.notes,
+        instructions: extras.instructions.trim() || undefined,
         // A conversa que pediu o projeto entra junto: quem criou o projeto a
         // partir do menu dela não devia ter que voltar lá e repetir o caminho.
         chatIds: chatPendente ? [chatPendente] : [],
@@ -191,7 +220,9 @@ export function ProjectsView({
     }
     setDraft(null);
     setEditandoId(null);
-    setSugerido(null);
+    setExtras(EXTRAS_VAZIOS);
+    setPasso(0);
+    setProcurando(false);
   };
 
   const apagar = async (p: Project) => {
@@ -336,8 +367,15 @@ export function ProjectsView({
             ? "projeto"
             : "lista";
 
+  /** Criando = wizard; editando = o formulário inteiro (ver ProjectSheet). */
+  const criando = nivel === "form" && editandoId === null;
+
   const TITULOS: Record<string, string> = {
-    form: editandoId ? "Edit project" : "New project",
+    // O passo no título, como no de skills: "New project" cinco vezes seguidas
+    // não distingue uma tela da seguinte.
+    form: editandoId
+      ? "Edit project"
+      : `New project · ${PASSOS_PROJETO[passo].label}`,
     instrucoes: "Custom instructions",
     escolher: "Add a note",
     notas: "Project notes",
@@ -347,10 +385,22 @@ export function ProjectsView({
 
   /** A seta de voltar de cada nível — ela desfaz o toque que trouxe você. */
   const voltar: Record<string, (() => void) | undefined> = {
+    // A seta é o ÚNICO voltar da tela, e ela anda pra trás: no wizard recua
+    // um passo, e só sai quando não há passo atrás (ver `voltar` em wizard.ts).
     form: () => {
+      if (
+        criando &&
+        peDoWizard({ atual: passo, total: PASSOS_PROJETO.length }).voltar ===
+          "passo"
+      ) {
+        setPasso(passo - 1);
+        return;
+      }
       setDraft(null);
       setEditandoId(null);
-      setSugerido(null);
+      setExtras(EXTRAS_VAZIOS);
+      setPasso(0);
+      setProcurando(false);
     },
     instrucoes: () => {
       setInstrucoes(null);
@@ -365,6 +415,9 @@ export function ProjectsView({
   const fecharTudo = () => {
     setDraft(null);
     setEditandoId(null);
+    setExtras(EXTRAS_VAZIOS);
+    setPasso(0);
+    setProcurando(false);
     setInstrucoes(null);
     setEscolhendo(false);
     setVendoNotas(false);
@@ -389,11 +442,24 @@ export function ProjectsView({
    *  conteúdo — ver a prop `footer` em Sheet.tsx. */
   const rodape =
     nivel === "form" ? (
-      <SheetSubmit
-        label={editandoId ? "Save project" : "Create project"}
-        problema={problema}
-        onSubmit={() => void salvar()}
-      />
+      // Com o catálogo de ícones aberto o rodapé sai: o catálogo traz o voltar
+      // dele, e dois voltares querendo dizer coisas diferentes é armadilha.
+      procurando ? undefined : criando ? (
+        <SheetWizardFoot
+          atual={passo}
+          total={PASSOS_PROJETO.length}
+          onPasso={setPasso}
+          problema={problema}
+          label="Create project"
+          onSubmit={() => void salvar()}
+        />
+      ) : (
+        <SheetSubmit
+          label="Save project"
+          problema={problema}
+          onSubmit={() => void salvar()}
+        />
+      )
     ) : nivel === "instrucoes" ? (
       <SheetSubmit label="Save instructions" onSubmit={salvarInstrucoes} />
     ) : nivel === "projeto" && aberto ? (
@@ -429,6 +495,11 @@ export function ProjectsView({
     <Sheet
       title={TITULOS[nivel]}
       footer={rodape}
+      progress={
+        criando && !procurando ? (
+          <SheetProgress atual={passo} total={PASSOS_PROJETO.length} />
+        ) : undefined
+      }
       // Nasce média, mesmo com dois projetos. Sendo "a altura do conteúdo", a
       // folha contava quantos projetos existem antes de a pessoa ler um: quem
       // tinha dois abria uma faixa de dois dedos, quem tinha oito abria meia
@@ -462,9 +533,18 @@ export function ProjectsView({
           focar={nivel === "form"}
           onDraft={setDraft}
           plugin={plugin}
-          onNotas={(notes, instructions) => setSugerido({ notes, instructions })}
+          extras={extras}
+          onExtras={setExtras}
+          passo={criando ? PASSOS_PROJETO[passo].id : undefined}
+          procurando={procurando}
+          onProcurar={setProcurando}
         />
       )}
+
+      {/* Fora do formulário a folha volta ao tamanho com que nasce (o médio):
+          o formulário pede a do tamanho do conteúdo, e a folha não desmonta
+          entre os níveis. */}
+      {nivel !== "form" && <TamanhoDaCasa />}
 
       {nivel === "instrucoes" && (
         <>
@@ -760,4 +840,10 @@ export function ProjectsView({
       )}
     </Sheet>
   );
+}
+
+/** Devolve a folha ao tamanho com que ela nasce — ver useSheetDefault. */
+function TamanhoDaCasa() {
+  useSheetDefault();
+  return null;
 }

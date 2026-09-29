@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { peDoWizard } from "../src/ui/wizard";
 import { PASSOS_SKILL } from "../src/ui/SkillSheet";
+import { PASSOS_PROJETO } from "../src/ui/ProjectSheet";
 import { SKILL_DRAFT_VAZIO } from "../src/skills/skillFile";
 
 // Criar um skill é uma FILA de telas, uma pergunta por vez. Um formulário de
@@ -113,6 +114,41 @@ describe("os passos cobrem o skill", () => {
 
   it("todo passo tem um rótulo curto — ele vai no TÍTULO da folha", () => {
     for (const p of PASSOS_SKILL) {
+      expect(p.label.trim()).not.toBe("");
+      expect(p.label.length).toBeLessThanOrEqual(14);
+    }
+  });
+});
+
+describe("o wizard de PROJETO", () => {
+  // Criar um projeto é a mesma fila de telas que a de skills — e nela a
+  // assistente deixa de trabalhar escondida: notas e instruções ganham um
+  // passo cada, à vista.
+  it("uma pergunta por tela: nome, notas, instruções, cor e ícone", () => {
+    expect(PASSOS_PROJETO.map((p) => p.id)).toEqual([
+      "name",
+      "notes",
+      "instructions",
+      "color",
+      "icon",
+    ]);
+  });
+
+  it("o nome vem primeiro — é nele que o ✨ monta o projeto inteiro", () => {
+    // E é o nome que a assistente usa pra procurar notas e escrever as
+    // instruções nos passos seguintes.
+    expect(PASSOS_PROJETO[0].id).toBe("name");
+  });
+
+  it("as notas vêm ANTES das instruções", () => {
+    // As instruções se escrevem melhor olhando pras notas escolhidas: a
+    // assistente recebe as duas.
+    const ids = PASSOS_PROJETO.map((p) => p.id as string);
+    expect(ids.indexOf("notes")).toBeLessThan(ids.indexOf("instructions"));
+  });
+
+  it("todo passo tem um rótulo curto — ele vai no TÍTULO da folha", () => {
+    for (const p of PASSOS_PROJETO) {
       expect(p.label.trim()).not.toBe("");
       expect(p.label.length).toBeLessThanOrEqual(14);
     }

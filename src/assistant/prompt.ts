@@ -225,3 +225,51 @@ want to be answered. A few plain sentences, not a bulleted spec.`,
   partes.push(UM_CAMPO);
   return partes.join("\n\n");
 }
+
+/**
+ * Procurar NOTAS pra um projeto — o que ele deve saber.
+ *
+ * É o único pedido desta assistente em que a matéria-prima não é texto que a
+ * pessoa escreveu: é a lista de nomes do vault. Por isso ele só existe com a
+ * chave `assistantSeesVault` ligada, e mesmo assim só vão CAMINHOS, nunca o
+ * conteúdo de uma nota — quem monta a lista é useAssistant, com o teto de
+ * TETO_NOTAS e as mais recentes primeiro.
+ *
+ * As já escolhidas vão junto pra ela não devolver o que já está na lista: uma
+ * sugestão repetida parece que o botão não fez nada.
+ */
+export function promptNotas(ctx: {
+  name: string;
+  instructions: string;
+  escolhidas: readonly string[];
+  caminhos: readonly string[];
+  idioma: string;
+}): string {
+  const partes = [
+    base(ctx.idioma),
+    SOBRE_PROJETO,
+    `Pick the notes from this vault that this project should KNOW — they are
+attached as its sources and go in as context on every chat started inside it.
+Choose by what the path says: folder, title, date. Prefer fewer, clearly
+relevant notes over many loosely related ones. If nothing fits, return none.`,
+    `Project: ${ctx.name || "(not named yet)"}`,
+  ];
+  if (ctx.instructions.trim())
+    partes.push(`Its instructions:\n${ctx.instructions.trim()}`);
+  if (ctx.escolhidas.length)
+    partes.push(
+      `Already attached — do NOT return these again:\n${ctx.escolhidas
+        .map((n) => `- ${n}`)
+        .join("\n")}`
+    );
+  partes.push(
+    `Notes in this vault (use these exact paths, or none):\n${ctx.caminhos
+      .map((n) => `- ${n}`)
+      .join("\n")}`
+  );
+  partes.push(
+    `Return: {"notes": ["exact/path.md", ...]} — at most 10 paths, copied
+exactly from the list above, and nothing else.`
+  );
+  return partes.join("\n\n");
+}

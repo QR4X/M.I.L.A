@@ -12,7 +12,20 @@
 //
 // Aqui o projeto se apresenta enquanto é feito: o cartão em cima muda conforme
 // se escolhe, e é ele que vai aparecer na lista depois.
+//
+// CRIAR é um wizard, como o de skills: uma pergunta por tela. E nele a
+// assistente deixa de trabalhar escondida. Antes, o ✨ do nome escolhia notas e
+// escrevia instruções em silêncio, e a pessoa só via o que ela tinha feito
+// depois de criar — sem ter escolhido nada. Agora cada coisa tem o seu passo,
+// à vista: o que o projeto vai SABER (as notas, com a assistente procurando no
+// vault) e COMO ele responde (as instruções, com a assistente escrevendo a
+// partir do nome e das notas).
+//
+// EDITAR continua sendo o formulário inteiro (nome, cor, ícone): quem veio
+// trocar o ícone não deve atravessar cinco telas. Notas e instruções de um
+// projeto que já existe se mexem na página dele.
 
+import { useEffect, useMemo, useState } from "react";
 import {
   PROJECT_COLORS,
   PROJECT_ICONS,
@@ -26,57 +39,179 @@ import {
   SheetIconGrid,
   SheetInput,
   SheetSwatches,
+  SheetTextarea,
 } from "./SheetForm";
-import { useEffect, useState } from "react";
+import { SheetGroup, SheetNote, SheetRow, useSheetFit } from "./Sheet";
 import type AxxaPlugin from "../main";
 import { AssistantPanel, ComAssistente, useRun } from "./AssistantPanel";
 import { limparRun } from "../assistant/store";
 import type { ProjetoSugerido } from "../assistant/parse";
 import { useAssistant } from "./useAssistant";
+import { rankNotes, vaultNotes } from "./notePicker";
+
+/**
+ * Os passos da CRIAÇÃO de um projeto, um por tela.
+ *
+ * O nome vem primeiro porque é nele que o ✨ monta o projeto inteiro — e
+ * porque é o nome que a assistente usa pra procurar notas e escrever as
+ * instruções nos passos seguintes. Depois, o que ele SABE antes de COMO ele
+ * responde: as instruções se escrevem melhor olhando pras notas escolhidas.
+ * Cor e ícone por último, e separados — uma pergunta por tela.
+ */
+export const PASSOS_PROJETO = [
+  { id: "name", label: "Name" },
+  { id: "notes", label: "Notes" },
+  { id: "instructions", label: "Instructions" },
+  { id: "color", label: "Color" },
+  { id: "icon", label: "Icon" },
+] as const;
+
+export type PassoProjeto = (typeof PASSOS_PROJETO)[number]["id"];
+
+/**
+ * O que o projeto vai SABER e COMO vai responder — as duas coisas que não
+ * cabem no `ProjectDraft` (nome/ícone/cor), porque só viram campos do projeto
+ * quando ele existe. Quem guarda é a folha, até o `salvar`.
+ */
+export interface ExtrasProjeto {
+  notes: string[];
+  instructions: string;
+}
+
+export const EXTRAS_VAZIOS: ExtrasProjeto = { notes: [], instructions: "" };
+
+/** Junta duas listas de caminhos sem repetir — a ordem de quem já estava. */
+function juntar(a: readonly string[], b: readonly string[]): string[] {
+  return [...new Set([...a, ...b])];
+}
+
+const nomeDaNota = (path: string) =>
+  path.split("/").pop()?.replace(/\.md$/i, "") ?? path;
 
 export function ProjectForm({
   draft,
   focar,
   onDraft,
   plugin,
-  onNotas,
+  extras,
+  onExtras,
+  passo,
+  procurando,
+  onProcurar,
 }: {
   draft: ProjectDraft;
   focar: boolean;
   onDraft: (d: ProjectDraft) => void;
   plugin: AxxaPlugin;
-  /**
-   * A assistente também sugere NOTAS e INSTRUÇÕES, e essas duas não cabem no
-   * rascunho: `ProjectDraft` é só nome/ícone/cor — o resto do projeto só
-   * existe depois que ele é criado. Quem sabe guardar isso é a folha.
-   */
-  onNotas?: (notas: string[], instrucoes: string) => void;
+  extras: ExtrasProjeto;
+  onExtras: (e: ExtrasProjeto) => void;
+  /** Qual passo mostrar. `undefined` = o formulário inteiro (EDITAR). */
+  passo?: PassoProjeto;
+  /** O catálogo de ícones está aberto — um nível da folha, que mora lá fora
+   *  pelo mesmo motivo do de skills: o rodapé é da folha. */
+  procurando: boolean;
+  onProcurar: (p: boolean) => void;
 }) {
   const set = (campo: Partial<ProjectDraft>) => onDraft({ ...draft, ...campo });
   const cor = projectColor(draft.color);
-  const [procurando, setProcurando] = useState(false);
-  const [ajudando, setAjudando] = useState(false);
-  const { indisponivel, pedirProjeto, alvo, modelos, livres, escolherModelo } = useAssistant(plugin);
+  /** Um painel da assistente por vez: dois seriam duas conversas disputando
+   *  o mesmo formulário. */
+  const [ajudando, setAjudando] = useState<
+    "" | "project" | "notes" | "instructions"
+  >("");
+  /** O que se digita no campo de busca de notas. */
+  const [busca, setBusca] = useState("");
+  const {
+    indisponivel,
+    pedirProjeto,
+    pedirNotas,
+    pedirInstrucoes,
+    deixarVerNotas,
+    veOVault,
+    alvo,
+    modelos,
+    livres,
+    escolherModelo,
+  } = useAssistant(plugin);
   const modelo = {
     atual: alvo?.model ?? "",
     opcoes: modelos,
     livres,
     onTrocar: (m: string) => void escolherModelo(m),
   };
+  /** A chave do vault foi ligada AQUI, agora — re-renderiza sem esperar as
+   *  settings avisarem. */
+  const [liberou, setLiberou] = useState(false);
+  const podeVerNotas = veOVault || liberou;
 
-  // A rodada vive fora daqui (assistant/store.ts): fechar o painel ou a folha
+  // A folha do tamanho do conteúdo enquanto o formulário está na tela (ver
+  // useSheetFit). O catálogo de ícones pede a cheia, e ao fechar ele isto volta.
+  useSheetFit(!procurando);
+
+  /** Este campo aparece agora? Sem `passo` (editar), só os de sempre. */
+  const mostra = (p: PassoProjeto) =>
+    passo === undefined
+      ? p === "name" || p === "color" || p === "icon"
+      : passo === p;
+
+  // ── As rodadas da assistente ─────────────────────────────────────────────
+  // Todas vivem fora daqui (assistant/store.ts): fechar o painel ou a folha
   // não cancela, e o resultado espera este formulário voltar.
-  const run = useRun("project");
+
+  // O projeto INTEIRO, a partir do nome. Agora o que ela sugere de notas e
+  // instruções vai pros passos seguintes, à vista — e SOMA ao que já havia
+  // em vez de trocar: ela não sabe o que a pessoa escolheu antes dela.
+  const runProjeto = useRun("project");
   useEffect(() => {
-    if (run.fase !== "pronto" || !run.resultado) return;
-    const d = run.resultado as ProjetoSugerido;
+    if (runProjeto.fase !== "pronto" || !runProjeto.resultado) return;
+    const d = runProjeto.resultado as ProjetoSugerido;
     set({ name: d.name, icon: d.icon, color: d.color });
-    // Notas e instruções não cabem no rascunho — a folha guarda e aplica
-    // assim que o projeto existir.
-    onNotas?.(d.notes, d.instructions);
+    onExtras({
+      notes: juntar(extras.notes, d.notes),
+      instructions: extras.instructions.trim()
+        ? extras.instructions
+        : d.instructions,
+    });
     limparRun("project");
-    setAjudando(false);
-  }, [run.fase, run.resultado]);
+    setAjudando("");
+  }, [runProjeto.fase, runProjeto.resultado]);
+
+  // As NOTAS que ela achou no vault — entram na lista, e tirar é um ✕.
+  const runNotas = useRun("notes");
+  useEffect(() => {
+    if (runNotas.fase !== "pronto" || !Array.isArray(runNotas.resultado))
+      return;
+    onExtras({
+      ...extras,
+      notes: juntar(extras.notes, runNotas.resultado as string[]),
+    });
+    limparRun("notes");
+    setAjudando("");
+  }, [runNotas.fase, runNotas.resultado]);
+
+  // As INSTRUÇÕES. Chave própria ("project-instructions"), e não a de
+  // "instructions": a tela de instruções de um projeto já criado escuta
+  // aquela, e aplicar o resultado lá abriria o nível dela no instante em que
+  // este projeto fosse salvo.
+  const runInstr = useRun("project-instructions");
+  useEffect(() => {
+    if (runInstr.fase !== "pronto" || typeof runInstr.resultado !== "string")
+      return;
+    onExtras({ ...extras, instructions: runInstr.resultado });
+    limparRun("project-instructions");
+    setAjudando("");
+  }, [runInstr.fase, runInstr.resultado]);
+
+  // As notas do vault que batem com a busca, fora as já escolhidas: tocar numa
+  // que já está no projeto seria um toque sem efeito, e lista onde metade dos
+  // toques é no-op ensina a desconfiar dela.
+  const achadas = useMemo(() => {
+    if (passo !== "notes" || !busca.trim()) return [];
+    const escolhidas = new Set(extras.notes);
+    return rankNotes(vaultNotes(plugin.app), busca, 30).filter(
+      (n) => !escolhidas.has(n.path)
+    );
+  }, [passo, busca, extras.notes, plugin]);
 
   // Procurar ícone TOMA a tela. O formulário sai inteiro — cartão, nome — e
   // ficam três coisas: voltar, a cor e os ícones. A cor fica porque é ela que
@@ -87,7 +222,7 @@ export function ProjectForm({
       <SheetIconCatalog
         value={draft.icon}
         tint={cor}
-        onBack={() => setProcurando(false)}
+        onBack={() => onProcurar(false)}
         onPick={(icon) => set({ icon })}
       >
         <SheetField label="Color">
@@ -101,8 +236,12 @@ export function ProjectForm({
       </SheetIconCatalog>
     );
 
+  const quantas = extras.notes.length;
+
   return (
     <>
+      {/* O cartão que vai aparecer na lista — e que agora conta as notas
+          escolhidas enquanto elas são escolhidas. */}
       <div className="axxa-form-preview">
         <span
           className="axxa-thing-mark"
@@ -115,57 +254,232 @@ export function ProjectForm({
           <span className="axxa-thing-name">
             {draft.name.trim() || "Untitled project"}
           </span>
-          <span className="axxa-thing-note">No notes yet · no chats yet</span>
+          <span className="axxa-thing-note">
+            {quantas === 0
+              ? "No notes yet"
+              : quantas === 1
+                ? "1 note"
+                : `${quantas} notes`}
+            {extras.instructions.trim() ? " · instructions" : ""}
+          </span>
         </span>
       </div>
 
-      <SheetField label="Name">
-        {/* O primeiro campo vazio da tela é onde a oferta faz sentido:
-            daqui ela monta o projeto inteiro — nome, ícone, cor,
-            instruções e as notas de origem. */}
-        <ComAssistente
-          aberto={ajudando}
-          ocupado={run.fase === "rodando"}
-          onAbrir={() => setAjudando(true)}
-          painel={
-            <AssistantPanel
-              para="project"
-              indisponivel={indisponivel}
-              modelo={modelo}
-              onFechar={() => setAjudando(false)}
-              onPedir={(modo, turnos) => pedirProjeto(modo, turnos)}
-            />
-          }
+      {mostra("name") && (
+        <SheetField
+          label="Name"
+          hint={passo ? "Or describe it and let ✨ set up the whole project." : undefined}
         >
-          <SheetInput
-            comSpark
-            value={draft.name}
-            placeholder="Thesis, Client X, Apartment…"
-            autoFocus={focar}
-            onChange={(name) => set({ name })}
+          {/* O primeiro campo vazio da tela é onde a oferta faz sentido:
+              daqui ela monta o projeto inteiro — nome, ícone, cor,
+              instruções e as notas de origem. */}
+          <ComAssistente
+            aberto={ajudando === "project"}
+            ocupado={runProjeto.fase === "rodando"}
+            onAbrir={() => setAjudando("project")}
+            painel={
+              <AssistantPanel
+                para="project"
+                indisponivel={indisponivel}
+                modelo={modelo}
+                onFechar={() => setAjudando("")}
+                onPedir={(modo, turnos) => pedirProjeto(modo, turnos)}
+              />
+            }
+          >
+            <SheetInput
+              comSpark
+              value={draft.name}
+              placeholder="Thesis, Client X, Apartment…"
+              autoFocus={focar && (passo === undefined || passo === "name")}
+              onChange={(name) => set({ name })}
+            />
+          </ComAssistente>
+        </SheetField>
+      )}
+
+      {mostra("notes") && (
+        <>
+          <SheetField
+            label="Notes"
+            hint="What this project should know — they go in as context on every chat started in it."
+          >
+            {/* O ✨ mora no campo de BUSCA: procurar notas é o que este campo
+                já faz, e a assistente é o jeito de procurar sem saber o nome
+                delas. Sem foco automático — a tela abre mostrando o que já foi
+                escolhido, e não o teclado cobrindo a lista. */}
+            <ComAssistente
+              titulo="Find notes for me"
+              aberto={ajudando === "notes"}
+              ocupado={runNotas.fase === "rodando"}
+              onAbrir={() => setAjudando("notes")}
+              painel={
+                <AssistantPanel
+                  para="notes"
+                  indisponivel={indisponivel}
+                  modelo={modelo}
+                  onFechar={() => setAjudando("")}
+                  onPedir={(_modo, turnos) =>
+                    pedirNotas(
+                      {
+                        name: draft.name,
+                        instructions: extras.instructions,
+                        escolhidas: extras.notes,
+                      },
+                      turnos
+                    )
+                  }
+                />
+              }
+            >
+              <SheetInput
+                comSpark
+                value={busca}
+                placeholder="Search notes to add"
+                onChange={setBusca}
+              />
+            </ComAssistente>
+          </SheetField>
+
+          {/* A assistente só procura com o consentimento de ver os NOMES das
+              notas. A chave é a mesma das settings; aqui é onde se percebe
+              que precisa dela. */}
+          {!podeVerNotas && (
+            <SheetGroup>
+              <SheetRow
+                icon="eye"
+                title="Let ✨ see your note names"
+                note="Only titles and folders — never what is inside a note."
+                onClick={() => {
+                  setLiberou(true);
+                  void deixarVerNotas();
+                }}
+              />
+            </SheetGroup>
+          )}
+
+          {busca.trim() !== "" && (
+            <SheetGroup label="In your vault">
+              {achadas.map((n) => (
+                <SheetRow
+                  key={n.path}
+                  dense
+                  icon="file-text"
+                  title={n.basename}
+                  note={n.path}
+                  action={{
+                    icon: "plus",
+                    label: `Add ${n.path}`,
+                    onClick: () =>
+                      onExtras({ ...extras, notes: juntar(extras.notes, [n.path]) }),
+                  }}
+                  onClick={() =>
+                    onExtras({ ...extras, notes: juntar(extras.notes, [n.path]) })
+                  }
+                />
+              ))}
+              {achadas.length === 0 && <SheetNote>No note matches that.</SheetNote>}
+            </SheetGroup>
+          )}
+
+          <SheetGroup label={quantas ? "In this project" : undefined}>
+            {extras.notes.map((path) => (
+              <SheetRow
+                key={path}
+                dense
+                icon="file-text"
+                title={nomeDaNota(path)}
+                note={path}
+                action={{
+                  icon: "x",
+                  label: `Remove ${path}`,
+                  onClick: () =>
+                    onExtras({
+                      ...extras,
+                      notes: extras.notes.filter((n) => n !== path),
+                    }),
+                }}
+                onClick={() => undefined}
+              />
+            ))}
+            {quantas === 0 && (
+              <SheetNote>
+                No notes yet. Search above, or tap ✨ to have the assistant find
+                them. You can also skip this and add notes later.
+              </SheetNote>
+            )}
+          </SheetGroup>
+        </>
+      )}
+
+      {mostra("instructions") && (
+        <SheetField
+          label="Instructions"
+          hint="Sent with every new chat in this project — it adds to how the app already works, it does not replace it."
+        >
+          {/* Ela escreve A PARTIR do projeto: o nome e as notas escolhidas no
+              passo anterior são a matéria-prima, e o que estiver escrito vai
+              junto pra ser melhorado em vez de jogado fora. */}
+          <ComAssistente
+            aberto={ajudando === "instructions"}
+            ocupado={runInstr.fase === "rodando"}
+            onAbrir={() => setAjudando("instructions")}
+            painel={
+              <AssistantPanel
+                para="instructions"
+                chave="project-instructions"
+                indisponivel={indisponivel}
+                modelo={modelo}
+                onFechar={() => setAjudando("")}
+                onPedir={(_modo, turnos) =>
+                  pedirInstrucoes(
+                    {
+                      name: draft.name,
+                      notes: extras.notes,
+                      atual: extras.instructions,
+                    },
+                    turnos
+                  )
+                }
+              />
+            }
+          >
+            <SheetTextarea
+              comSpark
+              value={extras.instructions}
+              rows={7}
+              autoFocus={focar && passo === "instructions"}
+              placeholder={
+                "Answer in Portuguese.\nCite the note you took it from.\nShort paragraphs, no bullet lists."
+              }
+              onChange={(instructions) => onExtras({ ...extras, instructions })}
+            />
+          </ComAssistente>
+        </SheetField>
+      )}
+
+      {mostra("color") && (
+        <SheetField label="Color">
+          <SheetSwatches
+            colors={PROJECT_COLORS}
+            value={draft.color}
+            resolve={projectColor}
+            onPick={(color) => set({ color })}
           />
-        </ComAssistente>
-      </SheetField>
+        </SheetField>
+      )}
 
-      <SheetField label="Color">
-        <SheetSwatches
-          colors={PROJECT_COLORS}
-          value={draft.color}
-          resolve={projectColor}
-          onPick={(color) => set({ color })}
-        />
-      </SheetField>
-
-      <SheetField label="Icon">
-        <SheetIconGrid
-          icons={PROJECT_ICONS}
-          value={draft.icon}
-          tint={cor}
-          onBrowse={() => setProcurando(true)}
-          onPick={(icon) => set({ icon })}
-        />
-      </SheetField>
-
+      {mostra("icon") && (
+        <SheetField label="Icon">
+          <SheetIconGrid
+            icons={PROJECT_ICONS}
+            value={draft.icon}
+            tint={cor}
+            onBrowse={() => onProcurar(true)}
+            onPick={(icon) => set({ icon })}
+          />
+        </SheetField>
+      )}
     </>
   );
 }

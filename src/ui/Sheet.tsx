@@ -45,9 +45,11 @@ import { screen, tap, warn } from "./haptics";
 const SheetSizeCtx = createContext<{
   expandir: () => void;
   ajustar: () => void;
+  restaurar: () => void;
 }>({
   expandir: () => {},
   ajustar: () => {},
+  restaurar: () => {},
 });
 
 /** Pede a folha no tamanho grande, uma vez, ao montar. */
@@ -77,6 +79,21 @@ export function useSheetFit(ativo: boolean): void {
   useEffect(() => {
     if (ativo) ajustar();
   }, [ativo, ajustar]);
+}
+
+/**
+ * Devolve a folha ao tamanho com que ela NASCEU (o `startFull` dela), ao
+ * montar.
+ *
+ * A folha não desmonta entre os níveis, então o tamanho que um formulário
+ * pediu (useSheetFit) fica pra quem vem depois. Quem não é formulário — a
+ * lista, a página de um projeto — chama isto pra voltar ao tamanho da casa.
+ */
+export function useSheetDefault(): void {
+  const { restaurar } = useContext(SheetSizeCtx);
+  useEffect(() => {
+    restaurar();
+  }, [restaurar]);
 }
 
 /**
@@ -246,7 +263,14 @@ export function Sheet({
   // logo depois de a pessoa arrastá-la pra baixo.
   const expandir = useCallback(() => setSize("full"), []);
   const ajustar = useCallback(() => setSize("fit"), []);
-  const api = useMemo(() => ({ expandir, ajustar }), [expandir, ajustar]);
+  const restaurar = useCallback(
+    () => setSize(startFull ? "full" : "peek"),
+    [startFull]
+  );
+  const api = useMemo(
+    () => ({ expandir, ajustar, restaurar }),
+    [expandir, ajustar, restaurar]
+  );
 
   /** O nível que o conteúdo emprestou, se houver (ver useSheetLevel). */
   const [interno, setInterno] = useState<{

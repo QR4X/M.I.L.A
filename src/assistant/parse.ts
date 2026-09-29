@@ -134,15 +134,7 @@ export function lerProjeto(
   if (!obj) return null;
   const name = texto(obj.name, 60);
   if (!name) return null;
-  const cruas = Array.isArray(obj.notes) ? obj.notes : [];
-  const permitidas = new Set(notasDoVault);
-  const notes = cruas
-    .filter((n): n is string => typeof n === "string")
-    .filter((n) => permitidas.has(n))
-    // Sem repetidas: o mesmo caminho duas vezes anexaria a mesma nota duas
-    // vezes, e a contagem do projeto passaria a mentir.
-    .filter((n, i, todas) => todas.indexOf(n) === i)
-    .slice(0, 10);
+  const notes = notasValidas(obj.notes, notasDoVault);
   return {
     name,
     icon: daLista(obj.icon, iconesValidos, iconesValidos[0] ?? "folder"),
@@ -150,6 +142,42 @@ export function lerProjeto(
     instructions: texto(obj.instructions, 2000),
     notes,
   };
+}
+
+/**
+ * Os caminhos que a assistente devolveu, filtrados pelo que EXISTE.
+ *
+ * Nada que ela escreva vira fonte de um projeto sem estar na lista do vault
+ * que foi mandada pra ela: modelo pequeno inventa caminho plausível, e uma
+ * fonte que aponta pra nota nenhuma é um projeto que diz saber uma coisa que
+ * não sabe.
+ */
+function notasValidas(
+  cruas: unknown,
+  notasDoVault: readonly string[],
+  fora: readonly string[] = []
+): string[] {
+  const permitidas = new Set(notasDoVault);
+  const jaTem = new Set(fora);
+  return (Array.isArray(cruas) ? cruas : [])
+    .filter((n): n is string => typeof n === "string")
+    .filter((n) => permitidas.has(n) && !jaTem.has(n))
+    // Sem repetidas: o mesmo caminho duas vezes anexaria a mesma nota duas
+    // vezes, e a contagem do projeto passaria a mentir.
+    .filter((n, i, todas) => todas.indexOf(n) === i)
+    .slice(0, 10);
+}
+
+/**
+ * As notas que a assistente achou pra um projeto (promptNotas). Sem as que já
+ * estão escolhidas — uma sugestão repetida parece um botão que não fez nada.
+ */
+export function lerNotas(
+  obj: Record<string, unknown> | null,
+  notasDoVault: readonly string[],
+  jaEscolhidas: readonly string[] = []
+): string[] {
+  return obj ? notasValidas(obj.notes, notasDoVault, jaEscolhidas) : [];
 }
 
 /**
