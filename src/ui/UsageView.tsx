@@ -48,11 +48,13 @@ import {
   metricaDa,
   modelosDaPagina,
   opcoesAVista,
+  relatorioDe,
+  semADimensao,
   valeFiltrar,
+  type Fatia,
   type Metrica,
-  type ModeloNaPagina,
 } from "../usage/page";
-import { Sheet, SheetGroup, SheetNote, SheetRow, SheetSearch } from "./Sheet";
+import { Sheet, SheetNote, SheetSearch } from "./Sheet";
 import { moduleIcon, moduleLabel, relativeShort } from "./modules";
 import { PROVIDERS } from "../core/providersMeta";
 import { prettyModelName } from "../providers/modelDescriptions";
@@ -155,7 +157,36 @@ export function UsageView({
   ];
   const visiveis = dimensoes.filter((d) => valeFiltrar(d.ops, f[d.chave]));
   const naLista = dimensoes.find((d) => d.chave === lista) ?? dimensoes[1];
+  // O relatório do "See all": o recorte da página MENOS o filtro da própria
+  // dimensão (ver semADimensao) — a mesma soma de sempre, só recortada.
+  const aggLista = useMemo(
+    () => aggregateFromSummaries(aplicar(chats, semADimensao(f, lista)), 0),
+    [chats, f, lista]
+  );
+  const mLista = metricaDa(aggLista.total);
   const achadas = buscarOpcoes(naLista.ops, buscaLista, naLista.nome);
+  const relatorio = relatorioDe(
+    achadas,
+    lista === "providers"
+      ? aggLista.byProvider
+      : lista === "models"
+        ? aggLista.byModel
+        : aggLista.byMode,
+    aggLista.total
+  );
+  // De QUÊ é o relatório: o período e os filtros das outras dimensões, que
+  // continuam valendo nele. Sem isto, os números da folha não batem com
+  // nada que a pessoa consiga apontar.
+  const escopo = [
+    f.days === 0 ? "All time" : `Last ${f.days} days`,
+    ...dimensoes
+      .filter((d) => d.chave !== lista)
+      .flatMap((d) => f[d.chave].map(d.nome)),
+    contagem(aggLista.total.chats),
+    mLista === "cost"
+      ? formatUsdRounded(aggLista.total.cost)
+      : `${formatCompact(aggLista.total.tokensIn + aggLista.total.tokensOut)} tokens`,
+  ];
 
   const verTodos = (d: Dimensao) => {
     setLista(d);
@@ -376,7 +407,13 @@ export function UsageView({
               <span className="axxa-section-label">By model</span>
               <div className="axxa-usage-list">
                 {modelos.map((r) => (
-                  <LinhaDeModelo key={r.id} r={r} m={m} />
+                  <LinhaDeFatia
+                    key={r.id}
+                    r={r}
+                    m={m}
+                    nome={prettyModelName(r.id)}
+                    icone={modelLogo(r.id)}
+                  />
                 ))}
               </div>
             </section>
@@ -400,10 +437,10 @@ export function UsageView({
         )}
       </div>
 
-      {/* A lista INTEIRA de uma dimensão — a folha do app, com as linhas da
-          folha de modelos (logo, nome, quantas conversas, o check). Marcar
-          aqui é o mesmo que tocar na pílula: a página atrás já muda, e a
-          folha fica aberta pra marcar mais de um. */}
+      {/* O "See all" é um RELATÓRIO da dimensão inteira, não um seletor: as
+          mesmas linhas do "By model" (o anel da fatia, conversas, tokens,
+          valor e %), sem check e sem nada com cara de toque. Filtrar é nas
+          pílulas; aqui se lê. */}
       <Sheet
         title={naLista.plural}
         open={listaAberta}
@@ -417,26 +454,36 @@ export function UsageView({
             onChange={setBuscaLista}
           />
         )}
-        <SheetGroup>
-          {achadas.map((o) => (
-            <SheetRow
-              key={o.id}
-              icon={naLista.icone(o.id)}
-              title={naLista.nome(o.id)}
-              note={contagem(o.count)}
-              selected={f[naLista.chave].includes(o.id)}
-              onClick={() =>
-                setF({
-                  ...f,
-                  [naLista.chave]: alternar(f[naLista.chave], o.id),
-                })
-              }
-            />
+        <p className="axxa-usage-report-head">
+          {escopo.map((parte, i) => (
+            <span key={i}>
+              {i > 0 && <span className="axxa-usage-sep">·</span>}
+              {parte}
+            </span>
           ))}
-          {achadas.length === 0 && (
-            <SheetNote>Nothing matches that search.</SheetNote>
-          )}
-        </SheetGroup>
+        </p>
+        {achadas.length === 0 ? (
+          <SheetNote>Nothing matches that search.</SheetNote>
+        ) : (
+          <div className="axxa-usage-list">
+            {relatorio.usadas.map((r) => (
+              <LinhaDeFatia
+                key={r.id}
+                r={r}
+                m={mLista}
+                nome={naLista.nome(r.id)}
+                icone={naLista.icone(r.id)}
+              />
+            ))}
+            {relatorio.paradas.map((o) => (
+              <LinhaParada
+                key={o.id}
+                nome={naLista.nome(o.id)}
+                icone={naLista.icone(o.id)}
+              />
+            ))}
+          </div>
+        )}
       </Sheet>
     </div>
   );
@@ -448,14 +495,25 @@ function contagem(n: number): string {
 }
 
 /**
- * Uma linha de modelo: o anel da fatia com o logo dentro, o nome do app, e o
- * valor na ponta.
+ * Uma linha de relatório: o anel da fatia com o logo dentro, o nome, e o
+ * valor na ponta. É a do "By model" e a do "See all" de qualquer dimensão.
  *
  * Sem dinheiro na página, o valor vira o volume — e o preço desce pra linha
  * de apoio, onde "free" e "no public price" continuam distintos.
  */
-function LinhaDeModelo({ r, m }: { r: ModeloNaPagina; m: Metrica }) {
-  const chats = r.chats === 1 ? "1 chat" : `${r.chats} chats`;
+function LinhaDeFatia({
+  r,
+  m,
+  nome,
+  icone,
+}: {
+  r: Fatia;
+  m: Metrica;
+  /** O nome do APP ("Sonnet 4.6", "OpenAI", "Vault Q&A"). */
+  nome: string;
+  icone: string;
+}) {
+  const chats = contagem(r.chats);
   const preco =
     r.preco === "gratis" ? "Free" : r.preco === "sem-preco" ? "—" : formatUsd(r.cost);
   return (
@@ -466,10 +524,10 @@ function LinhaDeModelo({ r, m }: { r: ModeloNaPagina; m: Metrica }) {
         aria-hidden="true"
       >
         <span className="axxa-donut" />
-        <Icon name={modelLogo(r.id)} size={16} />
+        <Icon name={icone} size={16} />
       </span>
       <span className="axxa-usage-row-text">
-        <span className="axxa-usage-row-name">{prettyModelName(r.id)}</span>
+        <span className="axxa-usage-row-name">{nome}</span>
         <span className="axxa-usage-row-sub">
           {chats}
           <span className="axxa-usage-sep">·</span>
@@ -491,6 +549,33 @@ function LinhaDeModelo({ r, m }: { r: ModeloNaPagina; m: Metrica }) {
         <span className="axxa-usage-row-pct">
           {r.quase ? "<1%" : `${r.pct}%`}
         </span>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Uma opção SEM conversa no recorte — no relatório mesmo assim, no fim e
+ * apagada: "usei esse modelo, só não nesse período" também é informação, e
+ * sem ela a lista não bateria com o "See all N" que a abriu.
+ */
+function LinhaParada({ nome, icone }: { nome: string; icone: string }) {
+  return (
+    <div className="axxa-usage-row is-idle">
+      <span
+        className="axxa-share"
+        style={{ "--axxa-pct": 0 } as CSSProperties}
+        aria-hidden="true"
+      >
+        <span className="axxa-donut" />
+        <Icon name={icone} size={16} />
+      </span>
+      <span className="axxa-usage-row-text">
+        <span className="axxa-usage-row-name">{nome}</span>
+        <span className="axxa-usage-row-sub">No chats in this slice</span>
+      </span>
+      <span className="axxa-usage-row-end">
+        <span className="axxa-usage-row-value">—</span>
       </span>
     </div>
   );

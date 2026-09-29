@@ -45,8 +45,11 @@ export function precoDo(b: UsageBucket): Preco {
   return b.hasUnknownCost ? "sem-preco" : "gratis";
 }
 
-/** Uma linha de "By model", já medida. */
-export interface ModeloNaPagina {
+/**
+ * Uma FATIA do total — um modelo, um provider, um modo —, já medida. É a linha
+ * do "By model" e a do relatório de uma dimensão inteira (o "See all").
+ */
+export interface Fatia {
   id: string;
   chats: number;
   tokens: number;
@@ -61,11 +64,62 @@ export interface ModeloNaPagina {
   quase: boolean;
 }
 
-export function modelosDaPagina(agg: UsageAggregate): ModeloNaPagina[] {
-  const m = metricaDa(agg.total);
-  const total = valorNa(agg.total, m);
+/** O nome antigo, de quando só havia a linha de modelo. */
+export type ModeloNaPagina = Fatia;
+
+export function modelosDaPagina(agg: UsageAggregate): Fatia[] {
+  return fatiasDe(agg.byModel, agg.total);
+}
+
+/**
+ * O relatório de uma dimensão INTEIRA — o "See all" de Provider, Model ou
+ * Mode. É relatório, não seletor: as mesmas linhas do "By model", com o anel
+ * e os números, e nenhuma cara de coisa que se toca.
+ *
+ * Toda opção da dimensão entra, pra lista bater com o "See all N": as que
+ * tiveram conversa no recorte, medidas e em ordem de peso; as que não
+ * tiveram, no fim, PARADAS — "usei esse modelo, só não nesse período" também
+ * é informação de relatório.
+ */
+export function relatorioDe(
+  ops: readonly Opcao[],
+  buckets: Record<string, UsageBucket>,
+  total: UsageBucket
+): { usadas: Fatia[]; paradas: Opcao[] } {
+  const ids = new Set(ops.map((o) => o.id));
+  const usadas = fatiasDe(
+    Object.fromEntries(
+      Object.entries(buckets).filter(([id, b]) => ids.has(id) && b.chats > 0)
+    ),
+    total
+  );
+  const medidas = new Set(usadas.map((u) => u.id));
+  return { usadas, paradas: ops.filter((o) => !medidas.has(o.id)) };
+}
+
+/**
+ * O recorte do relatório de uma dimensão: o da página, MENOS o filtro da
+ * própria dimensão. Com "GPT 5" marcado, o relatório de modelos com o recorte
+ * inteiro teria uma linha só, e os outros apareceriam como parados — quando
+ * eles só estão fora do filtro. O período e as outras dimensões continuam
+ * valendo: é o relatório DESTA página.
+ */
+export function semADimensao(
+  f: UsageFilter,
+  dim: "providers" | "models" | "modes"
+): UsageFilter {
+  return { ...f, [dim]: [] };
+}
+
+/** As fatias de um agrupamento qualquer, do maior peso pro menor. */
+export function fatiasDe(
+  buckets: Record<string, UsageBucket>,
+  totalDoRecorte: UsageBucket
+): Fatia[] {
+  const m = metricaDa(totalDoRecorte);
+  const total = valorNa(totalDoRecorte, m);
   return (
-    Object.entries(agg.byModel)
+    Object.entries(buckets)
       .map(([id, b]) => {
         const peso = valorNa(b, m);
         const exato = total > 0 ? (peso / total) * 100 : 0;
@@ -159,13 +213,14 @@ export const A_VISTA = 3;
  * As pílulas que a fileira mostra: as TRÊS mais usadas, sempre — e as
  * marcadas que não estão entre elas.
  *
- * O resto mora na lista do "See all". Mas o que foi marcado lá volta pra cá:
- * um filtro ligado que não aparece na página é um filtro esquecido — o total
- * muda e nada na tela diz por quê.
+ * Marcada fora das três acontece sem ninguém pedir: a ordem é por número de
+ * conversas, e ela muda sozinha quando uma conversa nova é gravada com a
+ * página aberta. Um filtro ligado que some da página é um filtro esquecido —
+ * o total muda e nada na tela diz por quê.
  *
- * E volta NA FRENTE. No fim da fileira ela caía depois das três, cortada na
- * beirada da tela: o filtro que a pessoa acabou de ligar era a única pílula
- * que não dava pra ver. As três não saem do lugar entre si.
+ * E ela fica NA FRENTE. No fim da fileira ela caía depois das três, cortada
+ * na beirada da tela: justamente o filtro ligado era a pílula que não dava
+ * pra ver. As três não saem do lugar entre si.
  */
 export function opcoesAVista(
   ops: readonly Opcao[],

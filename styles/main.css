@@ -1357,8 +1357,23 @@ body.theme-dark {
 /* Os filtros são as pílulas das folhas (`.axxa-choices`), uma fileira por
    dimensão, com o nome miúdo em cima — o mesmo rótulo dos módulos. Várias na
    mesma dimensão são OU; dimensões diferentes se somam. */
-.axxa-root .axxa-usage-filters {
-  gap: var(--axxa-3);
+/* Os GRUPOS respiram entre si (24px) bem mais do que o nome respira até as
+   próprias pílulas (8px): é essa diferença que faz Provider, Model e Mode
+   lerem como três blocos. Estava 8 e 6 — um bloco só de seis linhas.
+   A classe vai COLADA na do bloco de seção: `.axxa-home-block` (gap de 8px)
+   vem depois no arquivo e, com o mesmo peso, ganhava — o 12px que esta regra
+   pedia antes nunca chegou à tela. */
+.axxa-root .axxa-home-block.axxa-usage-filters {
+  gap: var(--axxa-5);
+  /* E a seção seguinte não pode ficar MAIS perto do último grupo do que os
+     grupos entre si (a página separa seções com 16px): senão o "By model"
+     lê como um quarto grupo de filtro. 16 + 8 = os mesmos 24. */
+  margin-bottom: var(--axxa-2);
+}
+
+/* Do "Filter" até o primeiro grupo, menos: o título é de TODOS eles. */
+.axxa-root .axxa-usage-filters > .axxa-home-headrow {
+  margin-bottom: calc(var(--axxa-2) * -1);
 }
 
 /* O bloco de seção encolhe os filhos pro próprio conteúdo — é pra AÇÃO (ver
@@ -1373,7 +1388,7 @@ body.theme-dark {
 .axxa-root .axxa-usage-dim {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--axxa-2);
 }
 
 /* O nome da dimensão e, na ponta, o "See all N ›" — a mesma linha de seção da
@@ -1411,6 +1426,9 @@ body.theme-dark {
    espiava ficava apagada justamente onde ela era o aviso. */
 .axxa-root .axxa-usage-dim .axxa-choices {
   flex-wrap: nowrap;
+  /* 10px entre as pílulas, e não os 8 das folhas: é o máximo em que as três
+     de Provider ainda cabem inteiras num telefone de 375px (sobram 3px). */
+  gap: 10px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   margin: 0 calc(var(--axxa-gutter) * -1);
@@ -1541,6 +1559,23 @@ body.theme-dark {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   font-variant-numeric: tabular-nums;
+}
+
+/* O cabeçalho do relatório do "See all": DE QUÊ são os números — o período,
+   os filtros que ainda valem, quantas conversas e o total. Uma linha de
+   apoio, como a de baixo do número grande. */
+.axxa-root .axxa-usage-report-head {
+  margin: 0 var(--axxa-1) var(--axxa-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.45;
+}
+
+/* Opção sem conversa no recorte: no relatório, mas parada — o nome desce um
+   tom e o anel fica vazio. Muted, e não faint: continua sendo informação. */
+.axxa-root .axxa-usage-row.is-idle .axxa-usage-row-name,
+.axxa-root .axxa-usage-row.is-idle .axxa-usage-row-value {
+  color: var(--text-muted);
 }
 
 /* A linha do índice local: uma frase, não um cartão. O índice não é decisão

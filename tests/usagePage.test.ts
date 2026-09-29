@@ -6,7 +6,10 @@ import {
   buscarOpcoes,
   conversasDoTopo,
   faixaDeDatas,
+  fatiasDe,
   opcoesAVista,
+  relatorioDe,
+  semADimensao,
   marcados,
   mediaPorConversa,
   metricaDa,
@@ -156,6 +159,60 @@ describe("By model", () => {
       })
     );
     expect(r.map((m) => m.id)).toEqual(["c", "a", "b"]);
+  });
+});
+
+describe("o relatório de uma dimensão inteira (o See all)", () => {
+  const ops = [
+    { id: "gpt-5", count: 13 },
+    { id: "claude-sonnet-4-6", count: 7 },
+    { id: "gemini-2.5-flash", count: 1 },
+  ];
+
+  it("as usadas medidas e em ordem de peso; as paradas no fim", () => {
+    const baldes = {
+      "gpt-5": balde({ cost: 1 }),
+      "claude-sonnet-4-6": balde({ cost: 3 }),
+    };
+    const total = agregado(baldes).total;
+    const r = relatorioDe(ops, baldes, total);
+    expect(r.usadas.map((u) => [u.id, u.pct])).toEqual([
+      ["claude-sonnet-4-6", 75],
+      ["gpt-5", 25],
+    ]);
+    // Sem conversa no recorte, mas no relatório: bate com o "See all 3".
+    expect(r.paradas.map((o) => o.id)).toEqual(["gemini-2.5-flash"]);
+    expect(r.usadas.length + r.paradas.length).toBe(ops.length);
+  });
+
+  it("só entra o que é da lista — a busca recorta o relatório", () => {
+    const baldes = {
+      "gpt-5": balde({ cost: 1 }),
+      "claude-sonnet-4-6": balde({ cost: 3 }),
+    };
+    const r = relatorioDe([ops[0]], baldes, agregado(baldes).total);
+    expect(r.usadas.map((u) => u.id)).toEqual(["gpt-5"]);
+    // A fatia continua sendo do TOTAL, não só do que sobrou na busca.
+    expect(r.usadas[0].pct).toBe(25);
+    expect(r.paradas).toEqual([]);
+  });
+
+  it("o recorte do relatório tira só o filtro da própria dimensão", () => {
+    const f = { providers: ["openai"], models: ["gpt-5"], modes: ["agent"], days: 30 };
+    expect(semADimensao(f, "models")).toEqual({
+      providers: ["openai"],
+      models: [],
+      modes: ["agent"],
+      days: 30,
+    });
+    // Não mexe no filtro de quem chamou.
+    expect(f.models).toEqual(["gpt-5"]);
+  });
+
+  it("fatiasDe serve pra qualquer agrupamento — o By model é um caso dela", () => {
+    const baldes = { a: balde({ cost: 1 }), b: balde({ cost: 1 }) };
+    const agg = agregado(baldes);
+    expect(fatiasDe(baldes, agg.total)).toEqual(modelosDaPagina(agg));
   });
 });
 
@@ -377,9 +434,35 @@ describe("o desenho da página de uso", () => {
     expect(VIEW).toContain("opcoesAVista(d.ops, f[d.chave])");
     expect(VIEW).toMatch(/d\.ops\.length > A_VISTA/);
     expect(VIEW).toContain("See all {d.ops.length}");
-    // A lista é a folha do app, com as linhas da folha de modelos.
     expect(VIEW).toMatch(/<Sheet\b/);
-    expect(VIEW).toMatch(/<SheetRow\b/);
+  });
+
+  it("a lista do See all é RELATÓRIO, não seletor — nada com cara de toque", () => {
+    // Com as linhas da folha de modelos (check, linha-botão), ela parecia um
+    // menu. Agora são as linhas do "By model": o anel, os números, e só.
+    expect(VIEW).not.toMatch(/<SheetRow\b/);
+    expect(VIEW).toMatch(/<LinhaDeFatia\b[\s\S]*?m=\{mLista\}/);
+    expect(VIEW).toContain("relatorioDe(");
+    expect(VIEW).toContain("semADimensao(f, lista)");
+    // As linhas de relatório são `div`, não botão.
+    const linha = VIEW.slice(
+      VIEW.indexOf("function LinhaDeFatia"),
+      VIEW.indexOf("function LinhaParada")
+    );
+    expect(linha).not.toContain("<button");
+    expect(linha).not.toContain("onClick");
+  });
+
+  it("os grupos de filtro respiram mais entre si do que até as pílulas", () => {
+    // A classe COLADA na do bloco de seção: `.axxa-home-block` (gap de 8px)
+    // vem depois no arquivo e, com o mesmo peso, ganhava — medido no preview,
+    // o espaço entre os grupos era 8px com a regra pedindo outra coisa.
+    const entreGrupos = bloco(".axxa-root .axxa-home-block.axxa-usage-filters {");
+    expect(entreGrupos).toContain("gap: var(--axxa-5)");
+    expect(bloco(".axxa-root .axxa-usage-dim {")).toContain("gap: var(--axxa-2)");
+    expect(bloco(".axxa-root .axxa-usage-dim .axxa-choices {")).toContain(
+      "gap: 10px"
+    );
   });
 
   it("modelo se chama pelo nome do APP, na página e no cartão", () => {
