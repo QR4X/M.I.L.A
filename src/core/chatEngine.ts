@@ -15,6 +15,7 @@ import {
 import { getContextWindow } from "./contextWindows";
 import { hybridSearch } from "../rag/hybrid";
 import {
+  blocoDeNotasAnexadas,
   buildChatSystemPrompt,
   storeMessagesToProvider,
 } from "../agent/conversation";
@@ -147,13 +148,9 @@ export async function streamReply(
       const noteAtts = userAttachments.filter(
         (a): a is NoteAttachment => a.type === "note"
       );
-      if (noteAtts.length > 0) {
-        noteContextBlock =
-          "\n\n[Notas anexadas pelo usuário]\n\n" +
-          noteAtts
-            .map((n) => `### ${n.path}\n\n${n.content}`)
-            .join("\n\n---\n\n");
-      }
+      // O montador é o MESMO que o cartão de projeto usa pra contar os tokens
+      // de entrada (ver blocoDeNotasAnexadas): o número de lá é o texto daqui.
+      noteContextBlock = blocoDeNotasAnexadas(noteAtts);
     }
     const fullSystem = buildChatSystemPrompt({
       persona: useChatStore.getState().sessionPersona,

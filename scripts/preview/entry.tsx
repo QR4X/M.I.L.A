@@ -109,11 +109,16 @@ const plugin = {
       getMarkdownFiles: () => [...FAKE_NOTES, ...skillFiles()],
       // getFiles inclui a MÍDIA — é dela que sai a lista de artefatos.
       getFiles: () => [...FAKE_NOTES, ...FAKE_ARTIFACTS],
-      getAbstractFileByPath: (p: string) =>
-        SKILL_FILES.has(p)
-          ? fakeFile(p)
-          : ([...FAKE_NOTES, ...FAKE_ARTIFACTS].find((f) => f.path === p) ??
-            null),
+      // As NOTAS saem como TFile de verdade (o protótipo do stub), igual às
+      // de skill: o app testa `instanceof TFile` antes de ler uma fonte de
+      // projeto, e com o objeto solto de antes toda fonte parecia sumida — o
+      // projeto abria conversa sem nota nenhuma e o cartão contava 0 tokens.
+      getAbstractFileByPath: (p: string) => {
+        if (SKILL_FILES.has(p)) return fakeFile(p);
+        const nota = FAKE_NOTES.find((f) => f.path === p);
+        if (nota) return fakeFile(p, nota.stat.mtime);
+        return FAKE_ARTIFACTS.find((f) => f.path === p) ?? null;
+      },
       // Criar / reescrever / apagar DE VERDADE (na memória): é o que faz o
       // formulário de skill ser testável aqui — sem isto ele "salvava" num
       // no-op e a lista nunca mudava.

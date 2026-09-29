@@ -34,13 +34,37 @@ export interface ChatSystemParts {
   instructions?: string;
 }
 
+/**
+ * O que as instruções de um projeto SOMAM ao system prompt.
+ *
+ * Função própria, e não uma linha dentro do montador, porque tem mais alguém
+ * que precisa do texto exato: o cartão de projeto, que mostra quantos tokens
+ * de entrada o projeto custa ao abrir uma conversa. Duas contas pro mesmo
+ * texto é como o número do cartão passaria a mentir sem ninguém ver.
+ */
+export function blocoDeInstrucoes(instrucoes?: string): string {
+  return instrucoes && instrucoes.trim() ? "\n\n" + instrucoes.trim() : "";
+}
+
+/**
+ * O bloco das NOTAS anexadas, como ele vai no system prompt (o modelo "vê" o
+ * conteúdo delas). UM montador só: o envio (chatEngine) e o cartão de projeto
+ * usam este — pelo mesmo motivo de `blocoDeInstrucoes`.
+ */
+export function blocoDeNotasAnexadas(
+  notas: readonly { path: string; content: string }[]
+): string {
+  if (!notas.length) return "";
+  return (
+    "\n\n[Notas anexadas pelo usuário]\n\n" +
+    notas.map((n) => `### ${n.path}\n\n${n.content}`).join("\n\n---\n\n")
+  );
+}
+
 /** Monta o system prompt do CHAT/Vault-QA: (persona || base) + style + vault + notes. */
 export function buildChatSystemPrompt(p: ChatSystemParts): string {
   const head = (p.persona && p.persona.trim()) || p.base;
-  const proj =
-    p.instructions && p.instructions.trim()
-      ? "\n\n" + p.instructions.trim()
-      : "";
+  const proj = blocoDeInstrucoes(p.instructions);
   const style =
     p.styleInstruction && p.styleInstruction.trim()
       ? "\n\n" + p.styleInstruction.trim()

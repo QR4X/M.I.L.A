@@ -33,7 +33,11 @@ import {
   type ProjectDraft,
 } from "../projects";
 import { ChatList, useChatSummaries } from "./ChatList";
-import { resumoDoProjeto } from "./projectSummary";
+import {
+  formatarTokens,
+  resumoDoProjeto,
+  tokensDeEntrada,
+} from "./projectSummary";
 import { ConfirmModal } from "./modals";
 import { Icon } from "./Icon";
 import {
@@ -138,6 +142,9 @@ export function ProjectsView({
 
   const chats = useChatSummaries(plugin);
   const projects = plugin.settings.projects ?? [];
+  // Quantos tokens de entrada cada projeto custa ao abrir uma conversa — o
+  // número do pé do cartão. Só com a lista à vista: é ela que mostra.
+  const tokensPorProjeto = useTokensDeEntrada(plugin, projects, open);
   const aberto = projects.find((p) => p.id === abertoId) ?? null;
 
   const update = async (fn: (prev: Project[]) => Project[]) => {
@@ -839,6 +846,20 @@ export function ProjectsView({
                           ? "1 chat"
                           : `${info.conversas} chats`}
                       </span>
+                      {/* O preço de abrir uma conversa aqui: tudo que o
+                          projeto soma ao prompt (instruções + o conteúdo das
+                          notas). Só aparece depois de as notas serem lidas —
+                          um "0" enquanto lê seria o cartão mentindo por um
+                          instante. */}
+                      {tokensPorProjeto[p.id] !== undefined && (
+                        <span
+                          className="axxa-proj-card-stat"
+                          title="Input tokens each new chat here starts with: the instructions plus the full text of its notes."
+                        >
+                          <Icon name="arrow-down-to-line" size={14} />
+                          {formatarTokens(tokensPorProjeto[p.id])}
+                        </span>
+                      )}
                     </span>
                   </button>
                   {!escolhaPara && (
@@ -881,4 +902,52 @@ export function ProjectsView({
 function TamanhoDaCasa() {
   useSheetDefault();
   return null;
+}
+
+/**
+ * Os tokens de ENTRADA de cada projeto (ver `tokensDeEntrada`), por id.
+ *
+ * Lê o conteúdo das notas-fonte — do jeito que `newChatInProject` lê
+ * (`cachedRead`), porque é isso que vai pro prompt. Nota que sumiu do vault
+ * não conta: ela também não vai (a sessão avisa que não achou e segue sem
+ * ela).
+ *
+ * Recalcula quando a lista de projetos muda (nota entrou ou saiu, instrução
+ * mudou) e quando a folha abre — o conteúdo de uma nota pode ter mudado
+ * desde a última vez, e a leitura em cache é barata.
+ */
+function useTokensDeEntrada(
+  plugin: AxxaPlugin,
+  projects: readonly Project[],
+  aberta: boolean
+): Record<string, number> {
+  const [mapa, setMapa] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!aberta) return;
+    let vivo = true;
+    void (async () => {
+      const saida: Record<string, number> = {};
+      for (const p of projects) {
+        const notas: { path: string; content: string }[] = [];
+        for (const caminho of p.sources) {
+          const f = plugin.app.vault.getAbstractFileByPath(caminho);
+          if (!(f instanceof TFile)) continue;
+          try {
+            notas.push({
+              path: caminho,
+              content: await plugin.app.vault.cachedRead(f),
+            });
+          } catch {
+            /* ilegível: também não iria pro prompt */
+          }
+        }
+        saida[p.id] = tokensDeEntrada(p.instructions, notas);
+      }
+      if (vivo) setMapa(saida);
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, [plugin, projects, aberta]);
+  return mapa;
 }

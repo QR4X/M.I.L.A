@@ -580,7 +580,6 @@ export async function sha1Hex(text: string): Promise<string> {
     .join("");
 }
 
-/** Estimativa rude de tokens (1 token ≈ 4 chars no inglês, 3-3.5 em PT-BR). */
-export function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 3.5);
-}
+/** A estimativa de tokens mora em core/tokens.ts (uma fórmula pro app todo);
+ *  daqui ela só é reexportada, pra quem já importava deste módulo. */
+export { estimateTokens } from "../core/tokens";

@@ -5,6 +5,8 @@
 
 import type { Project } from "../projects";
 import { relativeShort } from "./modules";
+import { blocoDeInstrucoes, blocoDeNotasAnexadas } from "../agent/conversation";
+import { estimateTokens } from "../core/tokens";
 
 /**
  * O que o CARTÃO de um projeto conta sobre ele, em três perguntas:
@@ -47,4 +49,37 @@ export function resumoDoProjeto(
   const sobre =
     primeira ?? (ultima?.title.trim() ? `Latest: ${ultima.title.trim()}` : null);
   return { quando, sobre, conversas: deles.length };
+}
+
+/**
+ * Quantos tokens de ENTRADA o projeto custa ao abrir uma conversa nele.
+ *
+ * É o que o projeto SOMA ao system prompt da primeira requisição: as
+ * instruções e o conteúdo inteiro de cada nota-fonte (ver
+ * `ChatSession.newChatInProject`, que lê as notas, e o chatEngine, que as
+ * põe no prompt). O texto é montado pelos MESMOS montadores que o envio usa
+ * (`blocoDeInstrucoes`, `blocoDeNotasAnexadas`), e contado pela MESMA
+ * estimativa do app — então o número do cartão é o texto que sai, não uma
+ * conta paralela que um dia diverge.
+ *
+ * Não entra o prompt base do app: ele sai em TODA conversa, com projeto ou
+ * sem. O que o cartão mostra é o preço de ESTE projeto.
+ */
+export function tokensDeEntrada(
+  instrucoes: string | undefined,
+  notas: readonly { path: string; content: string }[]
+): number {
+  const texto = blocoDeInstrucoes(instrucoes) + blocoDeNotasAnexadas(notas);
+  return texto ? estimateTokens(texto) : 0;
+}
+
+/**
+ * O número pro cartão: curto, e com "~" — é estimativa (≈3,5 caracteres por
+ * token), e um "1.234 tokens" exato prometeria uma precisão que ela não tem.
+ */
+export function formatarTokens(n: number): string {
+  if (n <= 0) return "0 tokens";
+  if (n < 1000) return `~${n} tokens`;
+  if (n < 10_000) return `~${(n / 1000).toFixed(1).replace(/\.0$/, "")}k tokens`;
+  return `~${Math.round(n / 1000)}k tokens`;
 }

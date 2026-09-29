@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { resumoDoProjeto } from "../src/ui/projectSummary";
+import {
+  formatarTokens,
+  resumoDoProjeto,
+  tokensDeEntrada,
+} from "../src/ui/projectSummary";
+import {
+  blocoDeInstrucoes,
+  blocoDeNotasAnexadas,
+} from "../src/agent/conversation";
+import { estimateTokens } from "../src/core/tokens";
 import type { Project } from "../src/projects";
 
 // O CARTÃO de projeto responde três perguntas sem abrir o projeto: está vivo?
@@ -93,4 +102,51 @@ describe("quanto já tem?", () => {
     );
     expect(r.conversas).toBe(2);
   });
+});
+
+describe("quanto custa abrir uma conversa aqui? (tokens de entrada)", () => {
+  const nota = (path: string, content: string) => ({ path, content });
+
+  it("é o texto que o projeto SOMA ao prompt — instruções e notas inteiras", () => {
+    // Os mesmos montadores que o envio usa: o número é o texto que sai.
+    const notas = [nota("Tese/Kuhn.md", "Paradigma.".repeat(35))];
+    const instr = "Responda em português.";
+    const texto =
+      blocoDeInstrucoes(instr) + blocoDeNotasAnexadas(notas);
+    expect(tokensDeEntrada(instr, notas)).toBe(estimateTokens(texto));
+  });
+
+  it("projeto sem notas e sem instruções não custa nada", () => {
+    expect(tokensDeEntrada(undefined, [])).toBe(0);
+    expect(tokensDeEntrada("   ", [])).toBe(0);
+  });
+
+  it("nota maior, projeto mais caro — o conteúdo inteiro vai", () => {
+    const pequena = tokensDeEntrada("", [nota("a.md", "x".repeat(350))]);
+    const grande = tokensDeEntrada("", [nota("a.md", "x".repeat(3500))]);
+    expect(grande).toBeGreaterThan(pequena * 5);
+  });
+
+  it("o bloco de notas é o MESMO de antes da extração", () => {
+    // O montador saiu de dentro do chatEngine pra ser compartilhado; o texto
+    // que vai pro modelo não pode ter mudado no caminho.
+    expect(
+      blocoDeNotasAnexadas([nota("A.md", "um"), nota("B.md", "dois")])
+    ).toBe(
+      "\n\n[Notas anexadas pelo usuário]\n\n### A.md\n\num\n\n---\n\n### B.md\n\ndois"
+    );
+    expect(blocoDeNotasAnexadas([])).toBe("");
+    expect(blocoDeInstrucoes("  Seja breve.  ")).toBe("\n\nSeja breve.");
+  });
+});
+
+describe("formatarTokens — curto, e com ~ porque é estimativa", () => {
+  it("zero sem til", () => expect(formatarTokens(0)).toBe("0 tokens"));
+  it("centenas", () => expect(formatarTokens(340)).toBe("~340 tokens"));
+  it("milhares com uma casa", () => {
+    expect(formatarTokens(1234)).toBe("~1.2k tokens");
+    expect(formatarTokens(2000)).toBe("~2k tokens");
+  });
+  it("dezenas de milhares, redondo", () =>
+    expect(formatarTokens(12_400)).toBe("~12k tokens"));
 });
