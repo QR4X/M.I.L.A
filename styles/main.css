@@ -5620,18 +5620,23 @@ body.is-mobile .axxa-root .axxa-history-more {
   background-color: inherit;
 }
 
-/* Teclado aberto: o MESMO respiro do composer (`var(--axxa-2)`, ver a regra
-   dele). A barra de gestos está atrás do teclado, então o safe-area aqui seria
-   uma faixa vazia entre o botão e o teclado.
+/* Teclado aberto: o MESMO respiro do painel da assistente (15px, ver
+   `.axxa-assist-layer`) — porque é o painel que está certo no aparelho em
+   todos os estados do teclado, e os dois moram na mesma caixa (a raiz).
 
-   Isto passou uma versão valendo 36px, com a teoria de que a altura do
-   teclado publicada era curta e o composer errava igual, só que disfarçado.
-   Os prints do composer provaram o contrário: ele acerta nos dois estados da
-   barra do SwiftKey. Quem errava era a folha, e o conserto é ela ser o
-   composer (regra da camada, mais acima) — não uma folga que esconde o erro. */
+   Isto foi `var(--axxa-2)` (8px, o do composer) na 0.7.39, e no aparelho
+   deixou o botão uns 13px baixo — cortado — com a barra do SwiftKey visível,
+   num campo de UMA linha (Description). Com a barra escondida estava certo. O
+   composer e o painel são campos de várias linhas; o wizard tem os dois
+   tipos. Com a mesma caixa e a mesma borda, a única coisa que separava o
+   botão do painel (inteiro) do botão da folha (cortado) era este respiro.
+
+   Antes disso ele chegou a valer 36px, com uma teoria que os prints do
+   composer desmentiram. 15px não é teoria: é o número que já funciona na
+   tela do lado. O teste do teclado exige que os dois sejam iguais. */
 body.axxa-keyboard-open .axxa-root .axxa-sheet-actions,
 .workspace-drawer.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
-  padding-bottom: var(--axxa-2);
+  padding-bottom: 15px;
 }
 
 .axxa-root .axxa-sheet-actions .axxa-form-foot,

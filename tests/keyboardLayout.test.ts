@@ -144,16 +144,29 @@ describe("o painel da assistente segue o composer", () => {
   });
 });
 
-describe("os respiros de baixo são OS DO COMPOSER", () => {
-  // O composer acerta nos dois estados da barra do teclado — é a referência, e
-  // os números dele são a régua. Uma versão chegou a usar 36px aqui, com a
-  // teoria de que a medida do teclado era curta e o composer errava igual; os
-  // prints dele provaram o contrário. Folga maior não conserta uma folha que
-  // anda ao contrário: só esconde.
-  it("o rodapé da folha usa o respiro do composer com o teclado aberto", () => {
-    const b = bloco("body.axxa-keyboard-open .axxa-root .axxa-sheet-actions,");
-    expect(b).toContain("padding-bottom: var(--axxa-2)");
-    // O composer, com o teclado aberto, usa exatamente este número.
+describe("o respiro embaixo do último botão é o que JÁ funciona no aparelho", () => {
+  // Uma versão chegou a usar 36px aqui, com a teoria de que a medida do
+  // teclado era curta e o composer errava igual; os prints dele provaram o
+  // contrário. Depois, 8px (o do composer) deixou o botão da folha cortado num
+  // campo de uma linha com a barra do SwiftKey visível — enquanto o painel da
+  // assistente, na MESMA caixa, ficava inteiro com 15px.
+  it("o rodapé da folha usa EXATAMENTE o respiro do painel da assistente", () => {
+    // Iguais por construção: se um mudar sem o outro, este teste quebra. É o
+    // painel que está confirmado no aparelho em todos os estados do teclado.
+    const valor = (b: string) =>
+      /padding-bottom:\s*([^;]+);/.exec(
+        b.replace(/\/\*[\s\S]*?\*\//g, "")
+      )?.[1].trim();
+    const folha = valor(
+      bloco("body.axxa-keyboard-open .axxa-root .axxa-sheet-actions,")
+    );
+    const painel = valor(bloco(".axxa-root .axxa-assist-layer {"));
+    expect(folha).toBe("15px");
+    expect(folha).toBe(painel);
+  });
+
+  it("o composer continua com o respiro dele", () => {
+    // O composer está certo como está — ninguém mexe nele por tabela.
     const c = bloco("body.is-mobile .axxa-keyboard-open .axxa-composer,");
     expect(c).toContain("padding-bottom: var(--axxa-2)");
   });
