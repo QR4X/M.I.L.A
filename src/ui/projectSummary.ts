@@ -10,7 +10,8 @@ import { relativeShort } from "./modules";
  * O que o CARTÃO de um projeto conta sobre ele, em três perguntas:
  *
  * · está VIVO? — quando foi a última conversa nele (ou quando ele nasceu,
- *   se ainda não teve nenhuma);
+ *   se ainda não teve nenhuma). Curto ("2d ago"), porque mora na linha do
+ *   título, ao lado do nome — o mesmo formato da lista de conversas;
  * · do que ele TRATA? — a primeira linha das instruções, que é a frase que a
  *   pessoa escreveu sobre ele; sem instruções, o título da conversa mais
  *   recente, que é a melhor pista seguinte; sem as duas, nada (o cartão
@@ -38,9 +39,7 @@ export function resumoDoProjeto(
     // como está — "ago" depois de uma data não é português nem inglês.
     return /^\d+[mhd]$/.test(r) ? `${r} ago` : r;
   };
-  const quando = ultima
-    ? `Active ${tempo(ultima.date)}`
-    : `Created ${tempo(p.createdAt)}`;
+  const quando = tempo(ultima ? ultima.date : p.createdAt);
   const primeira = (p.instructions ?? "")
     .split("\n")
     .map((l) => l.trim())

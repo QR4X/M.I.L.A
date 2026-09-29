@@ -5249,8 +5249,10 @@ body.is-mobile .axxa-root .axxa-history-more {
    saber, era preciso abrir. O cartão responde às três perguntas que se faz
    olhando uma lista de projetos (ver `resumoDoProjeto`):
 
-     está vivo?        → embaixo do nome, quando foi a última conversa
-     do que se trata?  → a 1ª linha das instruções (ou a última conversa)
+     está vivo?        → na linha do NOME, à direita ("2d ago"), como na
+                         lista de conversas
+     do que se trata?  → logo abaixo do nome: a 1ª linha das instruções (ou
+                         a última conversa)
      quanto já tem?    → notas e conversas, no pé
 
    Sem chevron: um cartão inteiro já é o alvo do toque, e a seta na ponta só
@@ -5289,10 +5291,13 @@ body.is-mobile .axxa-root .axxa-history-more {
 
 .axxa-root .axxa-proj-card-head {
   display: flex;
-  align-items: center;
+  /* Pelo TOPO, e não pelo centro: o texto (nome + duas linhas) é mais alto
+     que o brasão, e centrado ele descia o brasão pro meio do bloco — longe
+     do nome, que é de quem ele é a marca. */
+  align-items: flex-start;
   gap: var(--axxa-3);
   min-width: 0;
-  /* O lugar do ⋯, no canto de cima: o nome corta antes de chegar nele. */
+  /* O lugar do ⋯, no canto de cima: nome e data cortam antes de chegar nele. */
   padding-right: 32px;
 }
 
@@ -5300,10 +5305,23 @@ body.is-mobile .axxa-root .axxa-history-more {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Nome e data na mesma linha: o nome fica com o que sobra e corta com
+   reticências; a data é do tamanho dela e nunca quebra. Pela linha de BASE,
+   porque os dois têm tamanhos de letra diferentes. */
+.axxa-root .axxa-proj-card-top {
+  display: flex;
+  align-items: baseline;
+  gap: var(--axxa-2);
   min-width: 0;
 }
 
 .axxa-root .axxa-proj-card-name {
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--text-normal);
   font-size: var(--font-ui-medium);
   font-weight: var(--font-semibold);
@@ -5313,6 +5331,7 @@ body.is-mobile .axxa-root .axxa-history-more {
 }
 
 .axxa-root .axxa-proj-card-when {
+  flex: 0 0 auto;
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
   white-space: nowrap;
@@ -5368,11 +5387,12 @@ body.is-mobile .axxa-root .axxa-history-more {
   color: var(--text-faint);
 }
 
-/* O ⋯ no canto de cima, na altura do NOME — como nos cartões de skill, ele
-   mora onde o texto já corta antes de chegar. */
+/* O ⋯ no canto de cima, na linha do NOME e da data — como nos cartões de
+   skill, ele mora onde o texto já corta antes de chegar. A conta: o respiro
+   do cartão, mais meia linha do nome (~21px), menos meio botão (32px). */
 .axxa-root button.axxa-proj-card-more {
   position: absolute;
-  top: calc(var(--axxa-4) + 24px - 16px);
+  top: calc(var(--axxa-4) + 11px - 16px);
   right: var(--axxa-2);
   width: 32px;
   height: 32px;

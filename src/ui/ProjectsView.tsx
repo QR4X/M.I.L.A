@@ -795,33 +795,36 @@ export function ProjectsView({
                         <Icon name={p.icon} size={22} />
                       </span>
                       <span className="axxa-proj-card-title">
-                        <span className="axxa-proj-card-name">{p.name}</span>
+                        {/* A DATA na linha do título, à direita — como na
+                            lista de conversas: é onde o olho procura "quando". */}
+                        <span className="axxa-proj-card-top">
+                          <span className="axxa-proj-card-name">{p.name}</span>
+                          <span
+                            className={
+                              jaAqui
+                                ? "axxa-proj-card-when is-here"
+                                : "axxa-proj-card-when"
+                            }
+                          >
+                            {jaAqui ? "Already here" : info.quando}
+                          </span>
+                        </span>
+                        {/* E o DO QUE SE TRATA logo abaixo do nome, no lugar
+                            que era da data. Duas linhas reservadas sempre, pra
+                            todo cartão ter a mesma altura (o mesmo motivo dos
+                            cartões de skill). Curta de propósito, a dica: numa
+                            lista de projetos novos ela se repete em cartão
+                            após cartão. */}
                         <span
                           className={
-                            jaAqui
-                              ? "axxa-proj-card-when is-here"
-                              : "axxa-proj-card-when"
+                            info.sobre
+                              ? "axxa-proj-card-about"
+                              : "axxa-proj-card-about is-empty"
                           }
                         >
-                          {jaAqui ? "This chat is already here" : info.quando}
+                          {info.sobre ?? "No instructions yet"}
                         </span>
                       </span>
-                    </span>
-                    {/* DO QUE SE TRATA — em duas linhas reservadas sempre,
-                        pra todo cartão ter a mesma altura (o mesmo motivo dos
-                        cartões de skill: lista que muda de altura a cada
-                        item se lê torta). */}
-                    <span
-                      className={
-                        info.sobre
-                          ? "axxa-proj-card-about"
-                          : "axxa-proj-card-about is-empty"
-                      }
-                    >
-                      {/* Curta de propósito: numa lista de projetos novos ela se repete em
-                          cartão após cartão, e uma frase comprida repetida vira
-                          ruído. O itálico apagado já diz que é dica. */}
-                      {info.sobre ?? "No instructions yet"}
                     </span>
                     <span className="axxa-proj-card-meta">
                       <span className="axxa-proj-card-stat">

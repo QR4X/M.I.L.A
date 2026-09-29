@@ -29,11 +29,11 @@ describe("está vivo?", () => {
       ],
       AGORA
     );
-    expect(r.quando).toBe("Active 2d ago");
+    expect(r.quando).toBe("2d ago");
   });
 
   it("sem conversa nenhuma: quando ele nasceu", () => {
-    expect(resumoDoProjeto(projeto(), [], AGORA).quando).toBe("Created 5d ago");
+    expect(resumoDoProjeto(projeto(), [], AGORA).quando).toBe("5d ago");
   });
 
   it("agora mesmo não vira '0m ago'", () => {
@@ -42,12 +42,12 @@ describe("está vivo?", () => {
       [{ id: "a", title: "x", date: new Date(AGORA - 5_000).toISOString() }],
       AGORA
     );
-    expect(r.quando).toBe("Active just now");
+    expect(r.quando).toBe("just now");
   });
 
   it("mais de um mês: a data, sem 'ago' pendurado depois dela", () => {
     const r = resumoDoProjeto(projeto({ createdAt: dias(60) }), [], AGORA);
-    expect(r.quando).toMatch(/^Created \d{4}-\d{2}-\d{2}$/);
+    expect(r.quando).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });
 
