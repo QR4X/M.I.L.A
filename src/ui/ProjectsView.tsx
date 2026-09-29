@@ -856,7 +856,10 @@ export function ProjectsView({
                           className="axxa-proj-card-stat"
                           title="Input tokens each new chat here starts with: the instructions plus the full text of its notes."
                         >
-                          <Icon name="arrow-down-to-line" size={14} />
+                          {/* Seta pra CIMA: é o que SAI do aparelho pro
+                              modelo a cada conversa nova — do ponto de vista de
+                              quem paga, tokens de entrada são uma saída. */}
+                          <Icon name="arrow-up-from-line" size={14} />
                           {formatarTokens(tokensPorProjeto[p.id])}
                         </span>
                       )}
