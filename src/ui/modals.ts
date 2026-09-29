@@ -221,3 +221,65 @@ export function openPluginSettings(plugin: AxxaPlugin): void {
     new Notice("Open Settings → Community plugins → AXXA OS.");
   }
 }
+
+/**
+ * Mostra um texto de diagnóstico com um botão pra copiar.
+ *
+ * Existe porque no celular a área de transferência só aceita escrita logo
+ * depois de um TOQUE (ativação do usuário). A gravação do teclado termina
+ * sozinha, 20 segundos depois do comando, sem toque nenhum — e o Android
+ * recusava a cópia em silêncio: a pessoa terminava a gravação e não havia nada
+ * pra colar. Aqui a cópia sai do toque no botão, que é exatamente o gesto que o
+ * sistema exige.
+ *
+ * O texto também fica numa caixa selecionável, pra quem preferir segurar e
+ * copiar à mão.
+ */
+export class DiagnosticoModal extends Modal {
+  constructor(
+    app: App,
+    private readonly titulo: string,
+    private readonly texto: string,
+    private readonly ondeSalvou?: string
+  ) {
+    super(app);
+  }
+
+  onOpen(): void {
+    this.titleEl.setText(this.titulo);
+    const caixa = this.contentEl.createEl("textarea");
+    caixa.value = this.texto;
+    caixa.readOnly = true;
+    caixa.rows = 12;
+    caixa.style.width = "100%";
+    caixa.style.fontFamily = "var(--font-monospace)";
+    caixa.style.fontSize = "11px";
+    if (this.ondeSalvou) {
+      this.contentEl.createEl("p", {
+        text: `Also saved to ${this.ondeSalvou}.`,
+        cls: "setting-item-description",
+      });
+    }
+    new Setting(this.contentEl).addButton((b) =>
+      b
+        .setButtonText("Copy")
+        .setCta()
+        .onClick(async () => {
+          try {
+            await navigator.clipboard.writeText(this.texto);
+            new Notice("Copied — paste it in the chat.");
+          } catch {
+            // Sem clipboard: seleciona tudo na caixa, e o "copiar" do sistema
+            // resolve com um toque.
+            caixa.focus();
+            caixa.select();
+            new Notice("Select-all done — use the system Copy.");
+          }
+        })
+    );
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+  }
+}

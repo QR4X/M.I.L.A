@@ -19,9 +19,11 @@ import {
 } from "./rag/types";
 import { registerLocalUsage } from "./providers/dataCollect";
 import {
+  ensureFolder,
   listAllChats,
   type ChatSummary,
 } from "./core/chatPersistence";
+import { DiagnosticoModal } from "./ui/modals";
 import {
   hydrateModelInfoCache,
   getModelInfoCache,
@@ -880,12 +882,12 @@ export default class AxxaPlugin extends Plugin {
       },
     });
 
-    // Gravador do teclado: 20s de linhas, uma por mudança de altura. Um relatório
+    // Gravador do teclado: 30s de linhas, uma por mudança de altura. Um relatório
     // de foto única não serve pra isso — rodar o comando abre a paleta, e a
     // paleta tira o foco do campo que tinha aberto o teclado.
     this.addCommand({
       id: "record-keyboard-layout",
-      name: "Record keyboard layout (20s)",
+      name: "Record keyboard layout (30s)",
       callback: () => {
         const view = this.app.workspace
           .getLeavesOfType(VIEW_TYPE_AXXA)
@@ -896,15 +898,29 @@ export default class AxxaPlugin extends Plugin {
           return;
         }
         new Notice(
-          "Recording for 20s: open the form, tap the field, then show and hide the keyboard toolbar.",
+          "Recording for 30s: open the form, tap the field, then show and hide the keyboard toolbar.",
           8000
         );
-        view.gravarTeclado(20000, (texto) => {
+        view.gravarTeclado(30000, (texto) => {
           console.log(texto);
-          navigator.clipboard.writeText(texto).then(
-            () => new Notice("Keyboard recording copied — paste it in the chat.", 8000),
-            () => new Notice("Recording in the console (clipboard blocked).")
-          );
+          // NÃO copia sozinho: no celular a área de transferência só aceita
+          // escrita logo depois de um toque, e isto roda 20s depois do comando
+          // — o Android recusava em silêncio e não sobrava nada pra colar.
+          // Salva numa nota (não depende de toque nenhum) e abre uma janela com
+          // o botão Copy, cujo toque é a permissão que o sistema pede.
+          const caminho = "axxa-ai/keyboard-recording.md";
+          const adapter = this.app.vault.adapter;
+          void ensureFolder(adapter, "axxa-ai")
+            .then(() => adapter.write(caminho, "```\n" + texto + "\n```\n"))
+            .catch(() => undefined)
+            .finally(() =>
+              new DiagnosticoModal(
+                this.app,
+                "Keyboard recording",
+                texto,
+                caminho
+              ).open()
+            );
         });
       },
     });
