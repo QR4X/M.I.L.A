@@ -192,3 +192,62 @@ describe("o respiro embaixo do último botão é o que JÁ funciona no aparelho"
     expect(cartao).toContain("margin-top: auto");
   });
 });
+
+describe("com o teclado aberto, o botão da folha pousa como o cartão da assistente", () => {
+  // No aparelho, no MESMO quadro, o cartão da assistente terminava no topo do
+  // teclado e o botão da folha ficava cortado — as duas camadas na mesma raiz.
+  // Em vez de mais uma teoria sobre a folha, o rodapé passa a ser desenhado
+  // numa camada que COPIA a do painel. Estes casos garantem que a cópia não se
+  // afaste do original.
+  const sem = (b: string) => b.replace(/\/\*[\s\S]*?\*\//g, "");
+  const flutuante = () =>
+    sem(bloco(".workspace-drawer.axxa-keyboard-open .axxa-root .axxa-float-foot,"));
+  const painel = () => sem(bloco(".axxa-root .axxa-assist-layer {"));
+
+  it("mesma caixa e mesma coluna que o painel", () => {
+    for (const d of [
+      "position: absolute",
+      "inset: 0",
+      "display: flex",
+      "flex-direction: column",
+    ]) {
+      expect(flutuante(), d).toContain(d);
+      expect(painel(), d).toContain(d);
+    }
+  });
+
+  it("mesmo respiro embaixo que o painel", () => {
+    const pb = (b: string) => /padding-bottom:\s*([^;]+);/.exec(b)?.[1].trim();
+    expect(pb(flutuante())).toBe(pb(painel()));
+  });
+
+  it("desce por margem automática, como o cartão do painel", () => {
+    expect(sem(bloco(".axxa-root .axxa-float-foot-card {"))).toContain(
+      "margin-top: auto"
+    );
+  });
+
+  it("não engole os toques na folha embaixo", () => {
+    // A camada cobre a raiz inteira; sem isto, nada na folha receberia toque.
+    expect(flutuante()).toContain("pointer-events: none");
+    expect(sem(bloco(".axxa-root .axxa-float-foot-card {"))).toContain(
+      "pointer-events: auto"
+    );
+  });
+
+  it("fica abaixo do painel da assistente e acima da folha", () => {
+    const z = (b: string) => Number(/z-index:\s*(\d+)/.exec(b)?.[1]);
+    expect(z(flutuante())).toBeGreaterThan(1000);
+    expect(z(flutuante())).toBeLessThan(z(painel()));
+  });
+
+  it("fechado o teclado, ela nem aparece — e o pé de dentro da folha volta", () => {
+    expect(sem(bloco(".axxa-root .axxa-float-foot {"))).toContain("display: none");
+    // Aberto, o de dentro fica invisível mas GUARDA o lugar (visibility, não
+    // display): sem o espaço dele o conteúdo passaria por baixo do botão.
+    const dentro = sem(
+      bloco(".workspace-drawer.axxa-keyboard-open .axxa-root .axxa-sheet-actions,\nbody.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {")
+    );
+    expect(dentro).toContain("visibility: hidden");
+  });
+});

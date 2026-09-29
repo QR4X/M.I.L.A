@@ -15,6 +15,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -22,6 +23,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 import { SearchField } from "./SearchField";
 import { screen, tap, warn } from "./haptics";
@@ -180,6 +182,26 @@ export function Sheet({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  /**
+   * A raiz da AXXA — pra onde o rodapé vai com o teclado aberto.
+   *
+   * Com o teclado aberto, o rodapé NÃO é desenhado dentro da folha: ele vai
+   * pra uma camada na raiz, idêntica à do painel da assistente (ver
+   * `.axxa-float-foot` no CSS). O motivo é medido, não teórico: no aparelho, no
+   * MESMO quadro, com a barra de ferramentas do SwiftKey visível, o cartão da
+   * assistente terminava no topo do teclado e o botão da folha ficava cortado
+   * por ele. Os dois moram na mesma caixa; só a folha errava, e o preview
+   * nunca reproduziu por quê. Em vez de mais uma teoria sobre a folha, o
+   * botão passa a não depender dela: usa o mecanismo que está confirmado.
+   *
+   * Fechado o teclado, a camada fica escondida por CSS e o rodapé de sempre,
+   * dentro da folha, é o que aparece. Os dois são renderizados; quem decide
+   * qual se vê é a classe do teclado, sem estado nenhum aqui.
+   */
+  const [raiz, setRaiz] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    setRaiz(panelRef.current?.closest<HTMLElement>(".axxa-root") ?? null);
+  }, []);
   /** peek = altura do conteúdo (teto baixo) · full = quase a tela toda. */
   const [size, setSize] = useState<"peek" | "full">(startFull ? "full" : "peek");
   const startY = useRef<number | null>(null);
@@ -572,6 +594,16 @@ export function Sheet({
         </div>
         {footer && <div className="axxa-sheet-actions">{footer}</div>}
       </div>
+      {/* O MESMO rodapé, na camada da raiz — só aparece com o teclado aberto
+          (ver `raiz`, logo no começo do componente). */}
+      {open && footer && raiz
+        ? createPortal(
+            <div className="axxa-float-foot">
+              <div className="axxa-float-foot-card">{footer}</div>
+            </div>,
+            raiz
+          )
+        : null}
     </div>
   );
 }

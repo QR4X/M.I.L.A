@@ -5639,6 +5639,66 @@ body.axxa-keyboard-open .axxa-root .axxa-sheet-actions,
   padding-bottom: 15px;
 }
 
+/* ── o rodapé flutuante da folha (teclado aberto) ────────────────────────
+   Com o teclado aberto, o rodapé da folha é desenhado AQUI, numa camada da
+   raiz que copia o posicionamento da do painel da assistente (`.axxa-assist-
+   layer`): mesma caixa, mesma coluna, mesmo respiro de 15px, e o conteúdo
+   descendo por `margin-top: auto`.
+
+   Por que não dentro da folha: no aparelho, no MESMO quadro, com a barra de
+   ferramentas do SwiftKey visível, o cartão da assistente terminava no topo
+   do teclado e o botão da folha ficava cortado. As duas camadas moram na
+   mesma raiz; só a folha errava — e o preview, que tem o app.css real, nunca
+   reproduziu o porquê. Oito releases tentaram consertar a folha. Esta tira o
+   botão da dependência dela: ele pousa onde o cartão da assistente pousa, que
+   é o que está confirmado nos dois estados do teclado.
+
+   Fechado o teclado, esta camada nem existe na tela, e o rodapé de dentro da
+   folha é o que aparece — como sempre foi. */
+.axxa-root .axxa-float-foot {
+  display: none;
+}
+
+.workspace-drawer.axxa-keyboard-open .axxa-root .axxa-float-foot,
+body.is-mobile.axxa-keyboard-open .axxa-root .axxa-float-foot {
+  position: absolute;
+  inset: 0;
+  /* Acima da folha (1000) e ABAIXO do painel da assistente (1050): quando o
+     painel abre, ele cobre este botão, como cobria o de dentro da folha. */
+  z-index: 1040;
+  display: flex;
+  flex-direction: column;
+  /* O respiro do painel da assistente, igual: é o número confirmado. */
+  padding: var(--axxa-3);
+  padding-bottom: 15px;
+  /* A camada cobre a raiz inteira, mas não é ela que se toca: sem isto ela
+     engoliria todo toque na folha embaixo. Só o cartão recebe toque. */
+  pointer-events: none;
+}
+
+.axxa-root .axxa-float-foot-card {
+  margin-top: auto;
+  pointer-events: auto;
+}
+
+/* Dentro da camada o pé não tem respiro próprio — quem separa do fundo é o
+   padding da camada, como no painel. Sem isto o `.axxa-form-foot` somava os
+   12px dele aos 15 da camada. */
+.axxa-root .axxa-float-foot .axxa-form-foot,
+.axxa-root .axxa-float-foot .axxa-sheet-foot {
+  margin: 0;
+  padding: 0;
+  background-color: transparent;
+}
+
+/* E o de dentro da folha, com o teclado aberto, fica INVISÍVEL mas guarda o
+   lugar: sem o espaço dele, o conteúdo da folha iria até o fundo e passaria
+   por baixo do botão flutuante. */
+.workspace-drawer.axxa-keyboard-open .axxa-root .axxa-sheet-actions,
+body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
+  visibility: hidden;
+}
+
 .axxa-root .axxa-sheet-actions .axxa-form-foot,
 .axxa-root .axxa-sheet-actions .axxa-sheet-foot {
   position: static;
