@@ -66,9 +66,12 @@
       i[data-lucide] {
         display: inline-flex;
       }
+      /* A MESMA conta do Obsidian (`svg.svg-icon { width: var(--icon-size) }`
+         no app.css, 18px de padrão): com 18px fixos aqui, quem ajustava o
+         tamanho pelo token via o ícone mudar no aparelho e não no preview. */
       svg.lucide {
-        width: 18px;
-        height: 18px;
+        width: var(--icon-size, 18px);
+        height: var(--icon-size, 18px);
       }
       /* Desenho da navbar/teclado só pro preview. */
       .mobile-navbar {

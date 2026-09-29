@@ -12,13 +12,21 @@
 //
 // O recorte é aplicado ANTES de somar: com ele aplicado no fim, o total diria
 // uma coisa e a tabela outra.
+//
+// O DESENHO é o do resto do app, peça por peça: o número grande e os módulos
+// são os do cartão da home; o período é o segmented da home; os filtros são
+// as pílulas das folhas (com a contagem em expoente, como as categorias de
+// ícone); e cada modelo leva o anel da fatia que o cartão já usa — aqui com o
+// logo dentro, porque a página tem o espaço que o cartão não tem.
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { Notice } from "obsidian";
 import type AxxaPlugin from "../main";
-import { useChatSummaries } from "./ChatList";
+import type { ChatSession } from "../core/session";
+import { useChatSummaries, providerIcon } from "./ChatList";
 import { Icon } from "./Icon";
-import { aggregateFromSummaries, sortBucketEntries } from "../usage/aggregate";
+import { Segmented } from "./Segmented";
+import { aggregateFromSummaries, type ChatUsageRow } from "../usage/aggregate";
 import { formatUsd, formatUsdRounded } from "../usage/pricing";
 import { formatCompact } from "../usage/format";
 import { saveUsageMarkdown } from "../usage/export";
@@ -27,30 +35,58 @@ import {
   alternar,
   aplicar,
   opcoes,
-  temFiltro,
+  type Opcao,
   type UsageFilter,
 } from "../usage/filters";
-import { moduleLabel } from "./modules";
-import { providerIcon } from "./ChatList";
+import {
+  conversasDoTopo,
+  faixaDeDatas,
+  marcados,
+  mediaPorConversa,
+  metricaDa,
+  modelosDaPagina,
+  valeFiltrar,
+  type Metrica,
+  type ModeloNaPagina,
+} from "../usage/page";
+import { moduleIcon, moduleLabel, relativeShort } from "./modules";
 import { PROVIDERS } from "../core/providersMeta";
+import { prettyModelName } from "../providers/modelDescriptions";
+import { modelLogo } from "../providers/modelLogo";
 
-/** Janelas do filtro de período. 0 = tudo. */
-const PERIODOS: Array<{ dias: number; label: string }> = [
-  { dias: 0, label: "All time" },
-  { dias: 7, label: "7 days" },
-  { dias: 30, label: "30 days" },
-  { dias: 90, label: "90 days" },
+/** Janelas do período, em dias (0 = tudo). O id é o número em texto. */
+const PERIODOS = [
+  { id: "0", label: "All time" },
+  { id: "7", label: "7 days" },
+  { id: "30", label: "30 days" },
+  { id: "90", label: "90 days" },
 ];
+
+/** Quantas conversas a lista do topo mostra. */
+const TOPO = 10;
+
+/** Os filtros de lista: o que cada dimensão marca, como se chama e se desenha. */
+type Dimensao = "providers" | "models" | "modes";
 
 export function UsageView({
   plugin,
+  session,
+  filtro: f,
+  onFiltro: setF,
   onBack,
+  onOpenChat,
 }: {
   plugin: AxxaPlugin;
+  session: ChatSession;
+  /** O recorte. Mora no App: abrir uma conversa daqui desmonta esta tela, e
+   *  a volta tem que achar o recorte onde ele estava. */
+  filtro: UsageFilter;
+  onFiltro: (f: UsageFilter) => void;
   onBack: () => void;
+  /** Uma conversa da lista foi aberta — a tela troca pra ela. */
+  onOpenChat: () => void;
 }) {
   const chats = useChatSummaries(plugin);
-  const [f, setF] = useState<UsageFilter>(FILTRO_VAZIO);
   const [salvando, setSalvando] = useState(false);
 
   // As opções saem das conversas INTEIRAS, não do recorte: se elas
@@ -62,6 +98,31 @@ export function UsageView({
 
   const recorte = useMemo(() => aplicar(chats, f), [chats, f]);
   const agg = useMemo(() => aggregateFromSummaries(recorte, 0), [recorte]);
+  const m = metricaDa(agg.total);
+  const modelos = useMemo(() => modelosDaPagina(agg), [agg]);
+  const topo = useMemo(() => conversasDoTopo(agg, TOPO), [agg]);
+  const media = mediaPorConversa(agg.total);
+
+  const dimensoes: Array<{
+    chave: Dimensao;
+    titulo: string;
+    ops: Opcao[];
+    nome: (id: string) => string;
+    icone: (id: string) => string;
+  }> = [
+    {
+      chave: "providers",
+      titulo: "Provider",
+      ops: porProvider,
+      nome: (id) => PROVIDERS.find((p) => p.id === id)?.name ?? id,
+      icone: providerIcon,
+    },
+    // O nome do APP, nunca o id da API: "claude-sonnet-4-6" é como o
+    // provider chama; no resto do app ele é "Sonnet 4.6".
+    { chave: "models", titulo: "Model", ops: porModelo, nome: prettyModelName, icone: modelLogo },
+    { chave: "modes", titulo: "Mode", ops: porModo, nome: moduleLabel, icone: moduleIcon },
+  ];
+  const visiveis = dimensoes.filter((d) => valeFiltrar(d.ops, f[d.chave]));
 
   const salvarRelatorio = async () => {
     setSalvando(true);
@@ -87,6 +148,13 @@ export function UsageView({
     }
   };
 
+  const abrir = (c: ChatUsageRow) => {
+    void session.load(c);
+    onOpenChat();
+  };
+
+  const vazio = agg.total.chats === 0;
+
   return (
     <div className="axxa-chat">
       <header className="axxa-topbar is-bare">
@@ -99,250 +167,303 @@ export function UsageView({
           <Icon name="arrow-left" />
         </button>
         <span className="axxa-brand axxa-topbar-brand">Usage</span>
+        {/* O relatório é a SAÍDA desta tela, e mora na barra, como o "New"
+            das folhas: ele cria uma nota, e no app accent é o que cria.
+            Flutuando embaixo, ele cobria justamente a lista que a pessoa
+            tinha rolado pra ler. */}
+        <button
+          type="button"
+          className="axxa-topbar-action axxa-topbar-end"
+          aria-label="Save this report as a note"
+          title="Save this report as a note"
+          disabled={salvando || vazio}
+          onClick={() => void salvarRelatorio()}
+        >
+          <Icon name={salvando ? "loader" : "file-down"} size={18} />
+          <span>{salvando ? "Saving…" : "Report"}</span>
+        </button>
       </header>
 
-      <div className="axxa-messages axxa-home">
-        {/* Os totais do recorte, em cima: é a resposta da pergunta que a
-            pessoa acabou de fazer com os filtros. */}
-        <section className="axxa-usage">
-          <div className="axxa-usage-line">
-            <span className="axxa-usage-meta">
-              <span className="axxa-usage-big">
-                {agg.total.cost > 0
-                  ? formatUsdRounded(agg.total.cost)
-                  : formatCompact(agg.total.tokensIn + agg.total.tokensOut)}
-              </span>
-              <span className="axxa-usage-unit">
-                {agg.total.cost > 0 ? "spent" : "tokens"}
-              </span>
-              {agg.total.hasUnknownCost && (
-                <span
-                  className="axxa-usage-approx"
-                  title="Some models have no public price — this is a floor"
-                >
-                  +
-                </span>
-              )}
+      <div className="axxa-messages axxa-home axxa-usage-page">
+        {/* O período vem PRIMEIRO: ele é a régua da página inteira — o total,
+            a média, os modelos e a lista mudam com ele. */}
+        <Segmented
+          options={PERIODOS}
+          value={String(f.days)}
+          label="Period"
+          // Período é UM: duas janelas ao mesmo tempo não querem dizer nada.
+          onChange={(id) => setF({ ...f, days: Number(id) })}
+        />
+
+        {/* A resposta da pergunta que a pessoa acabou de fazer com o
+            recorte. */}
+        <section className="axxa-usage is-hero" aria-label="Totals">
+          <span className="axxa-usage-meta">
+            <span className="axxa-usage-big">
+              {m === "cost"
+                ? formatUsdRounded(agg.total.cost)
+                : formatCompact(agg.total.tokensIn + agg.total.tokensOut)}
             </span>
-            <span className="axxa-usage-month">
-              {agg.total.chats === 1 ? "1 chat" : `${agg.total.chats} chats`}
+            <span className="axxa-usage-unit">
+              {m === "cost" ? "spent" : "tokens"}
             </span>
-          </div>
+            {m === "cost" && agg.total.hasUnknownCost && (
+              <span
+                className="axxa-usage-approx"
+                title="Some models have no public price — this is a floor"
+              >
+                +
+              </span>
+            )}
+          </span>
+          {/* Quantas conversas, e ONDE elas caíram: "All time" sozinho não
+              diz se o total é de um mês ou de dois anos. */}
+          <span className="axxa-usage-sub">
+            {agg.total.chats === 1 ? "1 chat" : `${agg.total.chats} chats`}
+            {!vazio && (
+              <>
+                <span className="axxa-usage-sep">·</span>
+                {faixaDeDatas(agg.periodStart, agg.periodEnd)}
+              </>
+            )}
+          </span>
           <div className="axxa-mods">
+            {/* As setas são as do cartão de projeto: o que SOBE sai daqui
+                pro modelo, o que DESCE volta dele. */}
             <Modulo
-              rotulo="In"
+              icone="arrow-up-from-line"
+              rotulo="Sent"
               valor={formatCompact(agg.total.tokensIn)}
               unidade="tokens"
             />
             <Modulo
-              rotulo="Out"
+              icone="arrow-down-to-line"
+              rotulo="Received"
               valor={formatCompact(agg.total.tokensOut)}
               unidade="tokens"
             />
             <Modulo
-              rotulo="Avg"
+              icone="message-circle"
+              rotulo="Per chat"
               valor={
-                agg.total.chats > 0
-                  ? formatUsdRounded(agg.total.cost / agg.total.chats)
-                  : "—"
+                media == null
+                  ? "—"
+                  : m === "cost"
+                    ? formatUsdRounded(media)
+                    : formatCompact(Math.round(media))
               }
-              unidade="per chat"
+              unidade={m === "cost" ? "avg" : "tokens"}
             />
           </div>
         </section>
 
-        <Grupo titulo="Period">
-          <div className="axxa-chips">
-            {PERIODOS.map((p) => (
-              <Chip
-                key={p.dias}
-                label={p.label}
-                on={f.days === p.dias}
-                // Período é UM: duas janelas ao mesmo tempo não querem dizer
-                // nada. Por isso ele substitui em vez de alternar.
-                onClick={() => setF({ ...f, days: p.dias })}
-              />
+        {visiveis.length > 0 && (
+          <section className="axxa-home-block axxa-usage-filters">
+            <div className="axxa-home-headrow">
+              <span className="axxa-section-label">Filter</span>
+              {/* Limpa os filtros de LISTA; o período fica — ele tem o
+                  seletor dele, lá em cima, e não é isto que o botão diz. */}
+              {marcados(f) > 0 && (
+                <button
+                  type="button"
+                  className="axxa-home-filter is-accent"
+                  onClick={() => setF({ ...FILTRO_VAZIO, days: f.days })}
+                >
+                  <Icon name="x" size={16} />
+                  <span>Clear</span>
+                </button>
+              )}
+            </div>
+            {visiveis.map((d) => (
+              <div key={d.chave} className="axxa-usage-dim">
+                <span className="axxa-usage-dim-label">{d.titulo}</span>
+                <div className="axxa-choices" role="group" aria-label={d.titulo}>
+                  {d.ops.map((o) => {
+                    const on = f[d.chave].includes(o.id);
+                    const nome = d.nome(o.id);
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        className={on ? "axxa-choice is-on" : "axxa-choice"}
+                        aria-pressed={on}
+                        // Lido em voz alta, "GPT 5 13" não diz o que é o 13.
+                        aria-label={`${nome}, ${o.count} ${
+                          o.count === 1 ? "chat" : "chats"
+                        }`}
+                        onClick={() =>
+                          setF({ ...f, [d.chave]: alternar(f[d.chave], o.id) })
+                        }
+                      >
+                        <Icon name={d.icone(o.id)} size={16} />
+                        <span>{nome}</span>
+                        <sup className="axxa-choice-count" aria-hidden="true">
+                          {o.count}
+                        </sup>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             ))}
-          </div>
-        </Grupo>
-
-        <Grupo titulo="Provider">
-          <div className="axxa-chips">
-            {porProvider.map((o) => (
-              <Chip
-                key={o.id}
-                label={PROVIDERS.find((p) => p.id === o.id)?.name ?? o.id}
-                logo={providerIcon(o.id)}
-                count={o.count}
-                on={f.providers.includes(o.id)}
-                onClick={() =>
-                  setF({ ...f, providers: alternar(f.providers, o.id) })
-                }
-              />
-            ))}
-          </div>
-        </Grupo>
-
-        <Grupo titulo="Model">
-          <div className="axxa-chips">
-            {porModelo.map((o) => (
-              <Chip
-                key={o.id}
-                label={o.id}
-                count={o.count}
-                on={f.models.includes(o.id)}
-                onClick={() => setF({ ...f, models: alternar(f.models, o.id) })}
-              />
-            ))}
-          </div>
-        </Grupo>
-
-        <Grupo titulo="Mode">
-          <div className="axxa-chips">
-            {porModo.map((o) => (
-              <Chip
-                key={o.id}
-                label={moduleLabel(o.id)}
-                count={o.count}
-                on={f.modes.includes(o.id)}
-                onClick={() => setF({ ...f, modes: alternar(f.modes, o.id) })}
-              />
-            ))}
-          </div>
-        </Grupo>
-
-        {temFiltro(f) && (
-          <button
-            type="button"
-            className="axxa-home-filter is-accent"
-            onClick={() => setF(FILTRO_VAZIO)}
-          >
-            <Icon name="x" size={16} />
-            <span>Clear filters</span>
-          </button>
+          </section>
         )}
 
-        {/* O detalhe: quanto por modelo, dentro do recorte. É a tabela que
-            responde "o caro é qual?" sem precisar abrir conversa nenhuma. */}
-        <Grupo titulo="By model">
-          {sortBucketEntries(agg.byModel).length === 0 ? (
-            <p className="axxa-usage-vazio">Nothing in this slice.</p>
-          ) : (
-            <div className="axxa-linhas">
-              {sortBucketEntries(agg.byModel).map(([modelo, b]) => (
-                <div key={modelo} className="axxa-linha">
-                  <span className="axxa-linha-nome">{modelo}</span>
-                  <span className="axxa-linha-sub">
-                    {b.chats === 1 ? "1 chat" : `${b.chats} chats`} ·{" "}
-                    {formatCompact(b.tokensIn + b.tokensOut)} tokens
-                  </span>
-                  <span className="axxa-linha-valor">
-                    {b.cost > 0 ? formatUsd(b.cost) : "—"}
-                    {b.hasUnknownCost && (
-                      <span className="axxa-usage-approx">+</span>
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Grupo>
+        {vazio ? (
+          <div className="axxa-home-empty">
+            <Icon name="chart-no-axes-column" size={42} />
+            <p>
+              {chats.length === 0
+                ? "No usage yet. Every chat is counted here as you go."
+                : "Nothing in this slice. Try a longer period or fewer filters."}
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* "O caro é qual?", sem abrir conversa nenhuma. */}
+            <section className="axxa-home-block">
+              <span className="axxa-section-label">By model</span>
+              <div className="axxa-usage-list">
+                {modelos.map((r) => (
+                  <LinhaDeModelo key={r.id} r={r} m={m} />
+                ))}
+              </div>
+            </section>
 
-        <Grupo titulo="Most expensive chats">
-          {agg.chats.length === 0 ? (
-            <p className="axxa-usage-vazio">Nothing in this slice.</p>
-          ) : (
-            <div className="axxa-linhas">
-              {agg.chats.slice(0, 10).map((c) => (
-                <div key={c.id} className="axxa-linha">
-                  <span className="axxa-linha-nome">
-                    {c.title || "Untitled"}
-                  </span>
-                  <span className="axxa-linha-sub">
-                    {c.day} · {c.model}
-                  </span>
-                  <span className="axxa-linha-valor">
-                    {c.cost == null ? "—" : formatUsd(c.cost)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Grupo>
-
-        {/* O relatório é a saída desta tela: o que está aqui vira um .md no
-            vault, com o mesmo recorte. */}
-        <button
-          type="button"
-          className="axxa-fab is-wide"
-          disabled={salvando}
-          onClick={() => void salvarRelatorio()}
-        >
-          <Icon name={salvando ? "loader" : "file-down"} size={20} />
-          <span>{salvando ? "Saving…" : "Save report (.md)"}</span>
-        </button>
+            <section className="axxa-home-block">
+              <span className="axxa-section-label">
+                {m === "cost" ? "Most expensive chats" : "Biggest chats"}
+              </span>
+              <div className="axxa-usage-list">
+                {topo.map((c) => (
+                  <LinhaDeConversa
+                    key={c.id}
+                    c={c}
+                    m={m}
+                    onOpen={() => abrir(c)}
+                  />
+                ))}
+              </div>
+            </section>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function Grupo({
-  titulo,
-  children,
-}: {
-  titulo: string;
-  children: React.ReactNode;
-}) {
+/**
+ * Uma linha de modelo: o anel da fatia com o logo dentro, o nome do app, e o
+ * valor na ponta.
+ *
+ * Sem dinheiro na página, o valor vira o volume — e o preço desce pra linha
+ * de apoio, onde "free" e "no public price" continuam distintos.
+ */
+function LinhaDeModelo({ r, m }: { r: ModeloNaPagina; m: Metrica }) {
+  const chats = r.chats === 1 ? "1 chat" : `${r.chats} chats`;
+  const preco =
+    r.preco === "gratis" ? "Free" : r.preco === "sem-preco" ? "—" : formatUsd(r.cost);
   return (
-    <section className="axxa-home-block">
-      <span className="axxa-section-label">{titulo}</span>
-      {children}
-    </section>
+    <div className="axxa-usage-row">
+      <span
+        className="axxa-share"
+        style={{ "--axxa-pct": r.pct } as CSSProperties}
+        aria-hidden="true"
+      >
+        <span className="axxa-donut" />
+        <Icon name={modelLogo(r.id)} size={16} />
+      </span>
+      <span className="axxa-usage-row-text">
+        <span className="axxa-usage-row-name">{prettyModelName(r.id)}</span>
+        <span className="axxa-usage-row-sub">
+          {chats}
+          <span className="axxa-usage-sep">·</span>
+          {m === "cost"
+            ? `${formatCompact(r.tokens)} tokens`
+            : r.preco === "sem-preco"
+              ? "no public price"
+              : "free"}
+        </span>
+      </span>
+      <span className="axxa-usage-row-end">
+        <span
+          className="axxa-usage-row-value"
+          title={r.preco === "sem-preco" ? "No public price" : undefined}
+        >
+          {m === "cost" ? preco : formatCompact(r.tokens)}
+          {r.piso && <span className="axxa-usage-approx">+</span>}
+        </span>
+        <span className="axxa-usage-row-pct">
+          {r.quase ? "<1%" : `${r.pct}%`}
+        </span>
+      </span>
+    </div>
   );
 }
 
-/** Uma opção de filtro: nome, quantas conversas tem, e se está ligada. */
-function Chip({
-  label,
-  logo,
-  count,
-  on,
-  onClick,
+/**
+ * Uma conversa da lista do topo — o mesmo desenho do cartão de conversa da
+ * home (logo do provider, título, apoio, a ponta à direita), e abre do mesmo
+ * jeito: lista de conversa que não abre a conversa é uma armadilha.
+ */
+function LinhaDeConversa({
+  c,
+  m,
+  onOpen,
 }: {
-  label: string;
-  logo?: string;
-  count?: number;
-  on: boolean;
-  onClick: () => void;
+  c: ChatUsageRow;
+  m: Metrica;
+  onOpen: () => void;
 }) {
   return (
-    <button
-      type="button"
-      className={on ? "axxa-filter-chip is-on" : "axxa-filter-chip"}
-      aria-pressed={on}
-      onClick={onClick}
-    >
-      {logo && <Icon name={logo} size={14} />}
-      <span className="axxa-filter-nome">{label}</span>
-      {count !== undefined && (
-        <span className="axxa-filter-count">{count}</span>
-      )}
+    <button type="button" className="axxa-usage-row" onClick={onOpen}>
+      <span className="axxa-card-mark" aria-hidden="true">
+        <Icon name={providerIcon(c.provider)} size={20} />
+      </span>
+      <span className="axxa-usage-row-text">
+        <span className="axxa-usage-row-name">{c.title || "Untitled"}</span>
+        <span className="axxa-usage-row-sub">
+          {prettyModelName(c.model)}
+          <span className="axxa-usage-sep">·</span>
+          {moduleLabel(c.mode)}
+        </span>
+      </span>
+      <span className="axxa-usage-row-end">
+        <span className="axxa-usage-row-value">
+          {m === "tokens"
+            ? formatCompact(c.tokensIn + c.tokensOut)
+            : c.cost === 0
+              ? "Free"
+              : formatUsd(c.cost)}
+        </span>
+        <span className="axxa-usage-row-pct">{relativeShort(c.date)}</span>
+      </span>
     </button>
   );
 }
 
+/**
+ * Um módulo — o do cartão da home, com um ícone no rótulo: aqui os três são
+ * parentes (entra, sai, média), e é o desenho que diz qual é qual antes da
+ * palavra.
+ */
 function Modulo({
+  icone,
   rotulo,
   valor,
   unidade,
 }: {
+  icone: string;
   rotulo: string;
   valor: string;
   unidade: string;
 }) {
   return (
     <div className="axxa-mod">
-      <span className="axxa-mod-title">{rotulo}</span>
+      <span className="axxa-mod-title has-icon">
+        <Icon name={icone} size={12} />
+        <span>{rotulo}</span>
+      </span>
       <span className="axxa-mod-row">
         <span className="axxa-mod-value">{valor}</span>
         <span className="axxa-mod-unit">{unidade}</span>

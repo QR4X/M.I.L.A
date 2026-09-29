@@ -29,6 +29,7 @@ import { formatCompact } from "../usage/format";
 import { aggregateFromSummaries } from "../usage/aggregate";
 import { Icon } from "./Icon";
 import { providerIcon } from "./ChatList";
+import { prettyModelName } from "../providers/modelDescriptions";
 import { RagLine } from "./RagLine";
 import { heatmapDoMes, inicioDoMes, type Celula } from "./heatmap";
 import {
@@ -228,7 +229,9 @@ function LinhaDeModelo({ m }: { m: ModeloUsado }) {
         aria-hidden="true"
       />
       <Icon name={providerIcon(m.provider)} size={14} />
-      <span className="axxa-model-name">{m.model}</span>
+      {/* O nome do APP, como no seletor e na página de uso: o id da API
+          ("claude-sonnet-4-6") é o jeito do provider chamar, não o nosso. */}
+      <span className="axxa-model-name">{prettyModelName(m.model)}</span>
       <span className="axxa-model-pct">{m.pct}%</span>
     </div>
   );

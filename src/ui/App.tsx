@@ -15,6 +15,7 @@ import { ChatView } from "./ChatView";
 import { Dashboard } from "./Dashboard";
 import { History } from "./History";
 import { UsageView } from "./UsageView";
+import { FILTRO_VAZIO, type UsageFilter } from "../usage/filters";
 import { ModuleHome } from "./ModuleHome";
 import { ProjectsView } from "./ProjectsView";
 import { SkillsView } from "./SkillsView";
@@ -47,13 +48,17 @@ export function App({
    *  parecido: quem abriu do painel volta ao painel, quem abriu da tela do
    *  módulo volta pra ela. */
   const [voltarPara, setVoltarPara] = useState<
-    "home" | "history" | "module" | "projects" | "skills"
+    "home" | "history" | "module" | "usage" | "projects" | "skills"
   >("module");
   /** Qual projeto está aberto. Mora AQUI, e não dentro da tela de projetos,
    *  por causa da seta de voltar: entrar numa conversa desmonta a tela, e com
    *  o estado lá dentro a volta caía na lista — perdendo o projeto que a
    *  pessoa tinha aberto dois toques antes. */
   const [projetoAberto, setProjetoAberto] = useState<string | null>(null);
+  /** O recorte da página de uso — mora aqui pelo mesmo motivo do projeto
+   *  aberto: abrir uma conversa da lista dela desmonta a página, e a seta de
+   *  voltar tem que devolver o recorte que a pessoa montou, não um zerado. */
+  const [filtroDeUso, setFiltroDeUso] = useState<UsageFilter>(FILTRO_VAZIO);
   /** Projetos e Skills não são TELAS: são folhas que sobem por cima do que
    *  você está fazendo, entregam o que você foi buscar e descem. Por isso
    *  moram aqui, e não em `view` — a tela debaixo não se perde. */
@@ -86,6 +91,9 @@ export function App({
       setPainel(id);
       return;
     }
+    // Entrar no uso é começar do zero; só a VOLTA de uma conversa aberta de
+    // lá devolve o recorte (ver `filtroDeUso`).
+    if (id === "usage") setFiltroDeUso(FILTRO_VAZIO);
     setView(id);
   }, []);
 
@@ -129,7 +137,10 @@ export function App({
           aba={aba}
           onAba={setAba}
           onOpenHistory={() => setView("history")}
-          onOpenUsage={() => setView("usage")}
+          onOpenUsage={() => {
+            setFiltroDeUso(FILTRO_VAZIO);
+            setView("usage");
+          }}
           onOpenMenu={() => setMenuOpen(true)}
           // Cartão do painel: conversa nova naquele modo, JÁ ESCREVENDO. O
           // `inject` sem texto é exatamente isso — "põe o cursor no campo" —
@@ -147,7 +158,20 @@ export function App({
           }}
         />
       ) : view === "usage" ? (
-        <UsageView plugin={plugin} onBack={() => setView("home")} />
+        <UsageView
+          plugin={plugin}
+          session={session}
+          onBack={() => setView("home")}
+          filtro={filtroDeUso}
+          onFiltro={setFiltroDeUso}
+          // Uma conversa da lista do topo: quem carrega é a própria linha
+          // (como na ChatList); aqui só se troca de tela, e a seta volta pro
+          // uso.
+          onOpenChat={() => {
+            setVoltarPara("usage");
+            setView("chat");
+          }}
+        />
       ) : view === "history" ? (
         <History
           plugin={plugin}

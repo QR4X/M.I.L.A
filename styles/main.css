@@ -1101,7 +1101,9 @@ body.theme-dark {
 
 .axxa-root .axxa-usage-sep {
   margin: 0 2px;
-  color: var(--text-faint);
+  /* Muted, e não faint: o ponto mora sempre num cartão, e ali faint mede
+     2,3:1 — abaixo do mínimo até pra pontuação. */
+  color: var(--text-muted);
 }
 
 /* Calendário e modelos dividem a faixa do meio: o mês é estreito por
@@ -1239,13 +1241,6 @@ body.theme-dark {
   font-size: var(--font-ui-smaller);
 }
 
-.axxa-root .axxa-usage-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--axxa-3);
-}
-
 /* O texto da esquerda encolhe antes do modelo sumir: numa linha apertada, o
    que se corta é a frase, não o nome. */
 .axxa-root .axxa-usage-meta {
@@ -1258,25 +1253,13 @@ body.theme-dark {
   text-overflow: ellipsis;
 }
 
-/* As barras da semana: sete traços que só valem uns em relação aos outros. */
-.axxa-root .axxa-usage-spark {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 22px;
-}
-
-.axxa-root .axxa-usage-bar {
-  width: 5px;
-  border-radius: 2px;
-  background-color: color-mix(in srgb, var(--interactive-accent) 70%, transparent);
-}
-
 /* O "+" de "tem modelo sem preço aqui": pequeno e acima da linha, como uma
    nota de rodapé — o número continua sendo o número. */
 .axxa-root .axxa-usage-approx {
   align-self: flex-start;
-  color: var(--text-faint);
+  /* Muted: o "+" é RECADO (este valor é um piso), e mora sempre num cartão —
+     em faint ali ele some justamente quando importa. */
+  color: var(--text-muted);
   font-size: 0.5em;
 }
 
@@ -1291,18 +1274,10 @@ body.theme-dark {
   align-items: baseline;
   justify-content: space-between;
   gap: var(--axxa-3);
-  color: var(--text-faint);
+  /* Muted: "20 chats · $2.07" é recado, e em cima do cartão faint media
+     2,27:1 — o valor em dinheiro era a coisa mais apagada do cartão. */
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
-}
-
-.axxa-root .axxa-usage-model {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--axxa-1);
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 /* O cartão de uso é uma PORTA: ele avisa isso com o toque, não com uma seta —
@@ -1316,105 +1291,209 @@ body.theme-dark {
 }
 
 /* ── a página de uso ───────────────────────────────────────────────────
-   Os filtros são fichas que ligam e desligam. Várias na mesma dimensão são
-   OU; dimensões diferentes se somam. A ficha mostra a CONTAGEM porque ela é
-   metade da decisão: filtrar por um modelo de duas conversas raramente é o
-   que se quer. */
-.axxa-root .axxa-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--axxa-2);
+   O cartão da home aberto: as MESMAS peças — o número grande, os módulos, o
+   anel da fatia —, com o espaço que o cartão não tem. Nada aqui é desenho
+   novo; é o vocabulário do app arrumado numa página. */
+
+/* O cartão do topo cresce: aqui ele é a RESPOSTA da página, não um resumo
+   entre outros. */
+.axxa-root .axxa-usage.is-hero {
+  gap: var(--axxa-3);
+  padding: var(--axxa-4);
+  border-radius: var(--axxa-r-lg);
 }
 
-.axxa-root button.axxa-filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px var(--axxa-3);
-  border-radius: var(--axxa-r-pill);
-  background-color: var(--axxa-s1);
-  box-shadow: none;
+.axxa-root .axxa-usage.is-hero .axxa-usage-big {
+  font-size: 2.2em;
+}
+
+/* Quantas conversas e onde elas caíram, colado no número que elas explicam.
+   Muted: mora num cartão (a regra dos degraus, lá nos tokens). */
+.axxa-root .axxa-usage-sub {
+  margin-top: calc(var(--axxa-2) * -1);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
-.axxa-root button.axxa-filter-chip:hover {
-  background-color: var(--axxa-s2);
+/* O rótulo do módulo com um ícone na frente: os três da página são parentes
+   (sai, volta, média), e o desenho diz qual é qual antes da palavra. */
+.axxa-root .axxa-mod-title.has-icon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  /* O `size` do <Icon> vira atributo do SVG, e o CSS do Obsidian
+     (`svg.svg-icon { width: var(--icon-size) }`) passa por cima de atributo.
+     Quem manda no tamanho é o token: com os 18px de sempre, "PER CHAT"
+     cortava num quadro de telefone. */
+  --icon-size: 14px;
 }
 
-.axxa-root button.axxa-filter-chip.is-on {
-  color: var(--text-normal);
-  box-shadow: inset 0 0 0 1px var(--interactive-accent);
-}
-
-.axxa-root button.axxa-filter-chip.is-on .axxa-icon {
-  color: var(--interactive-accent);
-}
-
-.axxa-root .axxa-filter-nome {
-  max-width: 16ch;
+.axxa-root .axxa-mod-title.has-icon > span:last-child {
+  min-width: 0;
   overflow: hidden;
-  white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.axxa-root .axxa-filter-count {
-  color: var(--text-faint);
-  font-variant-numeric: tabular-nums;
+/* Os filtros são as pílulas das folhas (`.axxa-choices`), uma fileira por
+   dimensão, com o nome miúdo em cima — o mesmo rótulo dos módulos. Várias na
+   mesma dimensão são OU; dimensões diferentes se somam. */
+.axxa-root .axxa-usage-filters {
+  gap: var(--axxa-3);
 }
 
-/* As linhas de detalhe: nome, uma linha de apoio, e o valor na ponta. O valor
-   NUNCA encolhe — é o que a pessoa veio ler. */
-.axxa-root .axxa-linhas {
+/* O bloco de seção encolhe os filhos pro próprio conteúdo — é pra AÇÃO (ver
+   `.axxa-home-block`). Fileira de pílulas e lista não são ação: encolhidas,
+   a lista perdia a borda direita e o valor ia parar colado no nome. */
+.axxa-root .axxa-usage-filters > *,
+.axxa-root .axxa-home-block > .axxa-usage-list {
+  align-self: stretch;
+  min-width: 0;
+}
+
+.axxa-root .axxa-usage-dim {
   display: flex;
   flex-direction: column;
-  gap: var(--axxa-2);
+  gap: 6px;
 }
 
-.axxa-root .axxa-linha {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0 var(--axxa-3);
-  align-items: baseline;
+/* Aqui as pílulas ficam do TAMANHO delas. Justificadas (como nas folhas),
+   uma que sobrasse sozinha na fileira virava uma barra da largura da tela —
+   o "Gemini ¹" parecia o botão principal da página. Nas folhas são dez
+   categorias e a última fileira quase nunca fica com uma só; aqui são duas,
+   três, e sobra uma o tempo todo. */
+.axxa-root .axxa-usage-dim button.axxa-choice {
+  flex: 0 0 auto;
+  /* 10px de lado, e não 12: com 12, três providers passavam da largura de um
+     telefone por 3px e o terceiro caía sozinho na fileira de baixo. */
+  padding: 0 10px;
 }
 
-.axxa-root .axxa-linha-nome {
+.axxa-root .axxa-usage-dim-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* As listas (modelos, conversas): UM cartão, com as linhas separadas por fio.
+   É tabela de conferir conta — e tabela se lê de cima a baixo, sem um degrau
+   de superfície entre cada linha. */
+.axxa-root .axxa-usage-list {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--axxa-r);
+  background-color: var(--axxa-s1);
+  border: 1px solid var(--axxa-hairline);
+  box-shadow: var(--axxa-e1);
+  overflow: hidden;
+}
+
+.axxa-root .axxa-usage-row {
+  display: flex;
+  align-items: center;
+  gap: var(--axxa-3);
+  width: 100%;
+  min-height: 60px;
+  padding: var(--axxa-2) var(--axxa-3);
+  text-align: left;
+}
+
+.axxa-root .axxa-usage-row + .axxa-usage-row {
+  border-top: 1px solid var(--axxa-hairline);
+}
+
+/* A linha de conversa ABRE a conversa. */
+.axxa-root button.axxa-usage-row {
+  cursor: pointer;
+}
+
+.axxa-root button.axxa-usage-row:hover {
+  background-color: var(--axxa-hover);
+}
+
+/* O anel da fatia com o logo DENTRO: o mesmo anel do cartão da home (ver
+   `.axxa-donut`), maior, com o furo ocupado pelo modelo de quem é a fatia. */
+.axxa-root .axxa-share {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+.axxa-root .axxa-share .axxa-donut {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Anel de 3px em qualquer tamanho: `closest-side` mede o furo a partir da
+     borda do círculo. O do cartão mede em % do CANTO da caixa, e aumentado
+     assim ele virava uma rosca grossa. */
+  -webkit-mask-image: radial-gradient(
+    closest-side,
+    transparent calc(100% - 3.5px),
+    #000 calc(100% - 3px)
+  );
+  mask-image: radial-gradient(
+    closest-side,
+    transparent calc(100% - 3.5px),
+    #000 calc(100% - 3px)
+  );
+}
+
+.axxa-root .axxa-usage-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
   min-width: 0;
+}
+
+.axxa-root .axxa-usage-row-name {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--text-normal);
-  font-size: var(--font-ui-small);
+  font-size: var(--font-ui-medium);
 }
 
-.axxa-root .axxa-linha-sub {
-  grid-column: 1;
-  min-width: 0;
+/* Apoio em cima de um cartão: muted, nunca faint. */
+.axxa-root .axxa-usage-row-sub {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
-.axxa-root .axxa-linha-valor {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
+/* A ponta: o valor em cima, a fatia (ou a idade) embaixo, os dois encostados
+   à direita. Nunca encolhe — é o que a pessoa veio ler. */
+.axxa-root .axxa-usage-row-end {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.axxa-root .axxa-usage-row-value {
+  display: flex;
+  align-items: baseline;
   color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
   font-variant-numeric: tabular-nums;
 }
 
-.axxa-root .axxa-usage-vazio {
-  margin: 0;
-  color: var(--text-faint);
+.axxa-root .axxa-usage-row-pct {
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
-}
-
-/* O botão do relatório ocupa a largura: é a saída da tela, não um detalhe. */
-.axxa-root button.axxa-fab.is-wide {
-  align-self: stretch;
-  justify-content: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* A linha do índice local: uma frase, não um cartão. O índice não é decisão
@@ -6412,7 +6491,10 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    um "X" — o mesmo desenho girado 45°, no mesmo tamanho e no mesmo tom. Quem
    olha de relance vê dois fechares. Cor e palavra resolvem os dois enganos de
    uma vez: no app, accent é o que cria. */
-.axxa-root button.axxa-sheet-action {
+/* A mesma pílula serve à barra de uma PÁGINA quando ela tem uma saída (o
+   "Report" do uso): criar é criar, na folha ou na página. */
+.axxa-root button.axxa-sheet-action,
+.axxa-root button.axxa-topbar-action {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -6427,8 +6509,14 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   box-shadow: none;
 }
 
-.axxa-root button.axxa-sheet-action:hover {
+.axxa-root button.axxa-sheet-action:hover,
+.axxa-root button.axxa-topbar-action:hover:not(:disabled) {
   background-color: var(--interactive-accent-hover);
+}
+
+/* Sem conversa no recorte não há relatório a salvar. */
+.axxa-root button.axxa-topbar-action:disabled {
+  opacity: 0.45;
 }
 
 /* ── o menu de ações ───────────────────────────────────────────────────
