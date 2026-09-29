@@ -65,3 +65,30 @@ describe("o tamanho FIT: a folha encolhe quando o teclado fecha", () => {
     expect(bloco(".axxa-root .axxa-sheet.is-full {")).toContain("max-height: 94%");
   });
 });
+
+describe("os cartões de skill têm todos o mesmo tamanho", () => {
+  // Qualquer que seja o prompt ou o nome. Uma galeria se lê pelo ritmo, e o
+  // ritmo é o tamanho igual: cartões de alturas diferentes numa grade abrem
+  // degraus, e a fileira seguinte começa torta.
+  it("a prévia do prompt tem altura FIXA, não um intervalo", () => {
+    const b = bloco(".axxa-root .axxa-tile-paper {");
+    expect(b).toMatch(/(^|\s)height:\s*\d+px/);
+    expect(b).not.toMatch(/min-height|max-height/);
+  });
+
+  it("as colunas são metades exatas — o conteúdo não estica nenhuma", () => {
+    // `1fr` é `minmax(auto, 1fr)`: o nome, que é nowrap, esticava a coluna e o
+    // cartão saía pela borda da tela.
+    expect(bloco(".axxa-root .axxa-tiles {")).toContain(
+      "grid-template-columns: repeat(2, minmax(0, 1fr))"
+    );
+    expect(bloco(".axxa-root .axxa-tile-wrap {")).toContain("min-width: 0");
+  });
+
+  it("o cartão ocupa a célula inteira, e o nome corta em vez de quebrar", () => {
+    expect(bloco(".axxa-root button.axxa-tile {")).toContain("height: 100%");
+    const nome = bloco(".axxa-root .axxa-tile-head .axxa-tile-name {");
+    expect(nome).toContain("white-space: nowrap");
+    expect(nome).toContain("text-overflow: ellipsis");
+  });
+});

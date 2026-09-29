@@ -6040,7 +6040,13 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
 
 .axxa-root .axxa-tiles {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* `minmax(0, 1fr)` e NÃO `1fr`. `1fr` é `minmax(auto, 1fr)`: a coluna nunca
+     fica mais estreita que o conteúdo mais largo que ela tem — e o nome do
+     skill é `nowrap`. Um nome comprido esticava a coluna dele, o cartão
+     saia pela borda da tela, e os dois da fileira ficavam de larguras
+     diferentes. Com o piso em zero as duas colunas são metades exatas, e o
+     nome corta com reticências, que é o que ele sempre prometeu. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   /* Mais ar entre as FILEIRAS que entre as colunas: dois cartões lado a lado
      se leem como um par; dois cartões um embaixo do outro precisam de um
      corte, senão o rodapé de um parece o topo do outro. */
@@ -6052,6 +6058,9 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    dentro de botão não existe. */
 .axxa-root .axxa-tile-wrap {
   position: relative;
+  /* O mesmo motivo do `minmax(0, 1fr)` da grade, do lado do item: sem isto o
+     tamanho mínimo automático dele é o do conteúdo mais largo. */
+  min-width: 0;
   /* A altura das DUAS fileiras do rodapé (a caixa do desenho manda). Um número
      só, porque três coisas dependem dele: as duas caixas de ícone e a conta
      que sobe o ⋯ até a fileira do nome. */
@@ -6064,6 +6073,11 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   align-items: stretch;
   gap: var(--axxa-1);
   width: 100%;
+  /* A célula INTEIRA da grade, e não só a altura do conteúdo: com as partes
+     todas de altura fixa os cartões já saem iguais, mas isto garante que
+     nada — uma fonte do tema um pouco maior, um nome com emoji — abra um
+     degrau entre dois vizinhos de fileira. */
+  height: 100%;
   padding: 0 0 var(--axxa-3);
   border-radius: var(--axxa-r-lg);
   background-color: var(--axxa-s1);
@@ -6082,11 +6096,16 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    "tem mais aqui dentro". */
 .axxa-root .axxa-tile-paper {
   display: block;
-  /* Altura pelo conteúdo, com teto: prompt de uma linha não precisa de um
-     retângulo vazio embaixo dele, e prompt de trinta não pode virar a página
-     inteira. */
-  min-height: 84px;
-  max-height: 132px;
+  /* Altura FIXA — todo cartão do mesmo tamanho, qualquer que seja o prompt.
+     Ela já foi pelo conteúdo (84 a 132px), com o argumento de que um prompt
+     de uma linha não precisava de retângulo vazio embaixo. Numa GRADE isso
+     vira degrau: os cartões de uma fileira saem com alturas diferentes, e a
+     fileira seguinte começa torta. Uma galeria se lê pelo ritmo, e o ritmo
+     é o tamanho igual.
+     108px são quatro linhas e pouco do texto do cartão (fonte menor, 1,5 de
+     entrelinha) mais o respiro — a quinta linha é justamente a que a
+     máscara esmaece, e é ela que diz "tem mais aqui dentro". */
+  height: 108px;
   padding: var(--axxa-3);
   overflow: hidden;
   /* Um degrau ACIMA do cartão. Era o fundo da PÁGINA — ou seja, um degrau
