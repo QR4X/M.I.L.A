@@ -33,6 +33,7 @@ import {
 import { useEffect, useState } from "react";
 import type AxxaPlugin from "../main";
 import { AssistantPanel, ComAssistente, useRun } from "./AssistantPanel";
+import { useSheetFit } from "./Sheet";
 import { limparRun } from "../assistant/store";
 import type { SkillSugerido } from "../assistant/parse";
 import { useAssistant } from "./useAssistant";
@@ -88,6 +89,10 @@ export function SkillForm({
 }) {
   const set = (campo: Partial<SkillDraft>) => onDraft({ ...draft, ...campo });
   const setProcurando = onProcurar;
+  // A folha do TAMANHO DO CONTEÚDO enquanto o formulário está na tela: fechado
+  // o teclado, ela encolhe até o campo em vez de deixar um vão até o botão. O
+  // catálogo de ícones pede a cheia (é uma grade), e ao fechar ele isto volta.
+  useSheetFit(!procurando);
   /** Qual campo está com a assistente aberta. Um de cada vez: dois painéis no
    *  mesmo formulário seriam duas conversas disputando os mesmos campos. */
   const [ajudando, setAjudando] = useState<"" | "body" | "desc">("");

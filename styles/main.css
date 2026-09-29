@@ -402,6 +402,13 @@ body {
      A conta usa `--axxa-canvas`, então a linha do tema escuro (que troca o
      canvas) reaproveita esta sem repetir nada. */
   --axxa-raised: color-mix(in srgb, var(--text-normal) 7%, var(--axxa-canvas));
+  /* A cor da FOLHA — um degrau acima do canvas (ver `.axxa-sheet`). Mora aqui,
+     no body, e não na folha, porque tem mais alguém que precisa dela fora da
+     árvore da AXXA: a faixa da barra de gestos, embaixo da folha, que é da
+     gaveta do Obsidian (ver a regra de `.workspace-drawer-inner` com folha
+     aberta). As duas usam ESTE nome, pra não existirem duas contas pra mesma
+     cor. */
+  --axxa-sheet-bg: color-mix(in srgb, var(--text-normal) 5%, var(--axxa-canvas));
   /* O thumb do segmented é o único que precisa de dois valores, porque
      "levantado" não é a mesma direção nos dois temas: no claro é o BRANCO do
      tema, no escuro é um cinza acima do trilho. Um valor só deixaria o thumb
@@ -3156,7 +3163,7 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-composer {
      separava a folha do que está atrás era só o véu e a sombra. Numa foto de
      tela — e no olho, de relance — as duas viravam a mesma superfície com uma
      linha no meio. */
-  background-color: color-mix(in srgb, var(--text-normal) 5%, var(--axxa-canvas));
+  background-color: var(--axxa-sheet-bg);
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.34);
   transform: translateY(100%);
   /* Camada própria ANTES de começar: sem isto o WebView promove a folha no
@@ -3190,6 +3197,15 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-composer {
    min-height o navegador anima. */
 .axxa-root .axxa-sheet.is-full {
   min-height: 94%;
+  max-height: 94%;
+}
+
+/* FIT: a altura do conteúdo, com o teto do grande (ver useSheetFit). É o
+   tamanho de um formulário com o teclado FECHADO — na folha cheia sobrava um
+   vão entre o campo e o botão. `min-height: 0` e não `auto`: do tamanho
+   grande pra este a folha ENCOLHE, e de `auto` o navegador não anima. */
+.axxa-root .axxa-sheet.is-fit {
+  min-height: 0;
   max-height: 94%;
 }
 
@@ -3675,6 +3691,40 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-layer .axxa-sheet {
   min-height: 0;
   max-height: none;
   transition: transform var(--axxa-sheet-ms) ease-in-out;
+}
+
+/* ── a faixa da barra de gestos, com uma folha aberta ─────────────────────
+   Com o teclado fechado, a folha termina em cima de uma faixa que NÃO é dela:
+   é a reserva de baixo da gaveta do Obsidian. No app.css dele,
+
+     .workspace-drawer-inner {
+       background-color: var(--mobile-sidebar-background);
+       padding-bottom: calc(max(var(--safe-area-inset-bottom), var(--size-4-4))
+                            - var(--keyboard-height));
+     }
+
+   — o espaço da barra de gestos do Android, pintado com a cor da gaveta. A
+   folha é um degrau mais clara que isso (`--axxa-sheet-bg`), então a faixa
+   aparecia como uma barra escura grudada no fim da folha.
+
+   Pinta-se SÓ a faixa de baixo, com um gradiente de corte seco da altura
+   exata da reserva — não o fundo inteiro da gaveta. A reserva de cima (a área
+   da barra de status) é da mesma caixa, e ela deve continuar como está: em
+   folha nativa do Android o status fica com a página, não com a folha.
+
+   Com o teclado aberto a reserva vira zero (a conta do Obsidian desconta o
+   teclado), e a faixa pintada fica por trás do conteúdo — não aparece.
+
+   `:has()` porque quem sabe que há folha aberta é a nossa árvore, e a caixa a
+   pintar é a do Obsidian, alguns andares acima. */
+@supports selector(:has(*)) {
+  body.is-mobile .workspace-drawer-inner:has(.axxa-root .axxa-sheet-layer.is-open) {
+    background-image: linear-gradient(
+      to top,
+      var(--axxa-sheet-bg) max(var(--safe-area-inset-bottom), var(--size-4-4)),
+      transparent max(var(--safe-area-inset-bottom), var(--size-4-4))
+    );
+  }
 }
 
 .axxa-root .axxa-drawer-layer.is-open {

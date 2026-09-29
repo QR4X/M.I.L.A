@@ -16,7 +16,7 @@
 // se compartilha, se versiona e se edita no Obsidian como qualquer outra nota.
 // O ARQUIVO é a implementação, não a tela.
 
-import { useEffect, useMemo, useReducer, useState } from "react";
+import { useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
 import { Notice, TFile, normalizePath } from "obsidian";
 import type AxxaPlugin from "../main";
 import type { Skill } from "../skills/skills";
@@ -30,7 +30,7 @@ import {
 import { ensureFolder } from "../core/chatPersistence";
 import { ConfirmModal } from "./modals";
 import { Icon } from "./Icon";
-import { Sheet, SheetSearch } from "./Sheet";
+import { Sheet, SheetSearch, useSheetFull } from "./Sheet";
 import { Segmented } from "./Segmented";
 import { projectColor } from "../projects";
 import { SheetProgress, SheetSubmit, SheetWizardFoot } from "./SheetForm";
@@ -305,6 +305,7 @@ export function SkillsView({
       ) : (
         /* Pilha com respiro: na folha os blocos são irmãos soltos, e irmão
            solto não tem vão nenhum. */
+        <ListaCheia>
         <div className="axxa-sheet-stack">
           {/* O MESMO segmented do resto do app (a home, o trilho de providers
               nas settings): trilho, thumb que desliza, colunas iguais. Abas
@@ -449,7 +450,23 @@ export function SkillsView({
           )}
 
         </div>
+        </ListaCheia>
       )}
     </Sheet>
   );
+}
+
+/**
+ * A lista de skills na folha CHEIA — sempre, inclusive ao voltar do
+ * formulário.
+ *
+ * `startFull` só vale na montagem da folha, e a folha não desmonta entre a
+ * lista e o formulário (são níveis dela). O formulário pede a folha do
+ * tamanho do conteúdo (useSheetFit); sem isto, a lista voltaria herdando esse
+ * tamanho — um acervo em grade mostrado numa folha que encolheu pro tamanho
+ * de um campo de texto.
+ */
+function ListaCheia({ children }: { children: ReactNode }) {
+  useSheetFull();
+  return <>{children}</>;
 }

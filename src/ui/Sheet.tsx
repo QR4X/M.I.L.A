@@ -42,8 +42,12 @@ import { screen, tap, warn } from "./haptics";
  * `pedeTelaCheia` atravessando dois componentes que não têm nada com o
  * assunto.
  */
-const SheetSizeCtx = createContext<{ expandir: () => void }>({
+const SheetSizeCtx = createContext<{
+  expandir: () => void;
+  ajustar: () => void;
+}>({
   expandir: () => {},
+  ajustar: () => {},
 });
 
 /** Pede a folha no tamanho grande, uma vez, ao montar. */
@@ -52,6 +56,27 @@ export function useSheetFull(): void {
   useEffect(() => {
     expandir();
   }, [expandir]);
+}
+
+/**
+ * Pede a folha do TAMANHO DO CONTEÚDO — até o tamanho grande, se o conteúdo
+ * precisar — enquanto `ativo`.
+ *
+ * É o tamanho de um formulário. Com o teclado aberto a folha ocupa o que
+ * sobra acima dele de qualquer jeito (regra do teclado no CSS); o que muda é
+ * quando a pessoa FECHA o teclado. Na folha cheia, o formulário ficava com o
+ * campo lá em cima, o botão lá embaixo e um vão vazio no meio. Aqui a folha
+ * encolhe até o conteúdo e o botão fica logo depois do campo.
+ *
+ * `ativo` é dependência, e não uma leitura só na montagem: o formulário tem um
+ * nível que pede a folha cheia (o catálogo de ícones, ver useSheetFull) e,
+ * quando ele fecha, é aqui que a folha volta a encolher.
+ */
+export function useSheetFit(ativo: boolean): void {
+  const { ajustar } = useContext(SheetSizeCtx);
+  useEffect(() => {
+    if (ativo) ajustar();
+  }, [ativo, ajustar]);
 }
 
 /**
@@ -202,8 +227,11 @@ export function Sheet({
   useLayoutEffect(() => {
     setRaiz(panelRef.current?.closest<HTMLElement>(".axxa-root") ?? null);
   }, []);
-  /** peek = altura do conteúdo (teto baixo) · full = quase a tela toda. */
-  const [size, setSize] = useState<"peek" | "full">(startFull ? "full" : "peek");
+  /** peek = altura do conteúdo (teto baixo) · full = quase a tela toda ·
+   *  fit = altura do conteúdo, com o teto do grande (ver useSheetFit). */
+  const [size, setSize] = useState<"peek" | "full" | "fit">(
+    startFull ? "full" : "peek"
+  );
   const startY = useRef<number | null>(null);
   const dragY = useRef(0);
   /** O gesto lê o tamanho por REF: os listeners nativos são registrados uma vez
@@ -217,7 +245,8 @@ export function Sheet({
   // o efeito rodar sem parar — ou seja, a folha voltaria a crescer sozinha
   // logo depois de a pessoa arrastá-la pra baixo.
   const expandir = useCallback(() => setSize("full"), []);
-  const api = useMemo(() => ({ expandir }), [expandir]);
+  const ajustar = useCallback(() => setSize("fit"), []);
+  const api = useMemo(() => ({ expandir, ajustar }), [expandir, ajustar]);
 
   /** O nível que o conteúdo emprestou, se houver (ver useSheetLevel). */
   const [interno, setInterno] = useState<{
@@ -508,9 +537,11 @@ export function Sheet({
         className={
           size === "full"
             ? "axxa-sheet is-full"
-            : minSize === "mid"
-              ? "axxa-sheet is-mid"
-              : "axxa-sheet"
+            : size === "fit"
+              ? "axxa-sheet is-fit"
+              : minSize === "mid"
+                ? "axxa-sheet is-mid"
+                : "axxa-sheet"
         }
         role="dialog"
         aria-modal="true"
