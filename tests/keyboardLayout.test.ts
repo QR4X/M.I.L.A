@@ -13,9 +13,12 @@ import { resolve } from "node:path";
 // A regra do app é: quem publica a medida é o Obsidian (`--keyboard-height` no
 // <html>), e quem a desconta é a GAVETA, uma vez só:
 //
-//     body.is-mobile .workspace-drawer.axxa-keyboard-open {
-//       height: calc(100dvh - var(--keyboard-height, 0px)) !important;
+//     body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-keyboard-open {
+//       height: calc(100dvh - var(--keyboard-height, 0px));
 //     }
+//
+// (Até a 0.9.11 era `!important`; na 0.9.12 virou peso de seletor — o
+// `:not(#…)` soma um ID, que vence toda regra normal do app.css.)
 //
 // Tudo dentro dela — o composer, a folha, o painel da assistente — herda esse
 // fim e não faz conta nenhuma. Quem precisar de uma exceção que a escreva aqui
@@ -58,12 +61,12 @@ describe("a única conta de teclado", () => {
     // verificada aqui: a gaveta desconta o teclado, e o vh vem ANTES como
     // reserva pra quem não tem dvh — agora pela ORDEM dos dois blocos, que é
     // o que decide entre regras de mesma especificidade.
-    const b = bloco("body.is-mobile .workspace-drawer.axxa-keyboard-open {");
+    const b = bloco("body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-keyboard-open {");
     expect(b).toContain("calc(100vh - var(--keyboard-height, 0px))");
     expect(b).not.toContain("100dvh");
 
     const iRegra = SEM_COMENTARIO.indexOf(
-      "body.is-mobile .workspace-drawer.axxa-keyboard-open {"
+      "body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-keyboard-open {"
     );
     const iSupports = SEM_COMENTARIO.indexOf(
       "@supports (height: 100dvh)",
@@ -72,7 +75,7 @@ describe("a única conta de teclado", () => {
     expect(iSupports, "o @supports com o dvh sumiu").toBeGreaterThan(iRegra);
     const dentro = SEM_COMENTARIO.slice(iSupports, iSupports + 400);
     expect(dentro).toContain(
-      "body.is-mobile .workspace-drawer.axxa-keyboard-open"
+      "body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-keyboard-open"
     );
     expect(dentro).toContain("calc(100dvh - var(--keyboard-height, 0px))");
   });
@@ -80,16 +83,30 @@ describe("a única conta de teclado", () => {
   it("a gaveta em TELA CHEIA desconta pelo mesmo par", () => {
     // O outro sítio do mesmo padrão. Estava sem teste e passou despercebido
     // até a 0.9.8 mexer nos dois de uma vez.
-    const b = bloco("body.is-mobile .workspace-drawer.axxa-fullscreen {");
+    const b = bloco("body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-fullscreen {");
     expect(b).toContain("calc(100vh - var(--keyboard-height, 0px))");
     const i = SEM_COMENTARIO.indexOf(
-      "body.is-mobile .workspace-drawer.axxa-fullscreen {"
+      "body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-fullscreen {"
     );
     const dentro = SEM_COMENTARIO.slice(
       SEM_COMENTARIO.indexOf("@supports (height: 100dvh)", i),
       SEM_COMENTARIO.indexOf("@supports (height: 100dvh)", i) + 400
     );
     expect(dentro).toContain("calc(100dvh - var(--keyboard-height, 0px))");
+  });
+
+  it("as quatro alturas da gaveta carregam o reforço de especificidade", () => {
+    // 0.9.12: sem `!important`, o que faz a altura da gaveta vencer as regras
+    // do app.css é o `:not(#axxa-especificidade)` (+1 ID). Tirar o reforço
+    // numa delas não quebra nada à vista no desktop — e deixa o composer atrás
+    // do teclado no celular. Cada `height: calc(…--keyboard-height…)` tem de
+    // estar numa regra com ele.
+    const alturas = SEM_COMENTARIO.split("}").filter((r) =>
+      // `height` inteira — não o `max-height` do modal, que é outra conta.
+      /(?:^|[\s;{])height:\s*calc\(100d?vh - var\(--keyboard-height/.test(r)
+    );
+    expect(alturas).toHaveLength(4);
+    for (const r of alturas) expect(r).toContain(":not(#axxa-especificidade)");
   });
 
   it("as camadas da folha entram na CAIXA do composer, sem conta própria", () => {
@@ -145,8 +162,9 @@ describe("a única conta de teclado", () => {
     // está dentro já herdou o desconto e somar de novo é o bug de sempre.
     const permitidas = new Set([
       // A gaveta, no fullscreen e no modo normal: a ÚNICA conta que importa.
-      "height: calc(100vh - var(--keyboard-height, 0px)) !important",
-      "height: calc(100dvh - var(--keyboard-height, 0px)) !important",
+      // Sem !important desde a 0.9.12 (ver o teste do reforço, acima).
+      "height: calc(100vh - var(--keyboard-height, 0px))",
+      "height: calc(100dvh - var(--keyboard-height, 0px))",
       // Modais NATIVOS do Obsidian: `.modal-container` é filho do <body>, fora
       // da gaveta, e por isso desconta sozinho.
       "max-height: calc(100vh - var(--keyboard-height, 50vh) - 32px)",

@@ -17,10 +17,10 @@
    aqui vem prefixado com `.axxa-root` (0,2,x) e existe o bloco de reset
    abaixo. Regra: nada de seletor sem o prefixo, nada de !important.
 
-   A EXCEÇÃO: 5 `!important`, e por que ficam (0.9.10).
+   A EXCEÇÃO: 1 `!important`, e por que fica.
    O bloco logo abaixo (teclado + tela cheia no mobile) tinha 27. A revisão
    do Obsidian conta cada um como issue, e a nota pública é função dessa
-   contagem. 22 saíram e 5 ficaram, e as duas coisas foram PROVADAS:
+   contagem. 22 saíram na 0.9.10 e mais 4 na 0.9.12, e foram PROVADOS:
 
    · Os 22 que saíram perderam o !important e ganharam `:not(#axxa-
      especificidade)` no seletor — +1 de peso de ID, igual pra todos, o que
@@ -49,16 +49,19 @@
          antes vinha num `@supports selector(:has)` e era pulada, agora vale —
          esses aparelhos passam a ter a mesma folga dos outros.
 
-   · Os 5 que ficam são as dimensões da GAVETA:
-       — a largura, porque o Obsidian 1.13 escreve `style.width` INLINE nela
-         (`setPinnedSize`, no tablet com a gaveta fixada), e contra inline só
-         !important vence;
-       — as quatro alturas (tela cheia e teclado, com e sem dvh). Por essas
-         nada foi achado — nem inline, nem !important do app.css —, mas o
-         teclado do mobile é publicado por código nativo que não está no
-         bundle de desktop, e é a área que mais custou neste projeto. Ficam
-         até alguém conferir no aparelho, com o inspetor, que nada escreve
-         `height` inline na `.workspace-drawer` com o teclado aberto.
+   · O que FICA é a largura da gaveta: o Obsidian 1.13 escreve `style.width`
+     INLINE nela (`setPinnedSize`, no tablet com a gaveta fixada), e contra
+     inline só !important vence.
+
+   · As quatro ALTURAS da gaveta (tela cheia e teclado, com e sem dvh)
+     perderam o !important na 0.9.12, EM TESTE NO APARELHO. Nada foi achado
+     contra elas — nem inline no app.js, nem !important no app.css —, e o A/B
+     dos 128 estados, agora com `--keyboard-height` de 300px, dá a mesma
+     altura (661px com teclado, 961px sem). O que o desktop não mostra é o
+     código NATIVO do mobile, que publica o teclado. Se no aparelho o composer
+     ficar atrás do teclado, a volta é reverter o commit da 0.9.12 que trocou
+     estas quatro regras (o da versão é outro, separado de propósito), ou
+     reinstalar a 0.9.11, que é a última com elas.
 
    · `:has` (2×). Os outros 9 viraram classe (6 na 0.9.6, 3 na 0.9.10): o
      `.modal-container` é o `containerEl` do Modal; a folha da view é marcada
@@ -277,18 +280,22 @@ body.is-mobile.axxa-fullscreen .mobile-navbar {
      sai 100% pra fora). !important vence uma largura inline que o Obsidian
      possa ter setado no drawer. */
 body.is-mobile .workspace-drawer.axxa-fullscreen {
+  /* O ÚNICO !important que sobrou no arquivo: o Obsidian 1.13 escreve
+     `style.width` INLINE na gaveta quando ela é fixada no tablet
+     (`setPinnedSize`), e contra estilo inline só !important vence. */
   width: 100vw !important;
-  /* Menos a altura do teclado (v0.1.254): o composer de chat/agent é `absolute`
-     dentro da .axxa-root, então só sobe se a CAIXA encolher — e o Obsidian
-     mobile não encolhe a viewport, ele publica `--keyboard-height` no <html> e
-     deixa o teclado por cima. Como aqui a altura passou a ser NOSSA (100dvh),
-     era ela que segurava o composer atrás do teclado. Descontando, canvas e
-     composer sobem juntos e as últimas mensagens não ficam escondidas. O Vault
-     Q&A escapava do bug por ser `fixed` e já consumir a var. */
-  height: calc(100vh - var(--keyboard-height, 0px)) !important;
 }
+/* Menos a altura do teclado (v0.1.254): o composer de chat/agent é `absolute`
+   dentro da .axxa-root, então só sobe se a CAIXA encolher — e o Obsidian
+   mobile não encolhe a viewport, ele publica `--keyboard-height` no <html> e
+   deixa o teclado por cima. Como aqui a altura passou a ser NOSSA (100dvh),
+   era ela que segurava o composer atrás do teclado. Descontando, canvas e
+   composer sobem juntos e as últimas mensagens não ficam escondidas. O Vault
+   Q&A escapava do bug por ser `fixed` e já consumir a var.
+   Sem !important desde a 0.9.12 — ver o cabeçalho do arquivo. */
 body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-fullscreen {
   max-width: 100vw;
+  height: calc(100vh - var(--keyboard-height, 0px));
 }
 /* O mesmo em dvh, que acompanha a barra dinâmica do WebView. Vinha como uma
    SEGUNDA declaração de `height` logo acima — a forma clássica de fallback,
@@ -296,8 +303,8 @@ body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-fullscreen {
    mesma coisa sem repetir a propriedade: onde dvh existe esta regra vence
    (mesma especificidade, vem depois); onde não existe, fica o vh. */
 @supports (height: 100dvh) {
-  body.is-mobile .workspace-drawer.axxa-fullscreen {
-    height: calc(100dvh - var(--keyboard-height, 0px)) !important;
+  body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-fullscreen {
+    height: calc(100dvh - var(--keyboard-height, 0px));
   }
 }
 /* Propaga a viewport pela cadeia de containers até a view da AXXA. */
@@ -444,13 +451,13 @@ body.is-mobile
    altura. Escopado em `.axxa-keyboard-open`, que só existe quando a var é > 0 e
    a AXXA é a aba ativa — então fora do teclado nada muda, e com fullscreen as
    duas regras dão o mesmo valor. */
-body.is-mobile .workspace-drawer.axxa-keyboard-open {
-  height: calc(100vh - var(--keyboard-height, 0px)) !important;
+body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-keyboard-open {
+  height: calc(100vh - var(--keyboard-height, 0px));
 }
 /* dvh à parte, pela mesma razão do drawer em tela cheia (ver acima). */
 @supports (height: 100dvh) {
-  body.is-mobile .workspace-drawer.axxa-keyboard-open {
-    height: calc(100dvh - var(--keyboard-height, 0px)) !important;
+  body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-keyboard-open {
+    height: calc(100dvh - var(--keyboard-height, 0px));
   }
 }
 
