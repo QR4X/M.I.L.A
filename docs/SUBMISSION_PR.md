@@ -72,7 +72,7 @@ Fork do `obsidianmd/obsidian-releases`, e **adicione no FIM do array** em
 - [x] `manifest.json`, `versions.json`, `LICENSE` (MIT), `README` (PT+EN).
 - [x] Sem telemetria; sem `innerHTML`; CSS em `styles.css`.
 - [x] API privada revisada e justificada (acima).
-- [ ] **Screenshots reais** em `docs/screenshots/` (substituir os placeholders)
+- [x] **Screenshots reais** em `assets/screenshots/` e embutidos no README (7 telas, 390px)
       e/ou no README — o review gosta de ver a cara do plugin.
 - [ ] (Opcional) `fundingUrl` no `manifest.json` se quiser link de apoio.
 - [ ] Rodar `docs/VALIDATION.md` com chaves reais (sign-off funcional).
