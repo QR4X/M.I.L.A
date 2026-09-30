@@ -5,8 +5,19 @@ name: Release Obsidian plugin
 # (main.js + manifest.json + styles.css) que o Obsidian precisa pra distribuir
 # o update automaticamente — sem re-review depois do plugin já estar listado.
 #
-# Fluxo de update: bump do manifest + commit, depois:
-#   git tag 0.1.176 && git push --tags
+# Fluxo de update: bump do manifest + commit, depois — NESTA ORDEM:
+#
+#   git tag 0.9.7
+#   git push origin 0.9.7     # 1º a TAG: a Action builda e publica a Release
+#   # esperar a Release existir (gh run watch)
+#   git push origin main      # 2º a main
+#
+# A ordem importa. O portal do Obsidian lê o manifest.json no HEAD do branch
+# padrão e procura a Release daquela versão. Empurrando a main primeiro, existe
+# ~1 minuto em que o manifest já diz a versão nova e a Release ainda está sendo
+# buildada — e quem abrir a página nesse intervalo vê "No release matches your
+# manifest version". Com a tag primeiro, a main só anuncia a versão depois que
+# a Release existe, e a janela deixa de existir. (Aconteceu na 0.9.6.)
 #
 # Alternativa manual (workflow_dispatch): dispara pela aba Actions / API sem
 # push de tag. A versão vem do input `version` ou, se vazio, do manifest.json —
