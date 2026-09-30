@@ -939,7 +939,7 @@ export default class AxxaPlugin extends Plugin {
         window.clearTimeout(this.autoReindexTimer);
       }
       this.autoReindexTimer = window.setTimeout(
-        () => this.runAutoReindex(),
+        () => void this.runAutoReindex(),
         4000
       );
     };
@@ -1031,7 +1031,7 @@ export default class AxxaPlugin extends Plugin {
       await leaf?.setViewState({ type: VIEW_TYPE_AXXA, active: true });
     }
 
-    if (leaf) workspace.revealLeaf(leaf);
+    if (leaf) void workspace.revealLeaf(leaf);
     else {
       const en = this.settings.language === "en-us";
       new Notice(
@@ -1303,8 +1303,8 @@ export default class AxxaPlugin extends Plugin {
         this.settings[f] = stored;
       } else if (typeof saved[f] === "string" && saved[f]) {
         // Legado: chave em plaintext no data.json → move pro keychain do SO.
-        ss.setSecret(id, saved[f] as string);
-        this.settings[f] = saved[f] as string;
+        ss.setSecret(id, saved[f]);
+        this.settings[f] = saved[f];
         migrated = true;
       }
     }
@@ -1354,7 +1354,7 @@ export default class AxxaPlugin extends Plugin {
       if (ss) {
         // Chaves vão pro SecretStorage; data.json é salvo sem elas.
         for (const f of AxxaPlugin.SECRET_FIELDS) {
-          await ss.setSecret(this.secretId(f), this.settings[f] ?? "");
+          ss.setSecret(this.secretId(f), this.settings[f] ?? "");
         }
         await this.saveData(this.persistableSettings());
       } else {

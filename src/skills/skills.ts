@@ -8,6 +8,7 @@
 // edita no próprio Obsidian e compartilha (é uma nota). Esse é o efeito de rede.
 
 import { type App, parseYaml, normalizePath } from "obsidian";
+import { texto } from "../core/texto";
 
 export interface Skill {
   id: string;
@@ -54,16 +55,16 @@ function parseSkillFile(
   body = body.trim();
   if (!body) return null;
   const base = (path.replace(/\.md$/i, "").split("/").pop() ?? path).trim();
-  const name = String(fm.name ?? base);
+  const name = texto(fm.name) || base;
   return {
     id: "skill-" + base.toLowerCase().replace(/[^\w-]+/g, "-"),
     name,
-    description: String(fm.description ?? ""),
-    icon: String(fm.icon ?? "sparkles"),
+    description: texto(fm.description),
+    icon: texto(fm.icon) || "sparkles",
     // Sem cor no arquivo = "default", que é o brasão neutro de sempre. Skill
     // escrito à mão no Obsidian continua válido — a cor é opcional.
-    color: String(fm.color ?? "default"),
-    mode: fm.mode ? String(fm.mode) : undefined,
+    color: texto(fm.color) || "default",
+    mode: texto(fm.mode) || undefined,
     body,
     path,
     mtime,

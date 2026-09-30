@@ -15,6 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
+import type { ClipboardEvent } from "react";
 import {
   arrayBufferToBase64,
   Notice,
@@ -100,6 +101,7 @@ import { moduleFabLabel, moduleLabel, modulePlaceholder } from "./modules";
 import { filterModels, groupModels } from "./modelGroups";
 // O limite de favoritos é UM número, e ele mora onde se marca o favorito.
 import { FAVORITE_LIMIT } from "./SettingsTab";
+import { texto } from "../core/texto";
 
 /** Título da folha do "+" em cada nível. */
 const PLUS_SHEET_TITLE: Record<string, string> = {
@@ -728,7 +730,7 @@ Open Settings › Providers to add it, then run the connection test.`,
   const anexarPdf = (file: File) => {
     const leitor = new FileReader();
     leitor.onload = () => {
-      const dataUrl = String(leitor.result ?? "");
+      const dataUrl = texto(leitor.result);
       if (!dataUrl.startsWith("data:")) return;
       addAttachment({ type: "pdf", name: file.name, dataUrl });
     };
@@ -796,7 +798,7 @@ Open Settings › Providers to add it, then run the connection test.`,
   /** Colar. Duas coisas que o campo não fazia:
    *   - imagem da área de transferência (print) vira anexo
    *   - bloco grande vira anexo em vez de virar parede de texto */
-  const aoColar = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+  const aoColar = (e: ClipboardEvent<HTMLTextAreaElement>) => {
     const dados = e.clipboardData;
     if (!dados) return;
 
@@ -835,7 +837,7 @@ Open Settings › Providers to add it, then run the connection test.`,
   const anexarImagem = (file: File) => {
     const leitor = new FileReader();
     leitor.onload = () => {
-      const dataUrl = String(leitor.result ?? "");
+      const dataUrl = texto(leitor.result);
       if (!dataUrl.startsWith("data:")) return;
       addAttachment({
         type: "image",
@@ -1432,7 +1434,9 @@ Open Settings › Providers to add it, then run the connection test.`,
             label="Provider"
             activeId={pickProvider}
             onPick={setPickProvider}
-            onBlocked={aoTocarBloqueado}
+            onBlocked={(id, motivo, insistiu) =>
+              void aoTocarBloqueado(id, motivo, insistiu)
+            }
             items={PROVIDERS.map((p) => ({
               id: p.id,
               icon: p.icon,
@@ -2057,15 +2061,14 @@ function ReadAloudButton({
       type="button"
       className={speaking ? "axxa-msg-listen is-on" : "axxa-msg-listen"}
       aria-label={speaking ? "Stop" : "Read aloud"}
-      onClick={async () => {
+      onClick={() => {
         if (speaking) {
           stopSpeaking();
           setSpeaking(false);
           return;
         }
         setSpeaking(true);
-        await speak(plugin, text);
-        setSpeaking(false);
+        void speak(plugin, text).finally(() => setSpeaking(false));
       }}
     >
       <Icon name={speaking ? "square" : "volume-2"} size={15} />

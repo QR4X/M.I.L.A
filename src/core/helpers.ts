@@ -7,6 +7,7 @@
 import { ProviderError } from "../providers/base";
 import { getTranslations } from "../i18n";
 import type { AIErrorCode } from "../store/chat";
+import { texto } from "./texto";
 
 /** ID único — randomUUID quando disponível, fallback time+random. */
 export function makeId(): string {
@@ -34,20 +35,21 @@ export function agentActivitySpec(
   pendingText: string;
   doneText: string;
 } {
-  const path = String(args.path ?? args.from ?? args.folder ?? "");
+  const path = texto(args.path) || texto(args.from) || texto(args.folder);
   // Encurta path long pra cabe na timeline (mantém basename)
   const shorten = (p: string) => (p.length > 48 ? "…" + p.slice(-46) : p);
   const shortPath = shorten(path);
   // v0.1.228: aplica o mesmo encurtamento ao destino do move (`to`).
-  const shortTo = args.to ? shorten(String(args.to)) : "?";
+  const alvo = texto(args.to);
+  const shortTo = alvo ? shorten(alvo) : "?";
 
   switch (toolName) {
     case "vault_search":
       return {
         iconPending: "radar",
         iconDone: "search-check",
-        pendingText: `Searching "${String(args.query ?? "").slice(0, 40)}"`,
-        doneText: `Searched "${String(args.query ?? "").slice(0, 40)}"`,
+        pendingText: `Searching "${texto(args.query).slice(0, 40)}"`,
+        doneText: `Searched "${texto(args.query).slice(0, 40)}"`,
       };
     case "vault_list":
       return {

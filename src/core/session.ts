@@ -603,7 +603,7 @@ export class ChatSession {
         ...(m.type === "ai-response" && m.agentSteps
           ? { agentSteps: m.agentSteps }
           : {}),
-      })) as ChatMessage[];
+      }));
 
       const st = useChatStore.getState();
       // Abrir um chat NÃO é atividade: pula o próximo ciclo do auto-save.

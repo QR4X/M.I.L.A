@@ -105,7 +105,10 @@ export function App({
     setMenuOpen(false);
   }, []);
 
-  const useSkill = (skill: Skill) => {
+  // usarSkill e não useSkill: função comum, não hook. Com o prefixo `use`
+  // as regras de hooks a tratavam como tal e acusavam chamada dentro de
+  // callback — e quem lesse o código levava o mesmo susto.
+  const usarSkill = (skill: Skill) => {
     // Skill com modo preferido troca o modo (no-op se a sessão já travou).
     if (isChatMode(skill.mode)) session.setMode(skill.mode);
     setInject({ text: skill.body, nonce: Date.now() });
@@ -231,7 +234,7 @@ export function App({
             setModulo(m);
             setView("module");
           }}
-          onUseSkill={useSkill}
+          onUseSkill={usarSkill}
         />
       ) : null}
 
@@ -272,7 +275,7 @@ export function App({
         onUse={(sk) => {
           setPainel(null);
           setVoltarPara("skills");
-          useSkill(sk);
+          usarSkill(sk);
         }}
       />
 

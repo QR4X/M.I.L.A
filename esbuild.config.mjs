@@ -2,7 +2,8 @@ import esbuild from "esbuild";
 import process from "process";
 import fs from "fs";
 import path from "path";
-import builtins from "builtin-modules";
+// builtinModules vem do próprio Node desde o 9.3 — não precisa de pacote.
+import { builtinModules as builtins } from "node:module";
 import { report } from "./scripts/size-report.mjs";
 
 const prod = process.argv[2] === "production";

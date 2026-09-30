@@ -236,7 +236,7 @@ export function toAnthropicPayload(messages: ProviderMessage[]): {
 
     // Assistant text-only
     converted.push({
-      role: m.role as "user" | "assistant",
+      role: m.role,
       content: m.content,
     });
   }

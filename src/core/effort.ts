@@ -149,7 +149,7 @@ export function resolveEffortConfig(
   level: string,
   userConfigs?: Partial<Record<EffortLevel, Partial<EffortConfig>>>
 ): EffortConfig {
-  const lvl = (isEffortLevel(level) ? level : "med") as EffortLevel;
+  const lvl = (isEffortLevel(level) ? level : "med");
   const base = DEFAULT_EFFORT_CONFIGS[lvl];
   const override = userConfigs?.[lvl];
   if (!override) return base;

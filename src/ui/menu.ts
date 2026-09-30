@@ -129,9 +129,11 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
   // balão nasceria na janela errada, longe do item que o pediu.
   const doc =
     (ev.currentTarget as HTMLElement | null)?.ownerDocument ?? document;
-  const raiz =
-    (doc.querySelector(".axxa-root") as HTMLElement | null) ?? doc.body;
+  const raiz = doc.querySelector<HTMLElement>(".axxa-root") ?? doc.body;
 
+  // createElement e não createDiv: o createDiv do Obsidian ANEXA ao nó, e
+  // estes três nascem soltos de propósito — a camada e o balão só entram na
+  // árvore depois de medidos, e o botão é anexado por quem o desenha.
   const camada = doc.createElement("div");
   camada.className = "axxa-pop-layer";
 
@@ -153,35 +155,24 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
     b.className = a.danger ? "axxa-pop-item is-danger" : "axxa-pop-item";
     b.setAttribute("role", "menuitem");
     if (a.icon) {
-      const ico = doc.createElement("span");
       // Com cor, o ícone ganha a MESMA plaquinha da lista de projetos
       // (`axxa-thing-mark`): mesma forma, mesmo jeito de tingir — o fundo sai
       // do `currentColor`. Reusar a classe é o que garante que as duas telas
       // não comecem a divergir na terceira mudança.
-      ico.className = a.color
-        ? "axxa-pop-ico axxa-thing-mark"
-        : "axxa-pop-ico";
+      const ico = b.createSpan({
+        cls: a.color ? "axxa-pop-ico axxa-thing-mark" : "axxa-pop-ico",
+      });
       if (a.color) ico.style.color = a.color;
       // O mesmo `setIcon` do resto do app (ver Icon.tsx): o set de ícones é o
       // do Obsidian, então o menu não traz um segundo vocabulário de desenho.
       setIcon(ico, a.icon);
-      b.appendChild(ico);
     }
-    const txt = doc.createElement("span");
-    txt.className = "axxa-pop-label";
-    txt.textContent = a.label;
-    b.appendChild(txt);
+    b.createSpan({ cls: "axxa-pop-label", text: a.label });
     if (a.checked) {
-      const marca = doc.createElement("span");
-      marca.className = "axxa-pop-check";
-      setIcon(marca, "check");
-      b.appendChild(marca);
+      setIcon(b.createSpan({ cls: "axxa-pop-check" }), "check");
     }
     if (a.children) {
-      const chev = doc.createElement("span");
-      chev.className = "axxa-pop-chev";
-      setIcon(chev, "chevron-right");
-      b.appendChild(chev);
+      setIcon(b.createSpan({ cls: "axxa-pop-chev" }), "chevron-right");
     }
     b.addEventListener("click", (e) => {
       e.stopPropagation();

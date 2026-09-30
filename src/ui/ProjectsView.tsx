@@ -479,7 +479,7 @@ export function ProjectsView({
           type="button"
           className="axxa-home-filter"
           onClick={(e) =>
-            openActions(e as unknown as MouseEvent, acoesDoProjeto(aberto))
+            openActions(e, acoesDoProjeto(aberto))
           }
         >
           <Icon name="settings-2" size={16} />
@@ -875,7 +875,7 @@ export function ProjectsView({
                          gastar a primeira posição do menu repetindo o gesto
                          mais óbvio da tela é desperdiçar o lugar que o polegar
                          alcança primeiro. */
-                      openActions(e as unknown as MouseEvent, acoesDoProjeto(p))
+                      openActions(e, acoesDoProjeto(p))
                     }
                   >
                     <Icon name="more-horizontal" size={18} />

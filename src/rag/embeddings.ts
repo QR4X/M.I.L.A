@@ -82,7 +82,7 @@ export function arrayBufferToDataUrl(
     const chunk = bytes.subarray(i, i + chunkSize);
     // apply aceita array-like — Uint8Array funciona direto, sem cópia
     // intermediária via Array.from por chunk. v0.1.228
-    binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
+    binary += String.fromCharCode.apply(null, chunk);
   }
   const b64 = btoa(binary);
   return `data:${mimeType};base64,${b64}`;

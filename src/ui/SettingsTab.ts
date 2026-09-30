@@ -48,7 +48,6 @@ import {
 import { ELEVEN_MODELS, elevenVoices } from "../providers/elevenlabs";
 import { hapticsOn, setHapticsEnabled, tap } from "./haptics";
 import { PERMISSION_LABELS } from "../agent/permissions";
-import type { PermissionLevel } from "../agent/types";
 
 type KeyField =
   | "openaiApiKey"
@@ -1392,7 +1391,9 @@ export class AxxaSettingsTab extends PluginSettingTab {
       .addButton((b) =>
         b
           .setButtonText("Delete index")
-          .setDestructive()
+          // setWarning e não setDestructive: ver a nota em ui/modals.ts —
+          // setDestructive é API 1.13 e o mínimo declarado é 1.11.4.
+          .setWarning()
           .setDisabled(size === 0 && !this.plugin.vectorIndex)
           .onClick(async () => {
             await deleteIndex(this.app.vault.adapter, s.ragIndexPath);
@@ -1417,7 +1418,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
           d.addOption(id, label);
         }
         d.setValue(s.agentPermissionLevel).onChange(async (v) => {
-          s.agentPermissionLevel = v as PermissionLevel;
+          s.agentPermissionLevel = v;
           await this.save();
         });
       });

@@ -141,7 +141,7 @@ export function ModuleHome({
               aria-label="Filter sessions by period"
               onClick={(e) =>
                 openActions(
-                  e as unknown as MouseEvent,
+                  e,
                   PERIODOS.map((p) => ({
                     label: p.label,
                     checked: p.id === periodo.id,

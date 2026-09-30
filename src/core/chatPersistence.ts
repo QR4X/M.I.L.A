@@ -14,6 +14,7 @@
 import type { App, DataAdapter } from "obsidian";
 import type { AIToolStep } from "../agent/types";
 import { previewFromMarkdown } from "./chatPreview";
+import { texto } from "./texto";
 
 export interface ChatMessageStored {
   type: "user" | "ai-response";
@@ -373,12 +374,12 @@ export function parseChatMarkdown(content: string): ChatData {
   const fm = parseSimpleYaml(match[1]);
   const messages = parseBody(match[2]);
   return {
-    id: String(fm.id ?? ""),
-    title: String(fm.title ?? "Sem título"),
+    id: texto(fm.id),
+    title: texto(fm.title, "Sem título"),
     date: String(fm.date ?? new Date().toISOString()),
     mode: String(fm.mode ?? "chat"),
     provider: String(fm.provider ?? "openai"),
-    model: String(fm.model ?? ""),
+    model: texto(fm.model),
     effort: String(fm.effort ?? "med"),
     persona: fm.persona ? String(fm.persona) : undefined,
     instructions: fm.instructions ? String(fm.instructions) : undefined,
@@ -428,13 +429,13 @@ export function summaryFromFrontmatter(
   preview: string = ""
 ): ChatSummary {
   return {
-    id: String(fm.id ?? ""),
-    title: String(fm.title ?? "Sem título"),
-    date: String(fm.date ?? ""),
-    mode: String(fm.mode ?? fallbackMode),
-    provider: String(fm.provider ?? ""),
-    model: String(fm.model ?? ""),
-    effort: String(fm.effort ?? ""),
+    id: texto(fm.id),
+    title: texto(fm.title, "Sem título"),
+    date: texto(fm.date),
+    mode: texto(fm.mode, fallbackMode),
+    provider: texto(fm.provider),
+    model: texto(fm.model),
+    effort: texto(fm.effort),
     tokensIn: Number(fm.tokens_in ?? 0),
     tokensOut: Number(fm.tokens_out ?? 0),
     messageCount: Number(fm.message_count ?? 0),
@@ -461,9 +462,7 @@ export async function listChats(
     // metadataCache → pega de lá sem LER o arquivo (antes lia o .md INTEIRO
     // só pro frontmatter, pesado em vault com muitos chats). Cache frio
     // (arquivo recém-criado) cai no fallback de leitura.
-    const cached = app.metadataCache.getCache(file)?.frontmatter as
-      | Record<string, unknown>
-      | undefined;
+    const cached = app.metadataCache.getCache(file)?.frontmatter;
     if (cached && cached.id) {
       summaries.push(summaryFromFrontmatter(cached, mode, file));
       continue;

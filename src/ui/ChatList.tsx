@@ -301,7 +301,7 @@ export function ChatList({
               className="axxa-icon-btn axxa-history-more"
               aria-label={`Actions for ${c.title || "Untitled"}`}
               onClick={(e) =>
-                openActions(e as unknown as MouseEvent, [
+                openActions(e, [
                   {
                     label: c.starred ? "Unstar" : "Star",
                     icon: c.starred ? "star-off" : "star",

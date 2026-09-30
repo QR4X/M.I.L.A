@@ -214,7 +214,7 @@ export function AssistantPanel({
           title={`Writing with ${modelo.atual}`}
           onClick={(e) =>
             openActions(
-              e as unknown as MouseEvent,
+              e,
               // O logo de QUEM FEZ o modelo, não um símbolo de preço: numa
               // lista de nomes parecidos, a marca é o que se acha com o olho.
               // O grátis continua dito — na etiqueta, onde é informação e não

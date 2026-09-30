@@ -179,9 +179,8 @@ export class OllamaProvider implements Provider {
     onToken: TokenHandler,
     onUsage?: UsageHandler,
     signal?: AbortSignal,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- o catch
-    // não olha o erro: qualquer falha aqui significa a mesma coisa (endpoint
-    // inválido), e a mensagem crua do parser não ajudaria quem configurou.
+    // o Ollama não emite trilha de raciocínio separada, então o handler entra
+    // só pra assinatura bater com os outros providers e fica sem uso.
     _onReasoning?: ReasoningHandler
   ): Promise<ProviderResponse> {
     const endpoint = this.getEndpoint(apiKey);

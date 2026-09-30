@@ -113,7 +113,7 @@ export type ChatMessage =
 // DistributiveOmit aplica o Omit em cada membro do union separadamente.
 // Sem isso, Omit<ChatMessage, "id"> colapsa pros campos comuns dos 4 variants
 // e perde a discriminação por `type`.
-type DistributiveOmit<T, K extends keyof any> = T extends unknown
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
   ? Omit<T, K>
   : never;
 
@@ -400,7 +400,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((state) =>
       escritaDoTurno(state, (ms) => [
         ...ms,
-        { ...msg, id, timestamp: Date.now() } as ChatMessage,
+        { ...msg, id, timestamp: Date.now() },
       ])
     );
     return id;

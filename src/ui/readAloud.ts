@@ -92,7 +92,7 @@ async function synthesize(
     { model: s.ttsModel, prompt: text, voice: s.ttsVoice },
     plugin.providerCredential("openai")
   );
-  return item ? { data: item.data as Uint8Array, mime: item.mime } : null;
+  return item ? { data: item.data, mime: item.mime } : null;
 }
 
 /**

@@ -407,7 +407,7 @@ export type ToolExecutor = (
 export const TOOL_REGISTRY: Record<string, ToolExecutor> = {
   vault_search: (ctx, args) =>
     toolVaultSearch(ctx, args as unknown as SearchArgs),
-  vault_list: (ctx, args) => toolVaultList(ctx.app, args as unknown as ListArgs),
+  vault_list: (ctx, args) => toolVaultList(ctx.app, args),
   vault_read: (ctx, args) => toolVaultRead(ctx.app, args as unknown as ReadArgs),
   vault_create: (ctx, args) =>
     toolVaultCreate(ctx.app, args as unknown as CreateArgs),

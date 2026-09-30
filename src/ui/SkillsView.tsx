@@ -398,7 +398,7 @@ export function SkillsView({
                     className="axxa-icon-btn axxa-tile-more"
                     aria-label={`Actions for ${s.name}`}
                     onClick={(e) =>
-                      openActions(e as unknown as MouseEvent, [
+                      openActions(e, [
                         {
                           label: "Use",
                           icon: "corner-down-left",

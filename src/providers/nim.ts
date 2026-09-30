@@ -76,13 +76,13 @@ interface NodeHttpsLike {
 /** `require("https")` do Electron, ou null (mobile / runtime sem Node). */
 function getNodeHttps(): NodeHttpsLike | null {
   try {
-    // eslint-disable-next-line no-restricted-globals -- não é busca de janela:
-    // `require` do Electron só existe no escopo global do processo, e é ele
-    // que dá o `https` do Node pro streaming no desktop. No mobile este ramo
-    // nem é alcançado (ver o guarda Platform.isMobile em quem chama).
-    const req = (globalThis as { require?: (m: string) => unknown }).require;
+    // `require` do Electron: no desktop ele vive no escopo da janela e é ele
+    // que dá o `https` do Node pro streaming. No mobile não existe, a função
+    // devolve null e quem chama cai no requestUrl (ver o guarda Platform.isMobile).
+    const req = (window as unknown as { require?: (m: string) => unknown })
+      .require;
     if (!req) return null;
-    // v0.1.228: `globalThis.require` pode existir e NÃO ser o require do Node
+    // v0.1.228: `window.require` pode existir e NÃO ser o require do Node
     // (algum shim do bundler/webview). Só retorna se o módulo expõe .request —
     // senão cai no fallback mobile (requestUrl) em vez de explodir adiante.
     const mod = req("https") as Partial<NodeHttpsLike> | null;

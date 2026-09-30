@@ -475,7 +475,7 @@ export async function runAgentTurn(
         const indexed = preparedCalls.map((prep, idx) => ({ prep, idx }));
         const groups = new Map<string, typeof indexed>();
         for (const item of indexed) {
-          const a = item.prep.call.arguments as Record<string, unknown>;
+          const a = item.prep.call.arguments;
           const writeKey = [a.path, a.from, a.to]
             .filter((v) => typeof v === "string" && v)
             .map((v) => String(v).replace(/^\/+|\/+$/g, ""))

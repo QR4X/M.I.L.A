@@ -257,7 +257,7 @@ export class OpenAIProvider implements Provider {
         width,
         height,
         text: it.revised_prompt,
-      } as MediaGenerationItem;
+      };
     });
   }
 

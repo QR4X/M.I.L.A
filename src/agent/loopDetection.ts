@@ -10,9 +10,9 @@
  * assinaturas distintas e furavam a detecção de loop.
  */
 function stableStringify(value: unknown): string {
-  return JSON.stringify(value, (_key, val) => {
+  return JSON.stringify(value, (_key: string, val: unknown) => {
     if (val && typeof val === "object" && !Array.isArray(val)) {
-      return Object.keys(val as Record<string, unknown>)
+      return Object.keys(val)
         .sort()
         .reduce<Record<string, unknown>>((acc, k) => {
           acc[k] = (val as Record<string, unknown>)[k];

@@ -47,7 +47,8 @@ export function Markdown({
       compRef.current = comp;
       // Monta FORA da tela e troca pronto: sem o quadro vazio do meio.
       // No documento do PRÓPRIO destino: numa janela destacada, um nó
-      // criado na janela principal entra como estrangeiro.
+      // criado na janela principal entra como estrangeiro. E createElement,
+      // não createEl: o helper do Obsidian anexa ao nó, e este é temporário.
       const tmp = el.ownerDocument.createElement("div");
       await MarkdownRenderer.render(app, md, tmp, "", comp);
       if (ref.current !== el || shownRef.current !== md) return;

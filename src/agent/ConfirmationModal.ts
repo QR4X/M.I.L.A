@@ -14,6 +14,7 @@
 import { App, Component, MarkdownRenderer, Modal, Setting } from "obsidian";
 import type { ToolCall, ToolDefinition } from "./types";
 import type { Translations } from "../i18n";
+import { texto } from "../core/texto";
 
 interface ConfirmOpts {
   toolCall: ToolCall;
@@ -72,11 +73,11 @@ export class ConfirmationModal extends Modal {
     });
 
     const summaryEl = contentEl.createDiv({ cls: "axxa-confirm-summary" });
-    summaryEl.createEl("div", {
+    summaryEl.createDiv({
       cls: "axxa-confirm-tool-name",
       text: opts.toolCall.name,
     });
-    summaryEl.createEl("div", {
+    summaryEl.createDiv({
       cls: "axxa-confirm-tool-desc",
       text: firstSentence(opts.definition.description),
     });
@@ -168,13 +169,13 @@ export class ConfirmationModal extends Modal {
     switch (name) {
       case "vault_edit": {
         pathRow(strings.confirmLabelEdit, path);
-        block(String(args.oldStr ?? ""), "del");
-        block(String(args.newStr ?? ""), "add");
+        block(texto(args.oldStr), "del");
+        block(texto(args.newStr), "add");
         return;
       }
       case "vault_create": {
         pathRow(strings.confirmLabelCreate, path, "axxa-confirm-path-add");
-        block(String(args.content ?? ""), "add");
+        block(texto(args.content), "add");
         return;
       }
       case "vault_create_folder": {
@@ -182,8 +183,8 @@ export class ConfirmationModal extends Modal {
         return;
       }
       case "vault_move": {
-        pathRow(strings.confirmLabelFrom, String(args.from ?? ""), "axxa-confirm-path-del");
-        pathRow(strings.confirmLabelTo, String(args.to ?? ""), "axxa-confirm-path-add");
+        pathRow(strings.confirmLabelFrom, texto(args.from), "axxa-confirm-path-del");
+        pathRow(strings.confirmLabelTo, texto(args.to), "axxa-confirm-path-add");
         return;
       }
       case "vault_delete": {

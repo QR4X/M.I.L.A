@@ -142,7 +142,10 @@ export class ConfirmModal extends Modal {
         b.setButtonText(this.opts.confirmLabel ?? "Confirm").onClick(() =>
           this.finish(true)
         );
-        if (this.opts.danger) b.setDestructive();
+        // setWarning e não setDestructive: o segundo só existe a partir do
+        // 1.13 e o manifest declara minAppVersion 1.11.4. Trocar exigiria
+        // subir o mínimo e deixar de fora quem ainda não atualizou o app.
+        if (this.opts.danger) b.setWarning();
         else b.setCta();
       });
   }

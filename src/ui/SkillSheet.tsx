@@ -35,7 +35,6 @@ import type AxxaPlugin from "../main";
 import { AssistantPanel, ComAssistente, useRun } from "./AssistantPanel";
 import { useSheetFit } from "./Sheet";
 import { limparRun } from "../assistant/store";
-import type { SkillSugerido } from "../assistant/parse";
 import { useAssistant } from "./useAssistant";
 
 /**
@@ -114,7 +113,7 @@ export function SkillForm({
   // resposta chegar. Quem sabe onde o texto vai é o formulário.
   useEffect(() => {
     if (runBody.fase !== "pronto" || !runBody.resultado) return;
-    set(runBody.resultado as SkillSugerido);
+    set(runBody.resultado);
     limparRun("skill");
     setAjudando("");
   }, [runBody.fase, runBody.resultado]);
