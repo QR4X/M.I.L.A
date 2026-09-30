@@ -46,9 +46,17 @@ export function Markdown({
       comp.load();
       compRef.current = comp;
       // Monta FORA da tela e troca pronto: sem o quadro vazio do meio.
-      // No documento do PRÓPRIO destino: numa janela destacada, um nó
-      // criado na janela principal entra como estrangeiro. E createElement,
-      // não createEl: o helper do Obsidian anexa ao nó, e este é temporário.
+      // No documento do PRÓPRIO destino: numa janela destacada, um nó criado
+      // na janela principal entra como estrangeiro.
+      //
+      // O lint do Obsidian pede `el.ownerDocument.win.createDiv()` aqui. NÃO
+      // usamos, e a razão foi apurada (0.9.9): `createDiv` não está declarado
+      // em `Window` na tipagem oficial — só como função global solta — e o
+      // app.js do próprio Obsidian não chama `.win.createDiv(` uma única vez.
+      // É sugestão da regra, não API firmada. O que está em jogo aqui é o
+      // markdown de TODA resposta do chat: se a função não existir na janela,
+      // nada renderiza. `createElement` faz o que precisamos (nó solto, no
+      // documento certo) e é DOM padrão. Fica, com o aviso.
       const tmp = el.ownerDocument.createElement("div");
       await MarkdownRenderer.render(app, md, tmp, "", comp);
       if (ref.current !== el || shownRef.current !== md) return;

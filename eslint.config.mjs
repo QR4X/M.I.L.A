@@ -12,9 +12,13 @@
 //     requestUrl não faz streaming, e streaming é o produto. Todo provider
 //     tem o caminho não-streaming por requestUrl como fallback (mobile).
 //
-//   prefer-create-el (4×)
-//     createEl/createDiv do Obsidian ANEXAM ao nó; esses quatro elementos
-//     nascem soltos de propósito (ver os comentários em menu.ts e Markdown.tsx).
+//   prefer-create-el (1×, Markdown.tsx)
+//     um nó temporário, solto de propósito, no documento do destino (janela
+//     destacada). A regra sugere `el.ownerDocument.win.createDiv()`; apurado
+//     na 0.9.9 que `createDiv` NÃO está declarado em `Window` na tipagem
+//     oficial e que o app.js do Obsidian não usa `.win.createDiv(` nenhuma
+//     vez. É sugestão, não API firmada — e o que depende disso é o markdown
+//     de toda resposta do chat. Os outros 3 saíram na 0.9.6.
 //
 //   no-deprecated (2×, `setWarning`)
 //     setDestructive é API 1.13 e o manifest declara minAppVersion 1.11.4.

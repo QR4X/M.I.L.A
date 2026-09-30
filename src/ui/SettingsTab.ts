@@ -449,7 +449,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
 
     if (f.key) {
       const key = f.key;
-      const row = new Setting(el)
+      new Setting(el)
         .setName("API key")
         .setDesc("Stored in the OS keychain (not in data.json).")
         .addText((t) => {
@@ -465,7 +465,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
             });
         });
     } else {
-      const row = new Setting(el)
+      new Setting(el)
         .setName("Endpoint")
         .setDesc("Local server address. Ollama needs no key.")
         .addText((t) =>
@@ -1161,7 +1161,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
 
   private renderEleven(el: HTMLElement): void {
     const s = this.s;
-    const row = new Setting(el)
+    new Setting(el)
       .setName("ElevenLabs key")
       .setDesc("From elevenlabs.io › Profile › API key. Stays on this device.")
       .addText((t) => {
