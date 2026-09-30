@@ -124,14 +124,18 @@ export function posicaoDoBalao(params: {
 
 export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
   if (actions.length === 0) return;
+  // O documento do BOTÃO que abriu o menu, não o global: numa janela
+  // destacada do Obsidian (pop-out), `document` é o da janela principal — o
+  // balão nasceria na janela errada, longe do item que o pediu.
+  const doc =
+    (ev.currentTarget as HTMLElement | null)?.ownerDocument ?? document;
   const raiz =
-    (document.querySelector(".axxa-root") as HTMLElement | null) ??
-    document.body;
+    (doc.querySelector(".axxa-root") as HTMLElement | null) ?? doc.body;
 
-  const camada = document.createElement("div");
+  const camada = doc.createElement("div");
   camada.className = "axxa-pop-layer";
 
-  const balao = document.createElement("div");
+  const balao = doc.createElement("div");
   balao.className = "axxa-pop";
   balao.setAttribute("role", "menu");
 
@@ -144,12 +148,12 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
   let fechar = () => {};
 
   const item = (a: MenuAction, aoTocar: () => void): HTMLButtonElement => {
-    const b = document.createElement("button");
+    const b = doc.createElement("button");
     b.type = "button";
     b.className = a.danger ? "axxa-pop-item is-danger" : "axxa-pop-item";
     b.setAttribute("role", "menuitem");
     if (a.icon) {
-      const ico = document.createElement("span");
+      const ico = doc.createElement("span");
       // Com cor, o ícone ganha a MESMA plaquinha da lista de projetos
       // (`axxa-thing-mark`): mesma forma, mesmo jeito de tingir — o fundo sai
       // do `currentColor`. Reusar a classe é o que garante que as duas telas
@@ -163,18 +167,18 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
       setIcon(ico, a.icon);
       b.appendChild(ico);
     }
-    const txt = document.createElement("span");
+    const txt = doc.createElement("span");
     txt.className = "axxa-pop-label";
     txt.textContent = a.label;
     b.appendChild(txt);
     if (a.checked) {
-      const marca = document.createElement("span");
+      const marca = doc.createElement("span");
       marca.className = "axxa-pop-check";
       setIcon(marca, "check");
       b.appendChild(marca);
     }
     if (a.children) {
-      const chev = document.createElement("span");
+      const chev = doc.createElement("span");
       chev.className = "axxa-pop-chev";
       setIcon(chev, "chevron-right");
       b.appendChild(chev);
@@ -255,11 +259,11 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
     }
   };
   fechar = () => {
-    document.removeEventListener("keydown", onKey);
+    doc.removeEventListener("keydown", onKey);
     camada.remove();
   };
   camada.addEventListener("click", fechar);
-  document.addEventListener("keydown", onKey);
+  doc.addEventListener("keydown", onKey);
   // Rolou a lista atrás: o balão perde a âncora e some, em vez de ficar
   // pairando sobre outro item.
   raiz.addEventListener("scroll", fechar, { capture: true, once: true });

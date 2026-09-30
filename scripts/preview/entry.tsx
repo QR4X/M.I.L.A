@@ -84,7 +84,7 @@ const unreadListeners = new Set<() => void>();
 const settingsListeners = new Set<() => void>();
 
 const plugin = {
-  manifest: { version: PREVIEW_VERSION, id: "axxa-os-ai-agent" },
+  manifest: { version: PREVIEW_VERSION, id: "axxa-agent" },
   // VAULT de mentira, com forma de verdade: é dele que sai a lista de notas do
   // "+" e do `[[`. Com `app: {}` o buscador não tinha o que buscar — e um
   // buscador vazio "passa" em qualquer teste.

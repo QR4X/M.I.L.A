@@ -1,14 +1,28 @@
 // src/agent/tools.ts
-// Implementações das ferramentas — chamadas reais ao vault via DataAdapter.
+// Implementações das ferramentas — o que o agente pode fazer no vault.
 //
 // Convenção: cada tool é (app, args) → Promise<string>. String volta como
 // content do ToolResult. Em caso de erro, joga Error — o caller marca isError.
 //
 // Paths são SEMPRE relativos à raiz do vault. Tools normalizam (/, \, ..)
 // e bloqueiam paths que tentam sair do vault (anti path-traversal).
+//
+// TUDO AQUI PASSA PELA API DE VAULT, nunca pelo `adapter`. A diferença não é
+// de estilo:
+//   · apagar pelo adapter é apagar PRA SEMPRE — passa por cima da preferência
+//     "Deleted files" de quem usa (lixeira do Obsidian, do sistema, ou nada) e
+//     não tem desfazer. Uma IA apagando nota sem volta é o pior defeito que
+//     este plugin poderia ter. `fileManager.trashFile` respeita a escolha;
+//   · mover pelo adapter move o ARQUIVO e mais nada: todo [[link]] que
+//     apontava pra ele apodrece em silêncio. `fileManager.renameFile` reescreve
+//     os links — é ele que faz "organize minhas notas" não destruir o vault;
+//   · escrever pelo adapter não avisa ninguém: o metadataCache não atualiza na
+//     hora e nenhum outro plugin fica sabendo.
+//
+// O adapter continua certo pra pasta OCULTA do app (.axxa) — lá a API de Vault
+// não enxerga —, mas isso é em chatPersistence, não aqui.
 
-import type { App } from "obsidian";
-import { ensureFolder } from "../core/chatPersistence";
+import { TFile, TFolder, type App, type TAbstractFile } from "obsidian";
 import type { ToolContext } from "./types";
 import { hybridSearch } from "../rag/hybrid";
 
@@ -55,6 +69,36 @@ export function normalizePath(path: string): string {
   return normalized;
 }
 
+/**
+ * O que existe nesse caminho, do ponto de vista do Obsidian.
+ *
+ * `null` quer dizer "não existe PRA ELE" — e é isso que interessa: uma nota
+ * que o Obsidian não indexou (dentro de pasta oculta, por exemplo) não é
+ * assunto do agente, que trabalha nas notas de quem o chamou.
+ */
+function achar(app: App, path: string): TAbstractFile | null {
+  return app.vault.getAbstractFileByPath(path);
+}
+
+/** O arquivo nesse caminho, ou um erro que diz o que deu errado. */
+function acharArquivo(app: App, path: string): TFile {
+  const alvo = achar(app, path);
+  if (!alvo) throw new Error(`File does not exist: ${path}`);
+  if (!(alvo instanceof TFile)) throw new Error(`${path} is not a file.`);
+  return alvo;
+}
+
+/** Garante a pasta do caminho, criando os níveis que faltam. */
+async function garantirPasta(app: App, dir: string): Promise<void> {
+  if (!dir) return;
+  const partes = dir.split("/");
+  let caminho = "";
+  for (const parte of partes) {
+    caminho = caminho ? `${caminho}/${parte}` : parte;
+    if (!achar(app, caminho)) await app.vault.createFolder(caminho);
+  }
+}
+
 function dirOf(path: string): string {
   const parts = path.split("/");
   if (parts.length <= 1) return "";
@@ -71,21 +115,23 @@ interface ListArgs {
 
 export async function toolVaultList(app: App, args: ListArgs): Promise<string> {
   const folder = args.folder ? normalizePath(args.folder) : "";
-  const adapter = app.vault.adapter;
-  if (folder && !(await adapter.exists(folder))) {
+  // A raiz do vault é uma TFolder como qualquer outra.
+  const alvo = folder ? achar(app, folder) : app.vault.getRoot();
+  if (!alvo) {
     return `Folder does not exist: ${folder}`;
   }
-  // v0.1.228: adapter.list pode lançar (path é arquivo, permissão, etc.) —
-  // devolve mensagem amigável em vez de propagar erro cru pro agent.
-  let listing: Awaited<ReturnType<typeof adapter.list>>;
-  try {
-    listing = await adapter.list(folder || "/");
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return `Could not list ${folder || "/"}: ${msg}`;
+  if (!(alvo instanceof TFolder)) {
+    return `${folder} is not a folder.`;
   }
-  const folders = listing.folders.map((f) => `📁 ${f}`);
-  const files = listing.files.map((f) => `📄 ${f}`);
+  // Pelos FILHOS da pasta, e não pelo adapter: assim o agente vê o vault como
+  // quem usa vê. O adapter devolveria `.obsidian`, `.trash` e a pasta oculta
+  // do próprio app junto — lixo que ele não tem o que fazer com.
+  const folders = alvo.children
+    .filter((c): c is TFolder => c instanceof TFolder)
+    .map((f) => `📁 ${f.path}`);
+  const files = alvo.children
+    .filter((c): c is TFile => c instanceof TFile)
+    .map((f) => `📄 ${f.path}`);
   const all = [...folders, ...files];
   if (all.length === 0) {
     return `Empty folder: ${folder || "/"}`;
@@ -106,15 +152,10 @@ const MAX_READ_CHARS = 200_000; // ~200K chars cap pra não estourar context
 
 export async function toolVaultRead(app: App, args: ReadArgs): Promise<string> {
   const path = normalizePath(args.path);
-  const adapter = app.vault.adapter;
-  if (!(await adapter.exists(path))) {
-    throw new Error(`File does not exist: ${path}`);
-  }
-  const stat = await adapter.stat(path);
-  if (!stat || stat.type !== "file") {
-    throw new Error(`${path} is not a file.`);
-  }
-  const content = await adapter.read(path);
+  const file = acharArquivo(app, path);
+  // `read`, não `cachedRead`: o agente costuma ler PRA EDITAR logo em
+  // seguida, e o cache pode estar um passo atrás do disco.
+  const content = await app.vault.read(file);
   if (content.length > MAX_READ_CHARS) {
     // v0.1.228: evita cortar no meio de um surrogate pair (emoji etc.) —
     // se o char no limite é high-surrogate, recua 1 pra não quebrar o grafema.
@@ -140,15 +181,13 @@ export async function toolVaultCreate(
   args: CreateArgs
 ): Promise<string> {
   const path = normalizePath(args.path);
-  const adapter = app.vault.adapter;
-  if (await adapter.exists(path)) {
+  if (achar(app, path)) {
     throw new Error(
       `File already exists: ${path}. Use vault_edit to modify or vault_move to rename.`
     );
   }
-  const dir = dirOf(path);
-  if (dir) await ensureFolder(adapter, dir);
-  await adapter.write(path, args.content ?? "");
+  await garantirPasta(app, dirOf(path));
+  await app.vault.create(path, args.content ?? "");
   return `File created: ${path} (${(args.content ?? "").length} chars)`;
 }
 
@@ -166,11 +205,8 @@ interface EditArgs {
 
 export async function toolVaultEdit(app: App, args: EditArgs): Promise<string> {
   const path = normalizePath(args.path);
-  const adapter = app.vault.adapter;
-  if (!(await adapter.exists(path))) {
-    throw new Error(`File does not exist: ${path}`);
-  }
-  const content = await adapter.read(path);
+  const file = acharArquivo(app, path);
+  const content = await app.vault.read(file);
   const occurrences = content.split(args.oldStr).length - 1;
   if (occurrences === 0) {
     throw new Error(
@@ -186,8 +222,11 @@ export async function toolVaultEdit(app: App, args: EditArgs): Promise<string> {
   // split/join (NÃO .replace): replace interpreta $&, $1, $$ no newStr e
   // corromperia trechos com '$' (regex, TeX, preços) silenciosamente. Como já
   // garantimos occurrences===1, split/join troca exatamente a única ocorrência.
-  const newContent = content.split(args.oldStr).join(args.newStr);
-  await adapter.write(path, newContent);
+  // `process` lê e escreve num passo só, então uma alteração feita entre a
+  // leitura de cima e a escrita não é atropelada em silêncio.
+  await app.vault.process(file, (atual) =>
+    atual.split(args.oldStr).join(args.newStr)
+  );
   const delta = args.newStr.length - args.oldStr.length;
   const sign = delta >= 0 ? "+" : "";
   return `Edited ${path} (${sign}${delta} chars)`;
@@ -205,24 +244,24 @@ interface MoveArgs {
 export async function toolVaultMove(app: App, args: MoveArgs): Promise<string> {
   const from = normalizePath(args.from);
   const to = normalizePath(args.to);
-  const adapter = app.vault.adapter;
-  if (!(await adapter.exists(from))) {
+  const alvo = achar(app, from);
+  if (!alvo) {
     throw new Error(`Source does not exist: ${from}`);
   }
-  if (await adapter.exists(to)) {
+  if (achar(app, to)) {
     throw new Error(`Destination already exists: ${to}. Refusing to overwrite.`);
   }
-  // v0.1.228: se a origem é pasta, bloqueia mover pra dentro dela mesma
-  // (to === from ou descendente) — rename de pasta nesse caso corromperia.
-  const fromStat = await adapter.stat(from);
-  if (fromStat?.type === "folder" && (to === from || to.startsWith(from + "/"))) {
+  // Pasta pra dentro dela mesma corromperia a árvore.
+  if (alvo instanceof TFolder && (to === from || to.startsWith(from + "/"))) {
     throw new Error("Cannot move a folder into itself.");
   }
-  const dir = dirOf(to);
-  if (dir) await ensureFolder(adapter, dir);
-  // Usa rename do adapter (atomic em sistemas POSIX)
-  await adapter.rename(from, to);
-  return `Moved: ${from} → ${to}`;
+  await garantirPasta(app, dirOf(to));
+  // `fileManager.renameFile`, e NÃO `adapter.rename`: é ele que reescreve
+  // todo [[link]] que apontava pro caminho antigo. Com o adapter, o arquivo
+  // chegava no lugar novo e o vault inteiro ficava cheio de link quebrado —
+  // sem aviso, e justamente na ferramenta que existe pra organizar notas.
+  await app.fileManager.renameFile(alvo, to);
+  return `Moved: ${from} → ${to} (links updated)`;
 }
 
 // ============================================================
@@ -238,27 +277,22 @@ export async function toolVaultDelete(
   args: DeleteArgs
 ): Promise<string> {
   const path = normalizePath(args.path);
-  const adapter = app.vault.adapter;
-  if (!(await adapter.exists(path))) {
+  const alvo = achar(app, path);
+  if (!alvo) {
     throw new Error(`File does not exist: ${path}`);
   }
-  const stat = await adapter.stat(path);
-  if (!stat) {
-    throw new Error(`Stat failed for ${path}`);
+  if (alvo instanceof TFolder && alvo.children.length > 0) {
+    throw new Error(
+      `Folder ${path} is not empty. Delete the files first (safety).`
+    );
   }
-  if (stat.type === "folder") {
-    // Bloqueia delete de pasta com conteúdo (safety)
-    const listing = await adapter.list(path);
-    if (listing.files.length + listing.folders.length > 0) {
-      throw new Error(
-        `Folder ${path} is not empty. Delete the files first (safety).`
-      );
-    }
-    await adapter.rmdir(path, false);
-    return `Empty folder deleted: ${path}`;
-  }
-  await adapter.remove(path);
-  return `File deleted: ${path}`;
+  // `fileManager.trashFile`, e NÃO `adapter.remove`: ele obedece a preferência
+  // "Deleted files" de quem usa — lixeira do Obsidian, lixeira do sistema, ou
+  // apagar de vez, como a pessoa escolheu. Com o adapter era sempre a terceira,
+  // sem desfazer e sem ela ter pedido isso.
+  await app.fileManager.trashFile(alvo);
+  const oQue = alvo instanceof TFolder ? "Empty folder" : "File";
+  return `${oQue} moved to trash: ${path}`;
 }
 
 // ============================================================
@@ -274,11 +308,10 @@ export async function toolVaultCreateFolder(
   args: CreateFolderArgs
 ): Promise<string> {
   const path = normalizePath(args.path);
-  const adapter = app.vault.adapter;
-  if (await adapter.exists(path)) {
+  if (achar(app, path)) {
     return `Folder already exists: ${path}`;
   }
-  await ensureFolder(adapter, path);
+  await garantirPasta(app, path);
   return `Folder created: ${path}`;
 }
 

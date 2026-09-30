@@ -7,7 +7,7 @@
 
 ## 1. Visão
 
-Transformar o AXXA OS — AI Agent em um **workspace de IA "Cowork-like" centrado no mobile**, onde o usuário conversa e despacha tarefas agênticas de qualquer dispositivo, e a execução pesada roda em um **runtime central (VPS "master")** operando diretamente sobre o vault — sem depender de um PC ligado.
+Transformar o AXXA Agent em um **workspace de IA "Cowork-like" centrado no mobile**, onde o usuário conversa e despacha tarefas agênticas de qualquer dispositivo, e a execução pesada roda em um **runtime central (VPS "master")** operando diretamente sobre o vault — sem depender de um PC ligado.
 
 **Frase de visão:** *"Seu vault com um Claude Code morando dentro dele — acessível do bolso."*
 

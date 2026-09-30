@@ -92,7 +92,7 @@ export class OpenAIProvider implements Provider {
   ): Promise<ProviderResponse> {
     if (!apiKey || !apiKey.trim()) {
       throw new ProviderError(
-        "OpenAI API key not configured. Go to Settings → AXXA OS to paste your key.",
+        "OpenAI API key not configured. Go to Settings → AXXA Agent to paste your key.",
         "no-key"
       );
     }

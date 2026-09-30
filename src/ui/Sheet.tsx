@@ -294,8 +294,11 @@ export function Sheet({
         onClose();
       }
     };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    // O documento do painel, não o global: numa janela destacada do
+    // Obsidian eles são documentos diferentes.
+    const doc = panelRef.current?.ownerDocument ?? document;
+    doc.addEventListener("keydown", onKey);
+    return () => doc.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
   // O foco é da ABERTURA, e só dela. Junto do listener acima ele dependia de
@@ -452,7 +455,7 @@ export function Sheet({
       // preservar (pôr o cursor, selecionar, puxar a alcinha) só acontece
       // DENTRO do campo que já tem o foco. Campo sem foco é superfície como
       // qualquer outra.
-      return document.activeElement === campo;
+      return campo.ownerDocument.activeElement === campo;
     };
 
     const comecar = (y: number) => {

@@ -1,7 +1,7 @@
 {
-  "name": "axxa-os-ai-agent",
-  "version": "0.7.57",
-  "description": "AXXA OS — AI Agent (Obsidian plugin).",
+  "name": "axxa-agent",
+  "version": "0.8.0",
+  "description": "AXXA Agent (Obsidian plugin).",
   "private": true,
   "scripts": {
     "dev": "node esbuild.config.mjs",

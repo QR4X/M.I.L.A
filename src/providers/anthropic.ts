@@ -307,7 +307,7 @@ export class AnthropicProvider implements Provider {
   async chat(req: ProviderRequest, apiKey: string): Promise<ProviderResponse> {
     if (!apiKey || !apiKey.trim()) {
       throw new ProviderError(
-        "Anthropic API key not configured. Go to Settings → AXXA OS.",
+        "Anthropic API key not configured. Go to Settings → AXXA Agent.",
         "no-key"
       );
     }
@@ -380,7 +380,7 @@ export class AnthropicProvider implements Provider {
   ): Promise<ProviderResponse> {
     if (!apiKey || !apiKey.trim()) {
       throw new ProviderError(
-        "Anthropic API key not configured. Go to Settings → AXXA OS.",
+        "Anthropic API key not configured. Go to Settings → AXXA Agent.",
         "no-key"
       );
     }

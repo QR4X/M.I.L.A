@@ -895,8 +895,9 @@ Open Settings › Providers to add it, then run the connection test.`,
 
   // Abrir uma sheet tira o foco do campo — senão o teclado sobe por cima dela.
   const openSheet = (which: "model" | "effort" | "plus") => {
+    const campo = textareaRef.current;
     focoAntesDaFolha.current =
-      document.activeElement === textareaRef.current;
+      campo != null && campo.ownerDocument.activeElement === campo;
     textareaRef.current?.blur();
     // A folha de modelos abre sempre no provider da sessão, e no primeiro nível.
     if (which === "model") {

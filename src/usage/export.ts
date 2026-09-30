@@ -73,7 +73,7 @@ export function generateUsageMarkdown(
   lines.push("---");
   lines.push("");
 
-  lines.push(`# AXXA OS — Usage Report`);
+  lines.push(`# AXXA Agent — Usage Report`);
   lines.push("");
   lines.push(`> Período: **${periodLabel(agg, periodDays)}** · gerado em ${generatedAt}`);
   lines.push("");

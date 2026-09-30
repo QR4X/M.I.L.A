@@ -218,6 +218,6 @@ export function openPluginSettings(plugin: AxxaPlugin): void {
     app.setting?.openTabById?.(plugin.manifest.id);
   } catch (err) {
     console.error("[axxa] abrir Settings falhou:", err);
-    new Notice("Open Settings → Community plugins → AXXA OS.");
+    new Notice("Open Settings → Community plugins → AXXA Agent.");
   }
 }

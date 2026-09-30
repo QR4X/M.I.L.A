@@ -46,7 +46,9 @@ export function Markdown({
       comp.load();
       compRef.current = comp;
       // Monta FORA da tela e troca pronto: sem o quadro vazio do meio.
-      const tmp = document.createElement("div");
+      // No documento do PRÓPRIO destino: numa janela destacada, um nó
+      // criado na janela principal entra como estrangeiro.
+      const tmp = el.ownerDocument.createElement("div");
       await MarkdownRenderer.render(app, md, tmp, "", comp);
       if (ref.current !== el || shownRef.current !== md) return;
       el.replaceChildren(...Array.from(tmp.childNodes));

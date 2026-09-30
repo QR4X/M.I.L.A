@@ -1,4 +1,4 @@
-/* AXXA OS — AI Agent · styles/main.css
+/* AXXA Agent · styles/main.css
    Redesign, camada 1: a tela inicial do chat e o menu lateral.
    Mobile-first. Todas as cores saem das variáveis do Obsidian — o plugin
    herda o tema do usuário (claro/escuro, qualquer theme) em vez de impor
@@ -31,7 +31,7 @@
    pra não mexer no bloco transplantado. */
 
 
-.workspace-leaf-content[data-type="axxa-os-ai-agent"] .view-content {
+.workspace-leaf-content[data-type="axxa-agent"] .view-content {
   padding-left: 0 !important;
   padding-right: 0 !important;
   padding-top: 0 !important;
@@ -45,7 +45,7 @@
 }
 body.is-mobile
 .workspace-tab-container
-.workspace-leaf-content[data-type="axxa-os-ai-agent"]
+.workspace-leaf-content[data-type="axxa-agent"]
 .view-content {
   padding-bottom: var(--size-4-1) !important;
 }
@@ -55,7 +55,7 @@ body.is-mobile
 @supports selector(body:has(*)) {
   body.is-mobile:not(.axxa-fullscreen):has(.mobile-navbar):not(.is-hidden-nav)
     .workspace-tab-container
-    .workspace-leaf-content[data-type="axxa-os-ai-agent"]
+    .workspace-leaf-content[data-type="axxa-agent"]
     .view-content {
     padding-bottom: calc(
             var(--navbar-height, 50px) +
@@ -80,7 +80,7 @@ body.is-mobile
    ============================================================ */
 /* Chrome do drawer: no mobile o Obsidian mostra DOIS pedaços redundantes — o
    header do drawer (topo) e a barra de opções de tab na BASE (ícone da view +
-   "AXXA OS" + seletor de abas ⇕). Essa dupla `.workspace-drawer-header` +
+   "AXXA Agent" + seletor de abas ⇕). Essa dupla `.workspace-drawer-header` +
    `.workspace-drawer-tab-options` é EXATAMENTE a que a regra axxa-keyboard-open
    já esconde em produção quando o teclado abre — aqui espelhamos a mesma dupla
    comprovada (a v0.1.244 chutou `-active-tab-header` e errou o nome da barra da
@@ -103,7 +103,7 @@ body.is-mobile .workspace-drawer.axxa-fullscreen .workspace-drawer-tab-options {
    pra nunca tocar outra view. */
 body.is-mobile
   .workspace-drawer.axxa-fullscreen
-  .workspace-leaf-content[data-type="axxa-os-ai-agent"]
+  .workspace-leaf-content[data-type="axxa-agent"]
   .view-header {
   display: none !important;
 }
@@ -129,7 +129,7 @@ body.is-mobile .workspace-drawer.axxa-fullscreen .axxa-topbar {
 }
 body.is-mobile
   .workspace-drawer.axxa-fullscreen
-  .workspace-leaf-content[data-type="axxa-os-ai-agent"]
+  .workspace-leaf-content[data-type="axxa-agent"]
   .view-content {
   padding-top: 0 !important;
   margin-top: 0 !important;
@@ -151,10 +151,10 @@ body.is-mobile
   .workspace-drawer-active-tab-content,
 body.is-mobile
   .workspace-drawer.axxa-fullscreen
-  .workspace-leaf-content[data-type="axxa-os-ai-agent"],
+  .workspace-leaf-content[data-type="axxa-agent"],
 body.is-mobile
   .workspace-drawer.axxa-fullscreen
-  .workspace-leaf-content[data-type="axxa-os-ai-agent"]
+  .workspace-leaf-content[data-type="axxa-agent"]
   .view-content {
   background: var(--background-primary);
 }
@@ -168,10 +168,10 @@ body.is-mobile.theme-dark
   .workspace-drawer-active-tab-content,
 body.is-mobile.theme-dark
   .workspace-drawer.axxa-fullscreen
-  .workspace-leaf-content[data-type="axxa-os-ai-agent"],
+  .workspace-leaf-content[data-type="axxa-agent"],
 body.is-mobile.theme-dark
   .workspace-drawer.axxa-fullscreen
-  .workspace-leaf-content[data-type="axxa-os-ai-agent"]
+  .workspace-leaf-content[data-type="axxa-agent"]
   .view-content {
   background: var(--background-secondary);
 }
@@ -232,11 +232,11 @@ body.is-mobile
   margin: 0 !important;
 }
 
-.workspace-leaf-content[data-type="axxa-os-ai-agent"] {
+.workspace-leaf-content[data-type="axxa-agent"] {
   position: relative;
   isolation: auto;
 }
-.workspace-leaf-content[data-type="axxa-os-ai-agent"] .view-content {
+.workspace-leaf-content[data-type="axxa-agent"] .view-content {
   position: relative;
   /* z-index 10 (snippet do Inspector): põe a view da AXXA na frente da leaf
      nativa de baixo (o "No file") pra o composer não ficar atrás dela. */
@@ -247,7 +247,7 @@ body.is-mobile
   display: flex;
   flex-direction: column;
 }
-.workspace-leaf-content[data-type="axxa-os-ai-agent"] {
+.workspace-leaf-content[data-type="axxa-agent"] {
   height: 100%;
   width: 100%;
 }
@@ -267,11 +267,11 @@ body.is-mobile
    o continente. `overflow: hidden` mata a barra E devolve os 5px de largura.
    A (2) some junto com as outras do nosso subtree: no celular o polegar já
    diz onde está o scroll, e a referência não mostra barra nenhuma. */
-.workspace-leaf-content[data-type="axxa-os-ai-agent"] .view-content {
+.workspace-leaf-content[data-type="axxa-agent"] .view-content {
   overflow: hidden;
 }
 
-.workspace-leaf-content[data-type="axxa-os-ai-agent"] .view-content,
+.workspace-leaf-content[data-type="axxa-agent"] .view-content,
 .axxa-root,
 .axxa-root *,
 .axxa-confirm-modal,
@@ -280,7 +280,7 @@ body.is-mobile
   -ms-overflow-style: none;
 }
 
-.workspace-leaf-content[data-type="axxa-os-ai-agent"] .view-content::-webkit-scrollbar,
+.workspace-leaf-content[data-type="axxa-agent"] .view-content::-webkit-scrollbar,
 .axxa-root::-webkit-scrollbar,
 .axxa-root *::-webkit-scrollbar,
 .axxa-confirm-modal::-webkit-scrollbar,
@@ -291,10 +291,10 @@ body.is-mobile
 }
 
 @supports selector(:has(*)) {
-  .workspace-drawer-active-tab-container:has(.workspace-leaf-content[data-type="axxa-os-ai-agent"])
+  .workspace-drawer-active-tab-container:has(.workspace-leaf-content[data-type="axxa-agent"])
     .workspace-tab-container,
-  .workspace-drawer-active-tab-container:has(.workspace-leaf-content[data-type="axxa-os-ai-agent"])
-    .workspace-leaf:has(.workspace-leaf-content[data-type="axxa-os-ai-agent"]) {
+  .workspace-drawer-active-tab-container:has(.workspace-leaf-content[data-type="axxa-agent"])
+    .workspace-leaf:has(.workspace-leaf-content[data-type="axxa-agent"]) {
     height: 100%;
     width: 100%;
   }
@@ -319,10 +319,10 @@ body.is-mobile
    intocada — tem especificidade maior e ali o respiro é desejado. */
 body.is-mobile
   .workspace-tab-container
-  .workspace-leaf-content[data-type="axxa-os-ai-agent"]
+  .workspace-leaf-content[data-type="axxa-agent"]
   .view-content,
 body.is-mobile
-  .workspace-leaf-content[data-type="axxa-os-ai-agent"]
+  .workspace-leaf-content[data-type="axxa-agent"]
   .view-content {
   padding-bottom: 0 !important;
 }

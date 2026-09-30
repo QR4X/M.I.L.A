@@ -13,11 +13,11 @@ Fork do `obsidianmd/obsidian-releases`, e **adicione no FIM do array** em
 
 ```json
 {
-  "id": "axxa-os-ai-agent",
-  "name": "AXXA OS - AI Agent",
+  "id": "axxa-agent",
+  "name": "AXXA Agent",
   "author": "Axxa Lab",
   "description": "Chat with AI, query your vault with local RAG, and let an agent read and edit your notes across six LLM providers. Bring your own API key.",
-  "repo": "axxalab/axxa-os-ai-agent"
+  "repo": "axxalab/axxa-agent"
 }
 ```
 
@@ -27,7 +27,7 @@ Fork do `obsidianmd/obsidian-releases`, e **adicione no FIM do array** em
 
 ## 2. Descrição do PR (cole no corpo)
 
-> **AXXA OS — AI Agent**
+> **AXXA Agent**
 >
 > An AI workspace inside Obsidian: chat across six LLM providers (OpenAI,
 > Anthropic, Google Gemini, OpenRouter, NVIDIA NIM, Ollama), local RAG over your

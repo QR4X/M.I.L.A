@@ -18,7 +18,7 @@ import { App } from "./App";
 import { isDrawerOnScreen, isRightDrawer } from "./fullscreenScope";
 import { hapticsOn, setHapticsEnabled } from "./haptics";
 
-export const VIEW_TYPE_AXXA = "axxa-os-ai-agent";
+export const VIEW_TYPE_AXXA = "axxa-agent";
 
 /** Espera a animação da gaveta terminar antes de reavaliar a geometria. */
 const DRAWER_SETTLE_MS = 260;
@@ -46,7 +46,7 @@ export class AxxaView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "AXXA OS";
+    return "AXXA Agent";
   }
 
   getIcon(): string {

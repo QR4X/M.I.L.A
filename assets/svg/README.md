@@ -1,6 +1,6 @@
 # SVG source assets
 
-Arquivos SVG crus usados na UI do AXXA OS. São **fonte** — viram código inline
+Arquivos SVG crus usados na UI do AXXA Agent. São **fonte** — viram código inline
 no `main.js` no build (o plugin distribui só `main.js` + `manifest.json` +
 `styles.css`), então esta pasta **não é distribuída**, só serve de origem.
 

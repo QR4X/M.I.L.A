@@ -387,7 +387,7 @@ export default class AxxaPlugin extends Plugin {
 
   /** Índice persistido (JSON no diretório do plugin, fora do vault content). */
   private chatIndexPath(): string {
-    const dir = this.manifest.dir ?? ".obsidian/plugins/axxa-os-ai-agent";
+    const dir = this.manifest.dir ?? ".obsidian/plugins/axxa-agent";
     return `${dir}/chatIndex.json`;
   }
   /** Versão do schema do índice persistido. Caches de versão desconhecida são
@@ -734,7 +734,7 @@ export default class AxxaPlugin extends Plugin {
 
   /** Caminho do cache de specs dos modelos (JSON no diretório do plugin). */
   private modelInfoCachePath(): string {
-    const dir = this.manifest.dir ?? ".obsidian/plugins/axxa-os-ai-agent";
+    const dir = this.manifest.dir ?? ".obsidian/plugins/axxa-agent";
     return `${dir}/modelInfoCache.json`;
   }
 
@@ -838,7 +838,7 @@ export default class AxxaPlugin extends Plugin {
     );
 
     // Ícone na ribbon (sidebar esquerda do Obsidian).
-    this.addRibbonIcon("bot", "AXXA OS", () => {
+    this.addRibbonIcon("bot", "AXXA Agent", () => {
       this.activateView();
     });
 
@@ -846,13 +846,15 @@ export default class AxxaPlugin extends Plugin {
     // Logos dos providers como ícones do Obsidian (setIcon("logo-openai")…).
     registerBrandLogos();
 
+    // O Obsidian já prefixa o comando com o nome do plugin na paleta, então
+    // "Open AXXA Agent" viraria "AXXA Agent: Open AXXA Agent".
     this.addCommand({
-      id: "open-axxa-agent",
-      name: "Open AI Agent",
+      id: "open-panel",
+      name: "Open panel",
       callback: () => this.activateView(),
     });
 
-    // Settings tab — aparece em Settings -> Community Plugins -> AXXA OS.
+    // Settings tab — aparece em Settings -> Community Plugins -> AXXA Agent.
     this.settingsTab = new AxxaSettingsTab(this.app, this);
     this.addSettingTab(this.settingsTab);
 
@@ -1032,7 +1034,7 @@ export default class AxxaPlugin extends Plugin {
 
   /** Caminho do arquivo de settings do plugin. */
   private dataPath(nome = "data.json"): string {
-    const dir = this.manifest.dir ?? ".obsidian/plugins/axxa-os-ai-agent";
+    const dir = this.manifest.dir ?? ".obsidian/plugins/axxa-agent";
     return `${dir}/${nome}`;
   }
 

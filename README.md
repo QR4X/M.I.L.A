@@ -1,19 +1,19 @@
-# AXXA OS — AI Agent
+# AXXA Agent
 
 > **Your AI workspace, native to Obsidian.** Chat, ask your vault, and let an agent act on your notes — across 6 LLM providers, with your own API keys. Mobile-first.
 
-[![Version](https://img.shields.io/badge/version-0.4.0-6c5ce7)](manifest.json)
+[![Version](https://img.shields.io/badge/version-0.7.57-6c5ce7)](manifest.json)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.11.4%2B-7c3aed)](https://obsidian.md)
 [![Mobile](https://img.shields.io/badge/mobile-supported-success)](#)
 
-> **Status (v0.4.0 · Sep 2026):** the UI has been reset to a bare, unstyled CRUD shell while the app is redesigned from scratch. The engine described below (6 providers, local RAG, agent with diff-approval, Markdown persistence) is intact and drives the new shell — see [docs/CRUD_BASE.md](docs/CRUD_BASE.md). The feature descriptions in this README describe the target product; the current build is deliberately crude.
->
-> **Status (PT-BR):** a interface foi zerada para uma casca CRUD crua enquanto o app é redesenhado do zero. O motor (6 providers, RAG local, agente com aprovação de diff, persistência em Markdown) está intacto e alimenta a casca nova — ver [docs/CRUD_BASE.md](docs/CRUD_BASE.md).
+> **Status (v0.7.57 · Sep 2026):** feature-complete e em ciclo de revisão
+> para envio à galeria de plugins da comunidade. As telas descritas abaixo
+> são as que estão no build.
 
-AXXA OS — AI Agent turns Obsidian into a full AI workspace. It feels like a native feature, not a bolted-on panel: a chat lives in the right sidebar (a drawer on mobile), talks to the model of your choice, and — when you let it — reads, searches, and edits the notes in your vault. Bring your own keys, pick any of six providers, and keep every conversation as plain Markdown inside your vault.
+AXXA Agent turns Obsidian into a full AI workspace. It feels like a native feature, not a bolted-on panel: a chat lives in the right sidebar (a drawer on mobile), talks to the model of your choice, and — when you let it — reads, searches, and edits the notes in your vault. Bring your own keys, pick any of six providers, and keep every conversation as plain Markdown inside your vault.
 
-> 🇧🇷 **Versão em português** mais abaixo → [Pular para PT-BR](#-axxa-os--ai-agent-português).
+> 🇧🇷 **Versão em português** mais abaixo → [Pular para PT-BR](#-axxa-agent-português).
 
 ---
 
@@ -49,7 +49,7 @@ AXXA OS — AI Agent turns Obsidian into a full AI workspace. It feels like a na
 
 ## 🔒 Privacy & local-first
 
-AXXA OS is built for the Obsidian ethos — **your notes are yours**.
+AXXA Agent is built for the Obsidian ethos — **your notes are yours**.
 
 - **Everything stays in your vault.** Chats, generated media, and skills are plain `.md` files on disk. Nothing is uploaded to us.
 - **No telemetry, no tracking, no accounts.** The plugin phones home to *nobody*. The only network calls are the ones you trigger to the LLM provider you chose (with your own key).
@@ -67,13 +67,13 @@ AXXA OS is built for the Obsidian ethos — **your notes are yours**.
 
 1. Open **Settings → Community plugins**.
 2. Make sure **Restricted mode** is off.
-3. Click **Browse**, search for **AXXA OS — AI Agent**, and install.
-4. **Enable** the plugin. Open it from the ribbon icon or the command palette (**"AXXA OS: Open"**).
+3. Click **Browse**, search for **AXXA Agent**, and install.
+4. **Enable** the plugin. Open it from the ribbon icon or the command palette (**"AXXA Agent: Open"**).
 
 ### Manual installation
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](../../releases).
-2. Copy them into your vault at `<vault>/.obsidian/plugins/axxa-os-ai-agent/`.
+2. Copy them into your vault at `<vault>/.obsidian/plugins/axxa-agent/`.
 3. Reload Obsidian and enable the plugin in **Settings → Community plugins**.
 
 > **Requires** Obsidian **1.11.4+** (for OS-level secret storage of API keys). Works on desktop and mobile.
@@ -158,7 +158,7 @@ A single **Effort** selector (Low → Max) scales how hard the model works: max 
 
 ## 🔐 Privacy & network use
 
-AXXA OS — AI Agent is **bring-your-own-key** and stores everything locally. Specifically:
+AXXA Agent is **bring-your-own-key** and stores everything locally. Specifically:
 
 - **Your API keys** are stored in your operating system's secure storage (Obsidian's `secretStorage` / OS keychain) — **not** in the plugin's `data.json`, so they don't leak through Obsidian Sync or vault backups. They're sent **only** to the corresponding provider's official API endpoint. *(Legacy keys from older versions are migrated automatically on first load.)*
 - **Network requests** are made **only** to the LLM/embedding/image provider you choose (OpenAI, Anthropic, Google, OpenRouter, Nvidia, or your local Ollama), to send your prompts and vault context and stream back responses.
@@ -180,7 +180,7 @@ When you use a third-party provider, your data is subject to **that provider's**
 
 ## 💜 Support
 
-If AXXA OS — AI Agent helps your workflow, consider [supporting development](https://axxa.lab/support). Built by **Axxa Lab**.
+If AXXA Agent helps your workflow, consider [supporting development](https://axxa.lab/support). Built by **Axxa Lab**.
 
 ---
 
@@ -191,11 +191,11 @@ If AXXA OS — AI Agent helps your workflow, consider [supporting development](h
 ---
 ---
 
-# 🇧🇷 AXXA OS — AI Agent (Português)
+# 🇧🇷 AXXA Agent (Português)
 
 > **Seu workspace de IA, nativo no Obsidian.** Converse, pergunte ao seu vault e deixe um agente agir nas suas notas — em 6 provedores de LLM, com suas próprias chaves. Mobile-first.
 
-O AXXA OS — AI Agent transforma o Obsidian num workspace de IA completo. Parece uma feature nativa, não um painel colado: o chat fica na sidebar direita (drawer no mobile), fala com o modelo que você escolher e — quando você permite — lê, busca e edita as notas do seu vault. Use suas próprias chaves, escolha entre seis provedores, e guarde cada conversa como Markdown puro dentro do vault.
+O AXXA Agent transforma o Obsidian num workspace de IA completo. Parece uma feature nativa, não um painel colado: o chat fica na sidebar direita (drawer no mobile), fala com o modelo que você escolher e — quando você permite — lê, busca e edita as notas do seu vault. Use suas próprias chaves, escolha entre seis provedores, e guarde cada conversa como Markdown puro dentro do vault.
 
 ## ✨ Destaques
 
@@ -212,9 +212,9 @@ O AXXA OS — AI Agent transforma o Obsidian num workspace de IA completo. Parec
 
 ## 🚀 Instalação
 
-**Pela loja do Obsidian (recomendado, após publicação):** Settings → Community plugins → Browse → busque **AXXA OS — AI Agent** → Install → Enable.
+**Pela loja do Obsidian (recomendado, após publicação):** Settings → Community plugins → Browse → busque **AXXA Agent** → Install → Enable.
 
-**Manual:** baixe `main.js`, `manifest.json` e `styles.css` da [última release](../../releases) e copie pra `<vault>/.obsidian/plugins/axxa-os-ai-agent/`. Recarregue o Obsidian e ative o plugin.
+**Manual:** baixe `main.js`, `manifest.json` e `styles.css` da [última release](../../releases) e copie pra `<vault>/.obsidian/plugins/axxa-agent/`. Recarregue o Obsidian e ative o plugin.
 
 > **Requer** Obsidian **1.11.4+** (pra guardar as chaves no cofre seguro do SO). Funciona em desktop e mobile.
 

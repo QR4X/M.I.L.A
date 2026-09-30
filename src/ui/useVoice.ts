@@ -535,11 +535,14 @@ export function useVoice(opts: VoiceOptions): Voice {
   // já foi falado.
   useEffect(() => {
     if (state === "idle" || state === "working") return;
+    // `activeDocument` é do Obsidian: aponta pro documento da janela em uso,
+    // seja a principal ou uma destacada.
+    const doc = activeDocument ?? document;
     const onHide = () => {
-      if (document.hidden) finish();
+      if (doc.hidden) finish();
     };
-    document.addEventListener("visibilitychange", onHide);
-    return () => document.removeEventListener("visibilitychange", onHide);
+    doc.addEventListener("visibilitychange", onHide);
+    return () => doc.removeEventListener("visibilitychange", onHide);
   }, [state, finish]);
 
   return { state, seconds, levels, start, cancel, finish };

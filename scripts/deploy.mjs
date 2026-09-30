@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const CONFIG_FILE = ".axxa.local.json";
-const PLUGIN_FOLDER = "axxa-os-ai-agent";
+const PLUGIN_FOLDER = "axxa-agent";
 const FILES = ["main.js", "manifest.json", "styles.css"];
 
 function readConfig() {

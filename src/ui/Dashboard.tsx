@@ -96,7 +96,7 @@ export function Dashboard({
             a única tela que não é "um lugar" — é a casa. Como nome do app ele
             é assinatura, não cabeçalho, e o espaço que ele ocupava em cima
             virou quase uma conversa a mais na lista. */}
-        <span className="axxa-brand axxa-topbar-brand">AXXA AI AGENT</span>
+        <span className="axxa-brand axxa-topbar-brand">AXXA AGENT</span>
 
         {/* Tela cheia SÓ aqui, e só no celular. Ela era uma linha do menu, e
             menu é lugar de ir pra algum lugar — isto não vai a lugar nenhum,

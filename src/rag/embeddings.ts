@@ -277,8 +277,8 @@ export async function embedBatchOpenRouter(
             headers: {
               Authorization: `Bearer ${apiKey}`,
               "Content-Type": "application/json",
-              "HTTP-Referer": "https://github.com/axxalab/axxa-os-ai-agent",
-              "X-Title": "AXXA OS - AI Agent",
+              "HTTP-Referer": "https://github.com/axxalab/axxa-agent",
+              "X-Title": "AXXA Agent",
             },
             body: JSON.stringify(body),
             throw: false,

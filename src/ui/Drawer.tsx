@@ -91,11 +91,14 @@ export function Drawer({
         onClose();
       }
     };
-    document.addEventListener("keydown", onKey);
+    // O documento do painel, não o global: numa janela destacada do
+    // Obsidian eles são documentos diferentes.
+    const doc = panelRef.current?.ownerDocument ?? document;
+    doc.addEventListener("keydown", onKey);
     // Sem preventScroll o foco rola o ancestral atrás da gaveta (ela também
     // entra deslocada) — o mesmo pulo da folha.
     panelRef.current?.focus({ preventScroll: true });
-    return () => document.removeEventListener("keydown", onKey);
+    return () => doc.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
   /** Os três do motor + qualquer outro que apareça nas conversas gravadas. */
@@ -120,7 +123,7 @@ export function Drawer({
         tabIndex={-1}
       >
         <header className="axxa-drawer-head">
-          <span className="axxa-brand">AXXA OS</span>
+          <span className="axxa-brand">AXXA Agent</span>
           <button
             type="button"
             className="axxa-icon-btn"

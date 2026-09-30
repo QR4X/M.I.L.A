@@ -1,12 +1,12 @@
 # Submissão ao Obsidian Community Plugins (#12)
 
-Guia completo pra listar o AXXA OS no diretório oficial. A submissão é **uma vez**;
+Guia completo pra listar o AXXA Agent no diretório oficial. A submissão é **uma vez**;
 depois disso os updates chegam sozinhos via GitHub Release (já automatizado em
 `.github/workflows/release.yml`).
 
 ## 1. Pré-requisitos (já temos)
 
-- [x] Repo público no GitHub (`axxalab/axxa-os-ai-agent`).
+- [x] Repo público no GitHub (`axxalab/axxa-agent`).
 - [x] `manifest.json` na raiz com `id`, `name`, `version`, `minAppVersion`,
       `description`, `author`, `isDesktopOnly`.
 - [x] `versions.json` mapeando versão → minAppVersion.
@@ -22,11 +22,11 @@ e **adicione no FIM do array** em `community-plugins.json`:
 
 ```json
 {
-  "id": "axxa-os-ai-agent",
-  "name": "AXXA OS - AI Agent",
+  "id": "axxa-agent",
+  "name": "AXXA Agent",
   "author": "Axxa Lab",
   "description": "Chat with AI, query your vault with local RAG, and let an agent read and edit your notes across six LLM providers. Bring your own API key.",
-  "repo": "axxalab/axxa-os-ai-agent"
+  "repo": "axxalab/axxa-agent"
 }
 ```
 

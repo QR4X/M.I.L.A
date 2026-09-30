@@ -87,5 +87,5 @@ jobs:
           gh release create "$tag" \
             --title "$tag" \
             --target "${GITHUB_SHA}" \
-            --notes "AXXA OS — AI Agent $tag. Veja os commits para o changelog." \
+            --notes "AXXA Agent $tag. Veja os commits para o changelog." \
             output/main.js output/manifest.json output/styles.css
