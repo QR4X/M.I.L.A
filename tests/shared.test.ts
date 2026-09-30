@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { mapHttpError, buildChatBody } from "../src/providers/_shared";
+import {
+  mapHttpError,
+  buildChatBody,
+  parseOpenAIChatMessage,
+} from "../src/providers/_shared";
 
 // Núcleo compartilhado dos providers (extraído na v0.1.156). O parser SSE e o
 // ensureOk* já são exercidos pelos testes de stream; aqui foco em mapHttpError
@@ -83,5 +87,61 @@ describe("buildChatBody", () => {
     );
     expect(Array.isArray(b.tools)).toBe(true);
     expect(b.tool_choice).toBe("auto");
+  });
+});
+
+// ============================================================
+// parseOpenAIChatMessage — o que chega no fio pode estar torto
+// ============================================================
+// Estas garantias entraram quando os shapes do fio ganharam tipo: com `any`,
+// uma tool call sem `function` estourava aqui dentro ("cannot read name of
+// undefined") e derrubava a resposta inteira, em vez de descartar a entrada.
+
+describe("parseOpenAIChatMessage — tool calls tortas", () => {
+  const msg = (tool_calls: unknown[]) =>
+    parseOpenAIChatMessage({ content: "oi", tool_calls } as never);
+
+  it("tool call sem `function` é descartada, não derruba a resposta", () => {
+    const r = msg([{ type: "function", id: "a" }]);
+    expect(r.content).toBe("oi");
+    expect(r.toolCalls).toBeUndefined();
+  });
+
+  it("tool call sem `name` é descartada — não há o que chamar", () => {
+    const r = msg([{ type: "function", id: "a", function: { arguments: "{}" } }]);
+    expect(r.toolCalls).toBeUndefined();
+  });
+
+  it("sem `id` ganha um gerado, pra fechar o loop do agente", () => {
+    const r = msg([{ type: "function", function: { name: "ler", arguments: "{}" } }]);
+    expect(r.toolCalls).toHaveLength(1);
+    expect(r.toolCalls?.[0].name).toBe("ler");
+    expect(r.toolCalls?.[0].id).toMatch(/^call_/);
+  });
+
+  it("arguments ausente vira {} em vez de quebrar o JSON.parse", () => {
+    const r = msg([{ type: "function", id: "x", function: { name: "ler" } }]);
+    expect(r.toolCalls?.[0].arguments).toEqual({});
+  });
+
+  it("arguments inválido vira { _raw } — o erro fica visível, não some", () => {
+    const r = msg([
+      { type: "function", id: "x", function: { name: "ler", arguments: "{nao é json" } },
+    ]);
+    expect(r.toolCalls?.[0].arguments).toEqual({ _raw: "{nao é json" });
+  });
+
+  it("a torta é descartada e a boa do lado sobrevive", () => {
+    const r = msg([
+      { type: "function", id: "a", function: {} },
+      { type: "function", id: "b", function: { name: "ok", arguments: '{"n":1}' } },
+    ]);
+    expect(r.toolCalls).toHaveLength(1);
+    expect(r.toolCalls?.[0]).toMatchObject({ id: "b", name: "ok", arguments: { n: 1 } });
+  });
+
+  it("entrada que não é do tipo function é ignorada", () => {
+    const r = msg([{ type: "outro", function: { name: "ler", arguments: "{}" } }]);
+    expect(r.toolCalls).toBeUndefined();
   });
 });

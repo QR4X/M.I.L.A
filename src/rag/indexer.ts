@@ -29,6 +29,7 @@ import {
   isImagePath,
   type VectorEntry,
 } from "./types";
+import { texto } from "../core/texto";
 
 export interface IndexProgress {
   /** "scanning" → percorrendo vault | "embedding" → embedando chunks | "done" */
@@ -105,11 +106,16 @@ function buildObsidianContext(
   cache: CachedMetadata | null
 ): string {
   const parts: string[] = [`Nota: ${file.basename}`];
-  const fm = cache?.frontmatter;
+  // `frontmatter` é `any` na tipagem do Obsidian — e é conteúdo do usuário,
+  // que pode ter qualquer forma. Lido como registro aberto e filtrado por
+  // `texto`, que descarta o que não é primitivo (ver core/texto.ts).
+  const fm: Record<string, unknown> | undefined = cache?.frontmatter;
   if (fm) {
     const aliases = fm.aliases ?? fm.alias;
     if (aliases) {
-      const arr = Array.isArray(aliases) ? aliases : [aliases];
+      const arr = (Array.isArray(aliases) ? aliases : [aliases])
+        .map((a) => texto(a))
+        .filter((a) => a.length > 0);
       if (arr.length) parts.push(`Aliases: ${arr.join(", ")}`);
     }
   }
@@ -117,9 +123,10 @@ function buildObsidianContext(
   const tagSet = new Set<string>();
   const fmTags = fm?.tags ?? fm?.tag;
   if (fmTags) {
-    (Array.isArray(fmTags) ? fmTags : [fmTags]).forEach((tg) =>
-      tagSet.add(String(tg).replace(/^#/, ""))
-    );
+    (Array.isArray(fmTags) ? fmTags : [fmTags]).forEach((tg) => {
+      const t = texto(tg).replace(/^#/, "");
+      if (t) tagSet.add(t);
+    });
   }
   cache?.tags?.forEach((t) => tagSet.add(t.tag.replace(/^#/, "")));
   if (tagSet.size) parts.push(`Tags: ${Array.from(tagSet).join(", ")}`);

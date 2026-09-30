@@ -37,6 +37,29 @@ import {
   usageFrom,
   parseOpenAICompatSSE,
 } from "./_shared";
+import type { RespostaNoFio } from "./_shared";
+
+// ---- O que o NIM devolve (ver a nota em _shared.ts) ----------------------
+// O chat fala OpenAI-compatible. Imagem não: cada modelo hospedado usa um
+// shape diferente, e por isso os quatro campos abaixo são tentados em ordem.
+
+/** Erro do NIM — três campos possíveis, dependendo da camada que respondeu. */
+interface ErroNim {
+  detail?: string;
+  error?: { message?: string };
+  message?: string;
+}
+
+/** Resposta de geração de imagem: quatro formas conhecidas. */
+interface RespostaDeImagemNim extends ErroNim {
+  artifacts?: Array<{ base64?: unknown; image?: unknown }>;
+  image?: unknown;
+  b64_json?: unknown;
+}
+
+interface CatalogoNim {
+  data?: Array<{ id?: unknown }>;
+}
 
 // ============================================================
 // SSE REAL no desktop via Node `https` (v0.1.226).
@@ -273,16 +296,22 @@ export class NimProvider implements Provider {
         res.status,
         res.json ?? (typeof res.text === "string" ? res.text.slice(0, 500) : res.text)
       );
-      throw this.nimError(res.status, res.json, res.text, req.model);
+      throw this.nimError(
+        res.status,
+        res.json as ErroNim | undefined,
+        res.text,
+        req.model
+      );
     }
 
-    const message = res.json?.choices?.[0]?.message;
+    const corpo = res.json as RespostaNoFio | undefined;
+    const message = corpo?.choices?.[0]?.message;
     if (!message) throw new ProviderError("Empty response from NIM.", "unknown");
     const { content, toolCalls, reasoning } = parseOpenAIChatMessage(message);
     if (!toolCalls && !content) {
       throw new ProviderError("Empty response from NIM (no text or tool_calls).", "unknown");
     }
-    return { content, toolCalls, usage: usageFrom(res.json), reasoning };
+    return { content, toolCalls, usage: usageFrom(corpo ?? {}), reasoning };
   }
 
   /**
@@ -367,9 +396,9 @@ export class NimProvider implements Provider {
 
     if (resp.status < 200 || resp.status >= 300) {
       const text = await readAllText(resp.body).catch(() => "");
-      let json: { detail?: string; error?: { message?: string }; message?: string } | undefined;
+      let json: ErroNim | undefined;
       try {
-        json = JSON.parse(text);
+        json = JSON.parse(text) as ErroNim;
       } catch {
         /* corpo não-JSON */
       }
@@ -456,17 +485,19 @@ export class NimProvider implements Provider {
     }
     if (res.status < 200 || res.status >= 300) {
       console.error("[axxa] NIM image gen failed:", res.status, res.json ?? res.text);
+      const erro = res.json as ErroNim | undefined;
       const detail =
-        res.json?.detail ??
-        res.json?.error?.message ??
-        res.json?.message ??
+        erro?.detail ??
+        erro?.error?.message ??
+        erro?.message ??
         (typeof res.text === "string" ? res.text.slice(0, 280) : null) ??
         `HTTP ${res.status}`;
       throw new ProviderError(`NIM image gen (${res.status}): ${detail}`, "unknown");
     }
     // Várias APIs com shapes diferentes — tenta os mais comuns
     const items: MediaGenerationItem[] = [];
-    const artifacts = res.json?.artifacts;
+    const imagem = res.json as RespostaDeImagemNim | undefined;
+    const artifacts = imagem?.artifacts;
     if (Array.isArray(artifacts)) {
       for (const a of artifacts) {
         const b64 =
@@ -478,11 +509,11 @@ export class NimProvider implements Provider {
         if (b64) items.push({ data: base64ToBytes(b64), mime: "image/png" });
       }
     }
-    if (items.length === 0 && typeof res.json?.image === "string") {
-      items.push({ data: base64ToBytes(res.json.image), mime: "image/png" });
+    if (items.length === 0 && typeof imagem?.image === "string") {
+      items.push({ data: base64ToBytes(imagem.image), mime: "image/png" });
     }
-    if (items.length === 0 && typeof res.json?.b64_json === "string") {
-      items.push({ data: base64ToBytes(res.json.b64_json), mime: "image/png" });
+    if (items.length === 0 && typeof imagem?.b64_json === "string") {
+      items.push({ data: base64ToBytes(imagem.b64_json), mime: "image/png" });
     }
     if (items.length === 0) {
       console.error("[axxa] NIM unknown response shape:", res.json);
@@ -514,7 +545,9 @@ export class NimProvider implements Provider {
     if (res.status < 200 || res.status >= 300) {
       throw new ProviderError(`NIM: HTTP ${res.status}`, "unknown");
     }
-    const all: string[] = (res.json?.data ?? []).map((m: { id: string }) => m.id);
+    const all: string[] = ((res.json as CatalogoNim | undefined)?.data ?? [])
+      .map((m) => m?.id)
+      .filter((id): id is string => typeof id === "string");
     return all.filter(isRelevantNimModel).sort();
   }
 
@@ -529,7 +562,9 @@ export class NimProvider implements Provider {
         throw: false,
       });
       if (res.status < 200 || res.status >= 300) return [];
-      const all: string[] = (res.json?.data ?? []).map((m: { id: string }) => m.id);
+      const all: string[] = ((res.json as CatalogoNim | undefined)?.data ?? [])
+        .map((m) => m?.id)
+        .filter((id): id is string => typeof id === "string");
       return all.filter(isEmbeddingModelId).sort();
     } catch {
       return [];

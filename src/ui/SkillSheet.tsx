@@ -116,6 +116,7 @@ export function SkillForm({
     set(runBody.resultado);
     limparRun("skill");
     setAjudando("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `set` vem do formulário e muda a cada tecla; listá-lo re-aplicaria a sugestão por cima do que está sendo escrito.
   }, [runBody.fase, runBody.resultado]);
 
   useEffect(() => {
@@ -124,6 +125,7 @@ export function SkillForm({
     set({ description: runDesc.resultado });
     limparRun("description");
     setAjudando("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mesma razão do efeito acima.
   }, [runDesc.fase, runDesc.resultado]);
   const cor = projectColor(draft.color);
 

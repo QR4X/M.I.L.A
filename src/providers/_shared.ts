@@ -323,27 +323,93 @@ export function ensureOkRequest(
 }
 
 // ============================================================
-// Resposta non-stream (chat): message → content + toolCalls
+// A forma do fio (OpenAI-compatible)
 // ============================================================
-export function parseOpenAIChatMessage(message: {
+// `JSON.parse` devolve `any`, e `any` apaga a checagem de tipo de tudo que
+// encosta nele — era daí que saíam as ~260 reclamações de `no-unsafe-*`.
+// Declarar a forma que a API promete devolve a checagem. Em execução nada
+// muda: tipo não sobrevive ao build.
+//
+// Tudo é opcional de propósito. Host OpenAI-compatible é um zoológico: o que
+// a spec chama de obrigatório vem faltando na prática, e os `typeof` que já
+// existem abaixo continuam sendo a verdade sobre o que chegou.
+
+/** Tool call no fio — inteira (non-stream) ou em pedaço (stream). */
+export interface ToolCallNoFio {
+  index?: number;
+  type?: string;
+  id?: string;
+  function?: { name?: string; arguments?: string };
+}
+
+/** O `delta` de um chunk de streaming. */
+export interface DeltaNoFio {
   content?: unknown;
-  tool_calls?: Array<{ type: string; id: string; function: { name: string; arguments: string } }>;
+  reasoning?: unknown;
+  reasoning_content?: unknown;
+  tool_calls?: ToolCallNoFio[];
+}
+
+/** Contagem de tokens, quando o host manda. */
+export interface UsoNoFio {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+}
+
+/** Um chunk `data:` do SSE. */
+export interface ChunkNoFio {
+  choices?: Array<{ delta?: DeltaNoFio; finish_reason?: string }>;
+  usage?: UsoNoFio;
+}
+
+/** A mensagem de uma resposta non-stream. */
+export interface MensagemNoFio {
+  content?: unknown;
+  tool_calls?: ToolCallNoFio[];
   reasoning_content?: unknown;
   reasoning?: unknown;
-}): { content: string; toolCalls?: ProviderToolCall[]; reasoning?: string } {
+}
+
+/** O corpo de erro que quase todo host devolve. */
+export interface ErroNoFio {
+  error?: { message?: string; code?: unknown; status?: unknown };
+}
+
+/** A resposta non-stream inteira. */
+export interface RespostaNoFio {
+  choices?: Array<{ message?: MensagemNoFio; finish_reason?: string }>;
+  usage?: UsoNoFio;
+}
+
+// ============================================================
+// Resposta non-stream (chat): message → content + toolCalls
+// ============================================================
+export function parseOpenAIChatMessage(
+  message: MensagemNoFio
+): { content: string; toolCalls?: ProviderToolCall[]; reasoning?: string } {
   let toolCalls: ProviderToolCall[] | undefined;
   if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
-    toolCalls = message.tool_calls
-      .filter((tc) => tc.type === "function")
-      .map((tc) => {
-        let parsedArgs: Record<string, unknown> = {};
-        try {
-          parsedArgs = JSON.parse(tc.function.arguments);
-        } catch {
-          parsedArgs = { _raw: tc.function.arguments };
-        }
-        return { id: tc.id, name: tc.function.name, arguments: parsedArgs };
+    const lidas: ProviderToolCall[] = [];
+    for (const tc of message.tool_calls) {
+      if (tc.type !== "function") continue;
+      // Sem nome não há o que chamar; e `function` ausente estourava aqui
+      // antes de haver tipo — o `any` escondia que o host podia omiti-lo.
+      const nome = tc.function?.name;
+      if (!nome) continue;
+      const brutos = tc.function?.arguments ?? "";
+      let parsedArgs: Record<string, unknown> = {};
+      try {
+        parsedArgs = brutos ? (JSON.parse(brutos) as Record<string, unknown>) : {};
+      } catch {
+        parsedArgs = { _raw: brutos };
+      }
+      lidas.push({
+        id: tc.id || `call_${crypto.randomUUID()}`,
+        name: nome,
+        arguments: parsedArgs,
       });
+    }
+    if (lidas.length > 0) toolCalls = lidas;
   }
   // content pode vir como string OU array de parts ({ type:"text", text }) em
   // alguns hosts OpenAI-compat. v0.1.228: concatena os parts de texto; '' só
@@ -367,7 +433,7 @@ export function parseOpenAIChatMessage(message: {
 }
 
 export function usageFrom(json: {
-  usage?: { prompt_tokens?: number; completion_tokens?: number };
+  usage?: UsoNoFio;
 }): { input: number; output: number } | undefined {
   return json.usage
     ? {
@@ -397,7 +463,9 @@ export function finalizeOpenAIResponse(
     if (!acc.name) continue;
     let parsedArgs: Record<string, unknown> = {};
     try {
-      parsedArgs = acc.argsBuf ? JSON.parse(acc.argsBuf) : {};
+      parsedArgs = acc.argsBuf
+        ? (JSON.parse(acc.argsBuf) as Record<string, unknown>)
+        : {};
     } catch {
       parsedArgs = { _raw: acc.argsBuf };
     }
@@ -456,7 +524,7 @@ export async function parseOpenAICompatSSE(
         continue;
       }
       try {
-        const json = JSON.parse(data);
+        const json = JSON.parse(data) as ChunkNoFio;
         const delta = json?.choices?.[0]?.delta;
         if (delta) {
           const token = delta.content;

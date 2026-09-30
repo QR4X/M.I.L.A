@@ -49,8 +49,8 @@ export async function pedirAjuda(
 ): Promise<RetornoAssistente> {
   const messages: ProviderMessage[] = [
     { role: "system", content: p.sistema },
-    ...p.turnos.map((t) => ({
-      role: (t.quem === "pessoa" ? "user" : "assistant") as "user" | "assistant",
+    ...p.turnos.map((t): ProviderMessage => ({
+      role: t.quem === "pessoa" ? "user" : "assistant",
       content: t.texto,
     })),
   ];

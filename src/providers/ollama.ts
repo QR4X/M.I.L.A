@@ -37,6 +37,65 @@ import {
   ensureOkStream,
 } from "./_shared";
 
+// ---- O que o Ollama devolve (ver a nota em _shared.ts) -------------------
+// Ollama não fala OpenAI-compatible aqui: tool call vem sem `id`, e os
+// arguments chegam ora como objeto, ora como string JSON (depende do modelo).
+
+interface ToolCallOllama {
+  id?: string;
+  function?: { name?: string; arguments?: unknown };
+}
+
+interface MensagemOllama {
+  content?: unknown;
+  tool_calls?: unknown;
+}
+
+interface RespostaOllama {
+  message?: MensagemOllama;
+  done?: boolean;
+  error?: unknown;
+  prompt_eval_count?: number;
+  eval_count?: number;
+}
+
+interface CatalogoOllama {
+  models?: Array<{ name?: unknown }>;
+}
+
+/**
+ * Tool calls do Ollama → ProviderToolCall[]. Era o MESMO bloco escrito duas
+ * vezes (non-stream e stream); qualquer correção tinha que ser feita em dois
+ * lugares. Sem name não há o que chamar, então a entrada é descartada.
+ */
+function toolCallsDoOllama(brutas: unknown): ProviderToolCall[] {
+  if (!Array.isArray(brutas)) return [];
+  const saida: ProviderToolCall[] = [];
+  for (const [idx, tc] of (brutas as ToolCallOllama[]).entries()) {
+    const fn = tc?.function;
+    if (!fn?.name) continue;
+    const raw = fn.arguments;
+    let parsedArgs: Record<string, unknown> = {};
+    if (raw && typeof raw === "object") {
+      // Caminho Ollama: já vem como objeto.
+      parsedArgs = raw as Record<string, unknown>;
+    } else if (typeof raw === "string") {
+      // Caminho compat: alguns modelos devolvem string JSON.
+      try {
+        parsedArgs = JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        parsedArgs = { _raw: raw };
+      }
+    }
+    saida.push({
+      id: tc.id ?? `ollama_call_${Date.now()}_${idx}`,
+      name: fn.name,
+      arguments: parsedArgs,
+    });
+  }
+  return saida;
+}
+
 export class OllamaProvider implements Provider {
   id = "ollama";
   name = "Ollama";
@@ -112,7 +171,8 @@ export class OllamaProvider implements Provider {
 
     ensureOkRequest(res, { label: "Ollama" });
 
-    const message = res.json?.message;
+    const corpo = res.json as RespostaOllama | undefined;
+    const message = corpo?.message;
     if (!message) {
       throw new ProviderError("Empty response from Ollama.", "unknown");
     }
@@ -120,38 +180,8 @@ export class OllamaProvider implements Provider {
     // Parseia tool_calls — formato Ollama:
     //   { function: { name: string, arguments: object | string } }
     // Sem `id` na maioria dos casos — geramos um pra fechar o loop.
-    let toolCalls: ProviderToolCall[] | undefined;
-    if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
-      toolCalls = message.tool_calls
-        .map(
-          (tc: { id?: string; function?: { name?: string; arguments?: unknown } }, idx: number) => {
-            // v0.1.228: sem name não há tool call válido — descarta (espelha o
-            // `if (!acc.name) continue` do finalizeOpenAIResponse).
-            const fn = tc.function;
-            if (!fn?.name) return null;
-            const raw = fn.arguments;
-            let parsedArgs: Record<string, unknown> = {};
-            if (raw && typeof raw === "object") {
-              // Ollama path: já vem como objeto
-              parsedArgs = raw as Record<string, unknown>;
-            } else if (typeof raw === "string") {
-              // Compat path: alguns modelos via Ollama devolvem string JSON
-              try {
-                parsedArgs = JSON.parse(raw);
-              } catch {
-                parsedArgs = { _raw: raw };
-              }
-            }
-            return {
-              id: tc.id ?? `ollama_call_${Date.now()}_${idx}`,
-              name: fn.name,
-              arguments: parsedArgs,
-            };
-          }
-        )
-        .filter((tc: ProviderToolCall | null): tc is ProviderToolCall => tc !== null);
-      if (toolCalls && toolCalls.length === 0) toolCalls = undefined;
-    }
+    const lidas = toolCallsDoOllama(message.tool_calls);
+    const toolCalls = lidas.length > 0 ? lidas : undefined;
 
     const content = typeof message.content === "string" ? message.content : "";
     if (!toolCalls && !content) {
@@ -164,10 +194,10 @@ export class OllamaProvider implements Provider {
     const result: ProviderResponse = { content };
     if (toolCalls) result.toolCalls = toolCalls;
     // Usage tokens (vem no response não-streaming também)
-    if (res.json?.prompt_eval_count !== undefined || res.json?.eval_count !== undefined) {
+    if (corpo?.prompt_eval_count !== undefined || corpo?.eval_count !== undefined) {
       result.usage = {
-        input: res.json.prompt_eval_count ?? 0,
-        output: res.json.eval_count ?? 0,
+        input: corpo.prompt_eval_count ?? 0,
+        output: corpo.eval_count ?? 0,
       };
     }
     return result;
@@ -256,9 +286,9 @@ export class OllamaProvider implements Provider {
         for (const line of lines) {
           const trimmed = line.trim();
           if (!trimmed) continue;
-          let json: { message?: { content?: unknown; tool_calls?: unknown }; done?: boolean; error?: unknown; prompt_eval_count?: number; eval_count?: number };
+          let json: RespostaOllama;
           try {
-            json = JSON.parse(trimmed);
+            json = JSON.parse(trimmed) as RespostaOllama;
           } catch {
             // v0.1.228: linha provavelmente truncada — o buffer já guarda o
             // resto (último split vira o novo buffer), então ignoramos.
@@ -278,30 +308,8 @@ export class OllamaProvider implements Provider {
           // Ollama emite tool_calls inteiros (não em deltas) — geralmente
           // numa linha só, próximo do final do stream. Se reenviar, o array
           // novo SUBSTITUI o anterior (não acumula).
-          if (Array.isArray(message?.tool_calls) && message.tool_calls.length > 0) {
-            const parsed = message.tool_calls
-              .map(
-                (tc: { id?: string; function?: { name?: string; arguments?: unknown } }, idx: number) => {
-                  // v0.1.228: sem name não há tool call válido — descarta.
-                  const fn = tc.function;
-                  if (!fn?.name) return null;
-                  const raw = fn.arguments;
-                  let parsedArgs: Record<string, unknown> = {};
-                  if (raw && typeof raw === "object") {
-                    parsedArgs = raw as Record<string, unknown>;
-                  } else if (typeof raw === "string") {
-                    try { parsedArgs = JSON.parse(raw); } catch { parsedArgs = { _raw: raw }; }
-                  }
-                  return {
-                    id: tc.id ?? `ollama_call_${Date.now()}_${idx}`,
-                    name: fn.name,
-                    arguments: parsedArgs,
-                  };
-                }
-              )
-              .filter((tc: ProviderToolCall | null): tc is ProviderToolCall => tc !== null);
-            if (parsed.length > 0) lastToolCalls = parsed;
-          }
+          const parsed = toolCallsDoOllama(message?.tool_calls);
+          if (parsed.length > 0) lastToolCalls = parsed;
           if (json?.done === true) {
             usage = {
               input: json.prompt_eval_count ?? 0,
@@ -343,8 +351,11 @@ export class OllamaProvider implements Provider {
     if (res.status < 200 || res.status >= 300) {
       throw new ProviderError(`Ollama: HTTP ${res.status}`, "unknown");
     }
-    const models: { name: string }[] = res.json?.models ?? [];
-    return models.map((m) => m.name).sort();
+    const models = (res.json as CatalogoOllama | undefined)?.models ?? [];
+    return models
+      .map((m) => m?.name)
+      .filter((n): n is string => typeof n === "string")
+      .sort();
   }
 }
 

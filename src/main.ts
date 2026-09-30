@@ -405,7 +405,12 @@ export default class AxxaPlugin extends Plugin {
     try {
       const p = this.chatIndexPath();
       if (!(await this.app.vault.adapter.exists(p))) return null;
-      const parsed = JSON.parse(await this.app.vault.adapter.read(p));
+      // `JSON.parse` devolve `any` e `any` desliga a checagem de tudo que
+      // encosta nele; o envelope é lido como forma aberta e validado abaixo.
+      const parsed = JSON.parse(await this.app.vault.adapter.read(p)) as
+        | { v?: unknown; items?: unknown }
+        | unknown[]
+        | null;
       // Aceita o envelope versionado { v, items } e, por retrocompat, o array
       // cru de versões antigas. Versão desconhecida → descarta (volta pro walk).
       let items: unknown;
@@ -807,7 +812,9 @@ export default class AxxaPlugin extends Plugin {
       const path = this.modelInfoCachePath();
       if (await this.app.vault.adapter.exists(path)) {
         const raw = await this.app.vault.adapter.read(path);
-        hydrateModelInfoCache(JSON.parse(raw));
+        hydrateModelInfoCache(
+          JSON.parse(raw) as Parameters<typeof hydrateModelInfoCache>[0]
+        );
       }
     } catch (err) {
       console.error("[axxa] falha ao carregar modelInfoCache:", err);
@@ -1098,7 +1105,9 @@ export default class AxxaPlugin extends Plugin {
 
   async loadSettings() {
     // loadData() lê do arquivo do plugin no vault — substitui localStorage.
-    const saved = (await this.loadData()) ?? {};
+    // loadData() devolve `any`; o arquivo é do usuário e pode estar em
+    // qualquer estado, então a forma declarada é "pedaço de AxxaSettings".
+    const saved = ((await this.loadData()) ?? {}) as Partial<AxxaSettings>;
 
     // `loadData` devolve null tanto pra "primeira instalação" quanto pra
     // "o arquivo está lá e não deu pra ler" (JSON quebrado, escrita

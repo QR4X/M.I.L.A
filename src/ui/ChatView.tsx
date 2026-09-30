@@ -241,6 +241,7 @@ export function ChatView({
       setDraft((d) => (d.trim() ? `${d}\n\n${inject.text}` : inject.text));
     }
     textareaRef.current?.focus({ preventScroll: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `setDraft` troca junto com `draftKey`, ou seja, ao mudar de conversa. Listá-lo injetaria o texto de novo na conversa nova.
   }, [inject]);
 
   // Composer cresce com o texto. Mede com height:0 (altura definida) — com
@@ -316,9 +317,9 @@ export function ChatView({
       }
       if (m.type === "ai-response") {
         const narradas: TurnAction[] = bucket
-          .map((c) =>
+          .map((c): TurnAction | null =>
             c.type === "ai-comment" && c.activity
-              ? ({ kind: "activity", activity: c.activity } as TurnAction)
+              ? { kind: "activity", activity: c.activity }
               : null
           )
           .filter((a): a is TurnAction => a !== null);

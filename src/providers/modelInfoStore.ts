@@ -108,7 +108,9 @@ async function loadOpenRouterCatalog(): Promise<OpenRouterModel[]> {
     if (res.status < 200 || res.status >= 300) {
       throw new Error("OpenRouter /models HTTP " + res.status);
     }
-    const data = (res.json && res.json.data) as OpenRouterModel[] | undefined;
+    const data = (res.json as { data?: unknown } | undefined)?.data as
+      | OpenRouterModel[]
+      | undefined;
     // v0.1.228: só cacheia catálogo válido e não-vazio; em falha deixa null
     // pra permitir retry numa próxima chamada (não fixa um array vazio).
     if (!Array.isArray(data) || data.length === 0) {

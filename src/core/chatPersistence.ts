@@ -141,11 +141,21 @@ function yamlString(s: string): string {
 
 // Base64 UTF-8-safe (funciona no plugin Electron E no node dos testes). Usado
 // pra embutir os agentSteps num comentário sem risco de "-->" no result quebrar.
+//
+// Era `btoa(unescape(encodeURIComponent(s)))`. `escape`/`unescape` são legado
+// depreciado — a ponte pra bytes agora é TextEncoder/TextDecoder, que dá
+// exatamente os mesmos bytes UTF-8. O que já está gravado continua sendo lido.
 function b64encode(s: string): string {
-  return btoa(unescape(encodeURIComponent(s)));
+  const bytes = new TextEncoder().encode(s);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
 }
 function b64decode(s: string): string {
-  return decodeURIComponent(escape(atob(s)));
+  const bin = atob(s);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
 }
 
 function renderFrontmatter(chat: ChatData): string {
@@ -249,7 +259,7 @@ function parseSimpleYaml(text: string): Record<string, string | number | string[
       let value = arrayItemMatch[1].trim();
       if (value.startsWith('"') && value.endsWith('"')) {
         try {
-          value = JSON.parse(value);
+          value = JSON.parse(value) as string;
         } catch {
           /* keep */
         }
@@ -277,7 +287,7 @@ function parseSimpleYaml(text: string): Record<string, string | number | string[
     let value: string | number = rawValue;
     if (value.startsWith('"') && value.endsWith('"')) {
       try {
-        value = JSON.parse(value);
+        value = JSON.parse(value) as string;
       } catch {
         /* keep */
       }

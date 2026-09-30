@@ -107,6 +107,51 @@ interface AnthropicBody {
   temperature?: number;
 }
 
+// ---- O que a Anthropic devolve (ver a nota em _shared.ts) ----------------
+// Tudo opcional: o que chega é o que o `typeof` abaixo disser, não o que a
+// spec promete. Com `any` no lugar disto, nenhuma dessas leituras era checada.
+
+/** Bloco da resposta non-stream: texto ou tool_use. */
+interface BlocoDaResposta {
+  type?: string;
+  text?: unknown;
+  id?: string;
+  name?: string;
+  input?: unknown;
+}
+
+interface UsoAnthropic {
+  input_tokens?: number;
+  output_tokens?: number;
+}
+
+/** Resposta non-stream (requestUrl). */
+interface RespostaAnthropic {
+  content?: BlocoDaResposta[];
+  usage?: UsoAnthropic;
+}
+
+/** Um evento `data:` do stream. Cada `type` usa um subconjunto dos campos. */
+interface EventoAnthropic {
+  type?: string;
+  index?: number;
+  content_block?: { type?: string; id?: string; name?: string };
+  delta?: {
+    type?: string;
+    text?: unknown;
+    thinking?: unknown;
+    partial_json?: string;
+  };
+  message?: { usage?: UsoAnthropic };
+  usage?: UsoAnthropic;
+  error?: { message?: string };
+}
+
+/** Resposta do catálogo de modelos. */
+interface ModelosAnthropic {
+  data?: Array<{ id?: string }>;
+}
+
 /**
  * Converte ProviderMessage[] pro formato wire-level do Anthropic.
  * - system → extraído em campo separado
@@ -329,7 +374,8 @@ export class AnthropicProvider implements Provider {
     ensureOkRequest(res, { label: "Anthropic" });
 
     // Anthropic devolve content como array de blocks tipados (text + tool_use)
-    const content = res.json?.content;
+    const corpo = res.json as RespostaAnthropic | undefined;
+    const content = corpo?.content;
     if (!Array.isArray(content)) {
       throw new ProviderError("Empty response from Anthropic.", "unknown");
     }
@@ -339,11 +385,11 @@ export class AnthropicProvider implements Provider {
     for (const block of content) {
       if (block.type === "text" && typeof block.text === "string") {
         text += block.text;
-      } else if (block.type === "tool_use") {
+      } else if (block.type === "tool_use" && block.name) {
         toolCalls.push({
-          id: block.id,
+          id: block.id || `anthropic_call_${crypto.randomUUID()}`,
           name: block.name,
-          arguments: (block.input as Record<string, unknown>) ?? {},
+          arguments: (block.input as Record<string, unknown> | undefined) ?? {},
         });
       }
     }
@@ -359,7 +405,7 @@ export class AnthropicProvider implements Provider {
     if (toolCalls.length > 0) result.toolCalls = toolCalls;
 
     // Usage tokens
-    const usage = res.json?.usage;
+    const usage = corpo?.usage;
     if (usage) {
       result.usage = {
         input: usage.input_tokens ?? 0,
@@ -445,9 +491,9 @@ export class AnthropicProvider implements Provider {
         if (!trimmed.startsWith("data:")) continue;
         const data = trimmed.slice(5).trim();
         if (!data) continue;
-        let json: any;
+        let json: EventoAnthropic;
         try {
-          json = JSON.parse(data);
+          json = JSON.parse(data) as EventoAnthropic;
         } catch {
           // JSON inválido (linha SSE parcial/keep-alive) — pula
           continue;
@@ -455,7 +501,7 @@ export class AnthropicProvider implements Provider {
         try {
           if (json.type === "content_block_start") {
             const block = json.content_block;
-            if (block?.type === "tool_use") {
+            if (block?.type === "tool_use" && typeof json.index === "number") {
               toolUseAccum[json.index] = {
                 id: block.id ?? "",
                 name: block.name ?? "",
@@ -476,7 +522,7 @@ export class AnthropicProvider implements Provider {
                 onReasoning(th);
               }
             } else if (json.delta?.type === "input_json_delta") {
-              const idx = json.index;
+              const idx = json.index ?? -1;
               if (toolUseAccum[idx]) {
                 toolUseAccum[idx].jsonBuf += json.delta.partial_json ?? "";
               }
@@ -565,9 +611,10 @@ export class AnthropicProvider implements Provider {
         throw: false,
       });
       if (res.status < 200 || res.status >= 300) return this.curatedModels();
-      const ids: string[] = (res.json?.data ?? [])
-        .map((m: { id?: string }) => m.id)
-        .filter((id: unknown): id is string => typeof id === "string");
+      const catalogo = res.json as ModelosAnthropic | undefined;
+      const ids: string[] = (catalogo?.data ?? [])
+        .map((m) => m.id)
+        .filter((id): id is string => typeof id === "string");
       // Une com a curada (garante Fable/4.x mesmo se a API atrasar) + dedup.
       const merged = Array.from(new Set([...ids, ...this.curatedModels()]));
       return merged.length > 0 ? merged : this.curatedModels();
@@ -597,7 +644,9 @@ function buildAnthropicStreamResponse(
     let parsedArgs: Record<string, unknown> = {};
     try {
       // input_json_delta às vezes vem vazio quando o input é {} — buf vazio = {}
-      parsedArgs = acc.jsonBuf ? JSON.parse(acc.jsonBuf) : {};
+      parsedArgs = acc.jsonBuf
+        ? (JSON.parse(acc.jsonBuf) as Record<string, unknown>)
+        : {};
     } catch {
       parsedArgs = { _raw: acc.jsonBuf };
     }

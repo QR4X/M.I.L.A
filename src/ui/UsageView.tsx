@@ -182,9 +182,9 @@ export function UsageView({
   const mLista = metricaDa(aggLista.total);
 
   // A série do gráfico: o mesmo `byDay` do recorte, no passo que couber.
-  const serie = useMemo(() => {
+  const serie = useMemo((): { colunas: Coluna[]; passo: Passo } => {
     const j = janelaDoGrafico(f.days, agg.byDay);
-    if (!j) return { colunas: [] as Coluna[], passo: "day" as Passo };
+    if (!j) return { colunas: [], passo: "day" };
     const passo = passoDe(diasEntre(j.de, j.ate));
     return { colunas: serieDoTempo(agg.byDay, j.de, j.ate, passo), passo };
   }, [agg, f.days]);

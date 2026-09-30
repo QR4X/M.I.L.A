@@ -29,6 +29,30 @@ import {
   streamFallbackToChat,
   hasPdfAttachment,
 } from "./_shared";
+import type { RespostaNoFio } from "./_shared";
+
+// ---- O que o OpenRouter devolve (ver a nota em _shared.ts) ---------------
+// O chat fala OpenAI-compatible. O catálogo tem preço junto, e é por ele —
+// não pelo sufixo `:free` do nome — que descobrimos o que é grátis de verdade.
+
+interface ModeloOpenRouter {
+  id?: unknown;
+  pricing?: Record<string, unknown>;
+}
+
+interface CatalogoOpenRouter {
+  data?: unknown;
+}
+
+/** As entradas com `id` string. Catálogo malformado já chegou daqui. */
+function modelosDo(json: unknown): Array<{ id: string; pricing?: Record<string, unknown> }> {
+  const data = (json as CatalogoOpenRouter | undefined)?.data;
+  if (!Array.isArray(data)) return [];
+  return (data as ModeloOpenRouter[]).filter(
+    (m): m is { id: string; pricing?: Record<string, unknown> } =>
+      typeof m?.id === "string"
+  );
+}
 import { getModelCapabilities } from "./modelCapabilities";
 
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
@@ -98,7 +122,8 @@ export class OpenRouterProvider implements Provider {
     }
     ensureOkRequest(res, { label: "OpenRouter" });
 
-    const message = res.json?.choices?.[0]?.message;
+    const corpo = res.json as RespostaNoFio | undefined;
+    const message = corpo?.choices?.[0]?.message;
     if (!message) throw new ProviderError("Empty response.", "unknown");
     const { content, toolCalls, reasoning } = parseOpenAIChatMessage(message);
     if (!toolCalls && !content) {
@@ -106,7 +131,7 @@ export class OpenRouterProvider implements Provider {
     }
     // v0.1.228: propaga reasoning (DeepSeek R1 & afins expõem reasoning_content
     // em non-stream); antes era descartado aqui.
-    return { content, toolCalls, usage: usageFrom(res.json), reasoning };
+    return { content, toolCalls, usage: usageFrom(corpo ?? {}), reasoning };
   }
 
   async streamChat(
@@ -181,10 +206,7 @@ export class OpenRouterProvider implements Provider {
     }
     // v0.1.228: guarda contra catálogo malformado — `data` que não é array, ou
     // entradas sem `id` string, fariam o filtro chamar startsWith em undefined.
-    const data = Array.isArray(res.json?.data) ? res.json.data : [];
-    const all: string[] = data
-      .filter((m: unknown): m is { id: string } => typeof (m as { id?: unknown })?.id === "string")
-      .map((m: { id: string }) => m.id);
+    const all = modelosDo(res.json).map((m) => m.id);
     return all.filter(isRelevantOpenRouterModel).sort();
   }
 
@@ -213,16 +235,9 @@ export class OpenRouterProvider implements Provider {
         throw: false,
       });
       if (res.status < 200 || res.status >= 300) return [];
-      const data = Array.isArray(res.json?.data) ? res.json.data : [];
-      return data
-        .filter(
-          (m: unknown): m is { id: string; pricing?: Record<string, unknown> } =>
-            typeof (m as { id?: unknown })?.id === "string"
-        )
-        .filter((m: { pricing?: Record<string, unknown> }) =>
-          ehPrecoZero(m.pricing)
-        )
-        .map((m: { id: string }) => m.id)
+      return modelosDo(res.json)
+        .filter((m) => ehPrecoZero(m.pricing))
+        .map((m) => m.id)
         .filter(isRelevantOpenRouterModel)
         .sort();
     } catch {
@@ -242,7 +257,7 @@ export class OpenRouterProvider implements Provider {
         throw: false,
       });
       if (res.status < 200 || res.status >= 300) return [];
-      const all: string[] = (res.json?.data ?? []).map((m: { id: string }) => m.id);
+      const all = modelosDo(res.json).map((m) => m.id);
       return all.filter(isEmbeddingModelId).sort();
     } catch {
       return [];

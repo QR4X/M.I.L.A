@@ -158,7 +158,9 @@ export async function transcribeAudio(
     throw new ProviderError("OpenAI transcription rate limit.", "rate-limit");
   }
   if (res.status < 200 || res.status >= 300) {
-    const msg = res.json?.error?.message ?? `HTTP ${res.status}`;
+    const msg =
+      (res.json as { error?: { message?: string } } | undefined)?.error?.message ??
+      `HTTP ${res.status}`;
     throw new ProviderError(`OpenAI transcription: ${msg}`, "unknown");
   }
 

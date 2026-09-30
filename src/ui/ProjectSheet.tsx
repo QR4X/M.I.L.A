@@ -174,6 +174,7 @@ export function ProjectForm({
     });
     limparRun("project");
     setAjudando("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- roda quando a resposta CHEGA. `extras` é lido do render em que a fase virou "pronto", que é o atual; listá-lo faria o efeito re-aplicar a sugestão por cima do que a pessoa digitou depois.
   }, [runProjeto.fase, runProjeto.resultado]);
 
   // As NOTAS que ela achou no vault — entram na lista, e tirar é um ✕.
@@ -187,6 +188,7 @@ export function ProjectForm({
     });
     limparRun("notes");
     setAjudando("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mesma razão do efeito acima: aplica uma vez, na chegada.
   }, [runNotas.fase, runNotas.resultado]);
 
   // As INSTRUÇÕES. Chave própria ("project-instructions"), e não a de
@@ -200,6 +202,7 @@ export function ProjectForm({
     onExtras({ ...extras, instructions: runInstr.resultado });
     limparRun("project-instructions");
     setAjudando("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mesma razão do efeito acima: aplica uma vez, na chegada.
   }, [runInstr.fase, runInstr.resultado]);
 
   // As notas do vault que batem com a busca, fora as já escolhidas: tocar numa

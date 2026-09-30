@@ -20,6 +20,15 @@ const GEMINI_EMBEDDINGS_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/openai/embeddings";
 const NIM_EMBEDDINGS_ENDPOINT = "https://integrate.api.nvidia.com/v1/embeddings";
 
+/**
+ * Vetor de verdade: array E todo item numérico. `Array.isArray` sozinho só
+ * promete "é array" — um item não-numérico entraria no índice e estragaria
+ * toda busca feita depois dele, sem erro nenhum na hora.
+ */
+function ehVetor(v: unknown): v is number[] {
+  return Array.isArray(v) && v.every((n) => typeof n === "number");
+}
+
 interface OpenAIEmbeddingResponse {
   data: { embedding: number[]; index: number }[];
   usage: { prompt_tokens: number; total_tokens: number };
@@ -173,9 +182,9 @@ async function embedOpenAICompat(
   // Reconstrói POR index (não confia em sort+map sequencial): se a API
   // omitir/rejeitar um item, isso desalinharia os vetores dos chunks e
   // corromperia o índice silenciosamente. v0.1.227
-  const out: number[][] = new Array(texts.length);
+  const out = new Array<number[]>(texts.length);
   for (const d of parsed.data ?? []) {
-    if (d && d.index >= 0 && d.index < out.length && Array.isArray(d.embedding)) {
+    if (d && d.index >= 0 && d.index < out.length && ehVetor(d.embedding)) {
       out[d.index] = d.embedding;
     }
   }
@@ -355,7 +364,7 @@ export async function embedBatchOpenRouter(
       );
     }
     const emb = parsed.data[0]?.embedding;
-    if (!Array.isArray(emb) || emb.length === 0) {
+    if (!ehVetor(emb) || emb.length === 0) {
       throw new ProviderError(
         "Nemotron returned data with no embedding (empty or invalid item).",
         "unknown"

@@ -35,6 +35,30 @@ import {
   parseOpenAICompatSSE,
   streamFallbackToChat,
 } from "./_shared";
+import type { ErroNoFio, RespostaNoFio } from "./_shared";
+
+// ---- O que a Gemini devolve (ver a nota em _shared.ts) -------------------
+// O chat fala OpenAI-compatible; imagem e catálogo têm forma própria.
+
+/** Parte de conteúdo do endpoint de imagem — dois shapes, camel e snake. */
+interface ParteDeImagem {
+  inlineData?: { data: string; mimeType: string };
+  inline_data?: { data: string; mime_type: string };
+  text?: string;
+}
+
+interface RespostaDeImagem extends ErroNoFio {
+  candidates?: Array<{ content?: { parts?: ParteDeImagem[] } }>;
+}
+
+interface RespostaImagen extends ErroNoFio {
+  predictions?: Array<{ bytesBase64Encoded?: string; mimeType?: string }>;
+}
+
+/** Catálogo de modelos. `id` chega como unknown porque já foi visto ausente. */
+interface CatalogoGemini {
+  data?: Array<{ id?: unknown }>;
+}
 
 const GEMINI_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
@@ -118,20 +142,21 @@ export class GeminiProvider implements Provider {
     }
     // Muro de billing ANTES do mapeamento genérico (senão 429 vira rate-limit).
     if (res.status >= 400) {
-      const detail = res.json?.error?.message ?? "";
+      const detail = (res.json as ErroNoFio | undefined)?.error?.message ?? "";
       if (isGeminiBillingError(res.status, detail, "chat")) {
         throw new ProviderError(`Gemini billing: ${detail}`, "billing");
       }
     }
     ensureOkRequest(res, { label: "Gemini", authStatuses: [401, 403] });
 
-    const message = res.json?.choices?.[0]?.message;
+    const corpo = res.json as RespostaNoFio | undefined;
+    const message = corpo?.choices?.[0]?.message;
     if (!message) throw new ProviderError("Empty response from Gemini.", "unknown");
     const { content, toolCalls } = parseOpenAIChatMessage(message);
     if (!toolCalls && !content) {
       throw new ProviderError("Empty response from Gemini (no text or tool_calls).", "unknown");
     }
-    return { content, toolCalls, usage: usageFrom(res.json) };
+    return { content, toolCalls, usage: usageFrom(corpo ?? {}) };
   }
 
   async streamChat(
@@ -183,7 +208,7 @@ export class GeminiProvider implements Provider {
       // JSON.stringify(j ?? "") transformava um corpo sem .error.message em
       // texto cru ("null"/objeto inteiro) — ruído inútil no detail.
       try {
-        const j = await res.clone().json();
+        const j = (await res.clone().json()) as ErroNoFio;
         const msg = j?.error?.message;
         if (typeof msg === "string" && isGeminiBillingError(res.status, msg, "chat")) {
           throw new ProviderError(`Gemini billing: ${msg}`, "billing");
@@ -275,7 +300,7 @@ export class GeminiProvider implements Provider {
     }
     if (res.status < 200 || res.status >= 300) {
       const detail =
-        res.json?.error?.message ??
+        (res.json as ErroNoFio | undefined)?.error?.message ??
         (typeof res.text === "string" ? res.text.slice(0, 240) : null) ??
         `HTTP ${res.status}`;
       console.error("[axxa] Gemini image gen failed:", res.status, res.json ?? res.text);
@@ -295,11 +320,9 @@ export class GeminiProvider implements Provider {
     }
     // Aceita ambos os shapes: inlineData (camelCase, comum em REST JS clients)
     // OU inline_data (snake_case, formato cru REST)
-    const parts: Array<{
-      inlineData?: { data: string; mimeType: string };
-      inline_data?: { data: string; mime_type: string };
-      text?: string;
-    }> = res.json?.candidates?.[0]?.content?.parts ?? [];
+    const imagem = res.json as RespostaDeImagem | undefined;
+    const parts: ParteDeImagem[] =
+      imagem?.candidates?.[0]?.content?.parts ?? [];
     const items: MediaGenerationItem[] = [];
     let textAccum = "";
     for (const p of parts) {
@@ -374,7 +397,7 @@ export class GeminiProvider implements Provider {
     }
     if (res.status < 200 || res.status >= 300) {
       const detail =
-        res.json?.error?.message ??
+        (res.json as ErroNoFio | undefined)?.error?.message ??
         (typeof res.text === "string" ? res.text.slice(0, 240) : null) ??
         `HTTP ${res.status}`;
       console.error("[axxa] Imagen gen failed:", res.status, res.json ?? res.text);
@@ -389,8 +412,7 @@ export class GeminiProvider implements Provider {
       }
       throw new ProviderError(`Imagen (${res.status}): ${detail}`, "unknown");
     }
-    const preds: Array<{ bytesBase64Encoded?: string; mimeType?: string }> =
-      res.json?.predictions ?? [];
+    const preds = (res.json as RespostaImagen | undefined)?.predictions ?? [];
     const items: MediaGenerationItem[] = [];
     for (const p of preds) {
       if (p.bytesBase64Encoded) {
@@ -434,9 +456,9 @@ export class GeminiProvider implements Provider {
     }
     // v0.1.228: guarda contra id ausente/não-string antes do .startsWith/.slice
     // (alinha com o padrão do anthropic.ts).
-    const all: string[] = (res.json?.data ?? [])
-      .map((m: { id?: unknown }) => m?.id)
-      .filter((id: unknown): id is string => typeof id === "string");
+    const all: string[] = ((res.json as CatalogoGemini | undefined)?.data ?? [])
+      .map((m) => m?.id)
+      .filter((id): id is string => typeof id === "string");
     return all
       .map((id) => (id.startsWith("models/") ? id.slice(7) : id))
       .filter(isRelevantGeminiModel)
@@ -455,9 +477,9 @@ export class GeminiProvider implements Provider {
       });
       if (res.status < 200 || res.status >= 300) return [];
       // v0.1.228: mesma guarda de string do listModels.
-      const all: string[] = (res.json?.data ?? [])
-        .map((m: { id?: unknown }) => m?.id)
-        .filter((id: unknown): id is string => typeof id === "string");
+      const all: string[] = ((res.json as CatalogoGemini | undefined)?.data ?? [])
+        .map((m) => m?.id)
+        .filter((id): id is string => typeof id === "string");
       return all
         .map((id) => (id.startsWith("models/") ? id.slice(7) : id))
         .filter(isEmbeddingModelId)

@@ -29,6 +29,23 @@ import {
 } from "./_shared";
 // Reexporta os helpers compartilhados (gemini/nim/openrouter importavam daqui).
 export { toOpenAIMessages, finalizeOpenAIResponse } from "./_shared";
+import type { ErroNoFio, RespostaNoFio } from "./_shared";
+
+// ---- O que a OpenAI devolve (ver a nota em _shared.ts) -------------------
+
+interface ItemDeImagem {
+  b64_json?: string;
+  url?: string;
+  revised_prompt?: string;
+}
+
+interface RespostaDeImagemOpenAI extends ErroNoFio {
+  data?: unknown;
+}
+
+interface CatalogoOpenAI {
+  data?: Array<{ id?: unknown }>;
+}
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const OPENAI_MODELS_ENDPOINT = "https://api.openai.com/v1/models";
@@ -64,13 +81,14 @@ export class OpenAIProvider implements Provider {
     }
     ensureOkRequest(res, { label: "OpenAI" });
 
-    const message = res.json?.choices?.[0]?.message;
+    const corpo = res.json as RespostaNoFio | undefined;
+    const message = corpo?.choices?.[0]?.message;
     if (!message) throw new ProviderError("Empty response from OpenAI.", "unknown");
     const { content, toolCalls } = parseOpenAIChatMessage(message);
     if (!toolCalls && !content) {
       throw new ProviderError("Empty response from OpenAI (no text or tool_calls).", "unknown");
     }
-    return { content, toolCalls, usage: usageFrom(res.json) };
+    return { content, toolCalls, usage: usageFrom(corpo ?? {}) };
   }
 
   /**
@@ -202,7 +220,7 @@ export class OpenAIProvider implements Provider {
     }
     if (res.status === 403) {
       // Verifica se é problema de org verification (gpt-image-1)
-      const apiMsg = res.json?.error?.message ?? "";
+      const apiMsg = (res.json as ErroNoFio | undefined)?.error?.message ?? "";
       const isOrgIssue = /verif|organization/i.test(apiMsg);
       if (isOrgIssue || isGptImage) {
         throw new ProviderError(
@@ -227,12 +245,12 @@ export class OpenAIProvider implements Provider {
     }
     if (res.status < 200 || res.status >= 300) {
       const msg =
-        res.json?.error?.message ??
+        (res.json as ErroNoFio | undefined)?.error?.message ??
         (typeof res.text === "string" ? res.text.slice(0, 240) : null) ??
         `HTTP ${res.status}`;
       throw new ProviderError(`OpenAI images (${res.status}): ${msg}`, "unknown");
     }
-    const items = res.json?.data;
+    const items = (res.json as RespostaDeImagemOpenAI | undefined)?.data;
     if (!Array.isArray(items) || items.length === 0) {
       throw new ProviderError("OpenAI: response had no images (empty data).", "unknown");
     }
@@ -241,7 +259,7 @@ export class OpenAIProvider implements Provider {
     // consumidor lê as dimensões reais dos bytes do PNG se precisar.
     const sizeRequested = request.size && request.size !== "auto" ? body.size as string : "";
     const [width, height] = parseSize(sizeRequested);
-    return items.map((it: { b64_json?: string; url?: string; revised_prompt?: string }) => {
+    return (items as ItemDeImagem[]).map((it) => {
       const b64 = it.b64_json ?? "";
       if (!b64) {
         // Fallback se vier `url` em vez de b64 (caso raro)
@@ -299,7 +317,8 @@ export class OpenAIProvider implements Provider {
       throw new ProviderError("OpenAI TTS rate limit.", "rate-limit");
     }
     if (res.status < 200 || res.status >= 300) {
-      const msg = res.json?.error?.message ?? `HTTP ${res.status}`;
+      const msg =
+        (res.json as ErroNoFio | undefined)?.error?.message ?? `HTTP ${res.status}`;
       throw new ProviderError(`OpenAI TTS: ${msg}`, "unknown");
     }
     // Retorna binário (audio/mpeg). res.arrayBuffer é o buffer cru.
@@ -330,9 +349,9 @@ export class OpenAIProvider implements Provider {
     }
     // v0.1.228: a API pode trazer item sem `id` string — filtra antes do
     // filtro de relevância pra não passar undefined/non-string adiante.
-    const all: string[] = (res.json?.data ?? [])
-      .map((m: { id?: unknown }) => m.id)
-      .filter((id: unknown): id is string => typeof id === "string");
+    const all: string[] = ((res.json as CatalogoOpenAI | undefined)?.data ?? [])
+      .map((m) => m?.id)
+      .filter((id): id is string => typeof id === "string");
     return all.filter(isRelevantOpenAIModel).sort();
   }
 
@@ -347,7 +366,9 @@ export class OpenAIProvider implements Provider {
         throw: false,
       });
       if (res.status < 200 || res.status >= 300) return [];
-      const all: string[] = (res.json?.data ?? []).map((m: { id: string }) => m.id);
+      const all: string[] = ((res.json as CatalogoOpenAI | undefined)?.data ?? [])
+        .map((m) => m?.id)
+        .filter((id): id is string => typeof id === "string");
       return all.filter(isEmbeddingModelId).sort();
     } catch {
       return [];
