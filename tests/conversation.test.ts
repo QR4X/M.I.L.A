@@ -220,7 +220,7 @@ describe("storeMessagesToProvider", () => {
     expect(out).toHaveLength(2);
     expect(out[1].role).toBe("assistant");
     expect(out[1].content).toContain("Feito!");
-    expect(out[1].content).toContain("memória do agente");
+    expect(out[1].content).toContain("agent memory");
     expect(out[1].content).toContain("vault_create(a.md)");
     expect(out[1].content).toContain("vault_search(x)");
   });
@@ -241,14 +241,14 @@ describe("flattenAgentResponse", () => {
     const r = flattenAgentResponse("", [
       { id: "1", name: "vault_list", arguments: { folder: "f" }, result: "3 itens", ok: true },
     ]);
-    expect(r.startsWith("〔memória do agente")).toBe(true);
+    expect(r.startsWith("〔agent memory")).toBe(true);
     expect(r).toContain("vault_list(f) → ok — 3 itens");
   });
 
   it("steps vazios → bloco de memória sem linhas de ação", () => {
     const r = flattenAgentResponse("ok", []);
     expect(r.startsWith("ok\n\n")).toBe(true);
-    expect(r).toContain("memória do agente");
+    expect(r).toContain("agent memory");
   });
 
   it("trunca args e results longos inline (sem quebrar linha)", () => {

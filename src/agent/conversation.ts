@@ -160,7 +160,7 @@ export function flattenAgentResponse(
 ): string {
   const lines = steps.map((s, i) => summarizeStepLine(s, i));
   const block =
-    "〔memória do agente — ações já executadas nesta conversa:\n" +
+    "〔agent memory — actions already taken in this conversation:\n" +
     lines.join("\n") +
     "〕";
   const t = (finalText ?? "").trim();

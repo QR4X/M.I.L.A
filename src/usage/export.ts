@@ -75,26 +75,26 @@ export function generateUsageMarkdown(
 
   lines.push(`# AXXA Agent — Usage Report`);
   lines.push("");
-  lines.push(`> Período: **${periodLabel(agg, periodDays)}** · gerado em ${generatedAt}`);
+  lines.push(`> Period: **${periodLabel(agg, periodDays)}** · generated ${generatedAt}`);
   lines.push("");
 
-  // ===== Resumo =====
-  lines.push(`## Resumo`);
+  // ===== Summary =====
+  lines.push(`## Summary`);
   lines.push("");
-  lines.push(`- **Gasto total estimado:** ${formatUsd(agg.total.cost)}${agg.total.hasUnknownCost ? " (algum modelo sem pricing — ver `*` abaixo)" : ""}`);
-  lines.push(`- **Tokens consumidos:** ${formatNumber(agg.total.tokensIn)} in / ${formatNumber(agg.total.tokensOut)} out`);
-  lines.push(`- **Conversas:** ${agg.total.chats}`);
+  lines.push(`- **Estimated total spend:** ${formatUsd(agg.total.cost)}${agg.total.hasUnknownCost ? " (some model has no public price — see `*` below)" : ""}`);
+  lines.push(`- **Tokens used:** ${formatNumber(agg.total.tokensIn)} in / ${formatNumber(agg.total.tokensOut)} out`);
+  lines.push(`- **Chats:** ${agg.total.chats}`);
   if (agg.periodStart && agg.periodEnd) {
-    lines.push(`- **Janela:** ${agg.periodStart} → ${agg.periodEnd}`);
+    lines.push(`- **Window:** ${agg.periodStart} → ${agg.periodEnd}`);
   }
   lines.push("");
 
-  // ===== Por provider =====
+  // ===== By provider =====
   const providerRows = sortBucketEntries(agg.byProvider);
   if (providerRows.length > 0) {
-    lines.push(`## Por provider`);
+    lines.push(`## By provider`);
     lines.push("");
-    lines.push(`| Provider | Conversas | Tokens in | Tokens out | Custo |`);
+    lines.push(`| Provider | Chats | Tokens in | Tokens out | Cost |`);
     lines.push(`| -------- | --------- | --------- | ---------- | ----- |`);
     for (const [name, b] of providerRows) {
       lines.push(`| ${name} | ${b.chats} | ${formatNumber(b.tokensIn)} | ${formatNumber(b.tokensOut)} | ${bucketCostCell(b)} |`);
@@ -102,12 +102,12 @@ export function generateUsageMarkdown(
     lines.push("");
   }
 
-  // ===== Por modelo (top 15) =====
+  // ===== By model (top 15) =====
   const modelRows = sortBucketEntries(agg.byModel).slice(0, 15);
   if (modelRows.length > 0) {
-    lines.push(`## Por modelo (top 15)`);
+    lines.push(`## By model (top 15)`);
     lines.push("");
-    lines.push(`| Modelo | Conversas | Tokens in | Tokens out | Custo |`);
+    lines.push(`| Model | Chats | Tokens in | Tokens out | Cost |`);
     lines.push(`| ------ | --------- | --------- | ---------- | ----- |`);
     for (const [name, b] of modelRows) {
       lines.push(`| \`${name}\` | ${b.chats} | ${formatNumber(b.tokensIn)} | ${formatNumber(b.tokensOut)} | ${bucketCostCell(b)} |`);
@@ -115,12 +115,12 @@ export function generateUsageMarkdown(
     lines.push("");
   }
 
-  // ===== Por modo =====
+  // ===== By mode =====
   const modeRows = sortBucketEntries(agg.byMode);
   if (modeRows.length > 0) {
-    lines.push(`## Por modo`);
+    lines.push(`## By mode`);
     lines.push("");
-    lines.push(`| Modo | Conversas | Tokens in | Tokens out | Custo |`);
+    lines.push(`| Mode | Chats | Tokens in | Tokens out | Cost |`);
     lines.push(`| ---- | --------- | --------- | ---------- | ----- |`);
     for (const [name, b] of modeRows) {
       lines.push(`| ${name} | ${b.chats} | ${formatNumber(b.tokensIn)} | ${formatNumber(b.tokensOut)} | ${bucketCostCell(b)} |`);
@@ -128,12 +128,12 @@ export function generateUsageMarkdown(
     lines.push("");
   }
 
-  // ===== Top conversas =====
+  // ===== Top chats =====
   const top = agg.chats.slice(0, 10);
   if (top.length > 0) {
-    lines.push(`## Top 10 conversas (por custo)`);
+    lines.push(`## Top 10 chats (by cost)`);
     lines.push("");
-    lines.push(`| Título | Modo | Modelo | Tokens (in/out) | Custo |`);
+    lines.push(`| Title | Mode | Model | Tokens (in/out) | Cost |`);
     lines.push(`| ------ | ---- | ------ | --------------- | ----- |`);
     for (const c of top) {
       const titleTruncated = c.title.length > 50 ? c.title.slice(0, 47) + "..." : c.title;
@@ -145,8 +145,8 @@ export function generateUsageMarkdown(
 
   if (agg.total.hasUnknownCost) {
     lines.push("");
-    lines.push(`> \\* Custo estimado parcial — algum modelo não tem pricing configurado.`);
-    lines.push(`> Edite \`src/usage/pricing.ts\` pra adicionar.`);
+    lines.push(`> \* Partial estimate — at least one model has no public price,`);
+    lines.push(`> so the total above is a floor, not the full amount.`);
   }
 
   return lines.join("\n");

@@ -108,7 +108,7 @@ async function embedOpenAICompat(
 ): Promise<number[][]> {
   if (!apiKey || !apiKey.trim()) {
     throw new ProviderError(
-      `API key ${label} não configurada. Necessária pra embeddings.`,
+      `${label} API key not configured — embeddings need one.`,
       "no-key"
     );
   }
@@ -146,7 +146,7 @@ async function embedOpenAICompat(
   }
 
   if (res.status === 401 || res.status === 403) {
-    throw new ProviderError(`API key ${label} inválida.`, "invalid-key");
+    throw new ProviderError(`${label} API key is invalid.`, "invalid-key");
   }
   if (res.status === 429) {
     throw new ProviderError(
@@ -156,7 +156,7 @@ async function embedOpenAICompat(
   }
   if (res.status >= 400) {
     throw new ProviderError(
-      `Embeddings ${label} retornou ${res.status}: ${res.text?.slice(0, 200) ?? ""}`,
+      `${label} embeddings returned ${res.status}: ${res.text?.slice(0, 200) ?? ""}`,
       "unknown"
     );
   }
@@ -182,7 +182,7 @@ async function embedOpenAICompat(
   for (let i = 0; i < out.length; i++) {
     if (!Array.isArray(out[i]) || out[i].length === 0) {
       throw new ProviderError(
-        `Embeddings ${label}: a API devolveu ${parsed.data?.length ?? 0} vetores pra ${texts.length} inputs (faltou o índice ${i}).`,
+        `${label} embeddings: the API returned ${parsed.data?.length ?? 0} vectors for ${texts.length} inputs (index ${i} is missing).`,
         "unknown"
       );
     }
@@ -252,7 +252,7 @@ export async function embedBatchOpenRouter(
 ): Promise<number[][]> {
   if (!apiKey || !apiKey.trim()) {
     throw new ProviderError(
-      "API key do OpenRouter não configurada. Necessária pra embeddings VL (multimodal).",
+      "OpenRouter API key not configured — multimodal (VL) embeddings need one.",
       "no-key"
     );
   }
@@ -307,7 +307,7 @@ export async function embedBatchOpenRouter(
     }
 
     if (res.status === 401) {
-      throw new ProviderError("API key do OpenRouter inválida.", "invalid-key");
+      throw new ProviderError("OpenRouter API key is invalid.", "invalid-key");
     }
     if (res.status === 429) {
       throw new ProviderError(
@@ -326,7 +326,7 @@ export async function embedBatchOpenRouter(
         res.text?.slice(0, 500)
       );
       throw new ProviderError(
-        `OpenRouter embeddings retornou ${res.status}. Veja console.`,
+        `OpenRouter embeddings returned ${res.status}.`,
         "unknown"
       );
     }
@@ -349,15 +349,15 @@ export async function embedBatchOpenRouter(
         res.text?.slice(0, 800)
       );
       throw new ProviderError(
-        `Nemotron devolveu data vazio. Possíveis causas: (1) payload incompatível, ` +
-          `(2) rate limit silencioso, (3) modelo offline. Veja console.`,
+        `Nemotron returned no data. Likely causes: (1) incompatible payload, ` +
+          `(2) a silent rate limit, (3) the model is offline.`,
         "unknown"
       );
     }
     const emb = parsed.data[0]?.embedding;
     if (!Array.isArray(emb) || emb.length === 0) {
       throw new ProviderError(
-        "Nemotron devolveu data sem embedding (item vazio/inválido).",
+        "Nemotron returned data with no embedding (empty or invalid item).",
         "unknown"
       );
     }
@@ -387,7 +387,7 @@ export async function embedItems(
 
   if (hasImage && !spec.supportsImage) {
     throw new ProviderError(
-      `O modelo ${model} não suporta embeddings de imagem. Use nvidia/llama-nemotron-embed-vl-1b-v2:free (OpenRouter, free) pra multimodal.`,
+      `${model} does not support image embeddings. Use nvidia/llama-nemotron-embed-vl-1b-v2:free (OpenRouter, free) for multimodal.`,
       "unknown"
     );
   }
@@ -402,7 +402,7 @@ export async function embedItems(
   // em vez de embedar texto vazio e corromper o índice. v0.1.228
   if (hasImage) {
     throw new ProviderError(
-      `Embedding de imagem só é suportado via OpenRouter (Nemotron VL). O modelo ${model} (${spec.provider}) não embeda imagem.`,
+      `Image embedding is only supported through OpenRouter (Nemotron VL). ${model} (${spec.provider}) cannot embed images.`,
       "unknown"
     );
   }

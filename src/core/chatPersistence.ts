@@ -368,7 +368,7 @@ function parseBody(body: string): ChatMessageStored[] {
 export function parseChatMarkdown(content: string): ChatData {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!match) {
-    throw new Error("Frontmatter inválido — não encontrei `---` delimitadores.");
+    throw new Error("Invalid frontmatter — no `---` delimiters found.");
   }
   const fm = parseSimpleYaml(match[1]);
   const messages = parseBody(match[2]);
@@ -566,11 +566,11 @@ export async function renameChat(
   newTitle: string
 ): Promise<void> {
   const clean = newTitle.trim();
-  if (!clean) throw new Error("Título vazio.");
+  if (!clean) throw new Error("Title is empty.");
   const path = chatFilePath(chatsPath, mode, chatId);
   const content = await app.vault.adapter.read(path);
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!match) throw new Error("Frontmatter inválido nesse chat.");
+  if (!match) throw new Error("Invalid frontmatter in this chat file.");
   // Atualiza só a linha `title:` (mantém resto do frontmatter)
   const updatedFm = match[1].replace(
     /^title:\s*.*$/m,
@@ -605,7 +605,7 @@ export async function setChatStarred(
   const path = chatFilePath(chatsPath, mode, chatId);
   const content = await app.vault.adapter.read(path);
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!match) throw new Error("Frontmatter inválido nesse chat.");
+  if (!match) throw new Error("Invalid frontmatter in this chat file.");
   let fm = match[1].replace(/^starred:\s*.*$\n?/m, "");
   if (starred) {
     // Reinsere antes de tokens_in. Se o arquivo não tiver tokens_in (formato
