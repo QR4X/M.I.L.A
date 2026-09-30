@@ -1651,7 +1651,11 @@ body.theme-dark {
   border-bottom: 1px solid var(--axxa-hairline);
 }
 
-.axxa-root button.axxa-chart-col {
+/* Serve pra coluna de verdade (um botão) e pra do gráfico vazio (um span):
+   as duas são a mesma faixa. `.axxa-root .axxa-chart-col` já ganha do
+   `button:not(.clickable-icon)` do Obsidian — duas classes contra uma classe
+   e um elemento. */
+.axxa-root .axxa-chart-col {
   /* A coluna INTEIRA é o alvo do toque — a faixa toda, do piso ao topo —,
      mesmo quando a barra lá dentro é um fio de três pixels. */
   flex: 1 1 0;
@@ -1660,6 +1664,9 @@ body.theme-dark {
   padding: 0;
   background-color: transparent;
   box-shadow: none;
+}
+
+.axxa-root button.axxa-chart-col {
   cursor: pointer;
 }
 
@@ -1713,6 +1720,40 @@ body.theme-dark {
    colunas vizinhas. */
 .axxa-root .axxa-chart-bar.is-out:has(+ .axxa-chart-bar.is-in) {
   margin-bottom: 2px;
+}
+
+/* ── o gráfico vazio ───────────────────────────────────────────────────
+   O lugar do gráfico não some quando não há série: fica a forma dele,
+   apagada, com o motivo escrito por cima. */
+.axxa-root .axxa-chart.is-empty .axxa-chart-plot {
+  position: relative;
+  /* Sem dado não há escala: o fio do piso viraria a promessa de um eixo que
+     não está medindo nada. */
+  border-bottom-color: transparent;
+}
+
+/* As colunas de mentira nunca nas cores das séries — seriam dado inventado.
+   E bem mais apagadas que o cinza de "não usei" do calendário (8%): com ele,
+   doze blocos competiam com a frase e a própria frase virava legenda deles.
+   Aqui elas são o lugar guardado, e quem fala é o texto. */
+.axxa-root .axxa-chart-bar.is-ghost {
+  background-color: color-mix(in srgb, var(--text-normal) 4%, transparent);
+}
+
+/* O motivo por cima, no meio: é ele o conteúdo, e o desenho atrás é só o
+   lugar guardado. */
+.axxa-root .axxa-chart-motivo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 var(--axxa-3);
+  text-align: center;
+  text-wrap: balance;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
 }
 
 .axxa-root .axxa-chart-axis {

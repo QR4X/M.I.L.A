@@ -356,8 +356,29 @@ export function UsageView({
             no fim da página com as tabelas.
             Com uma coluna só não há série — um gráfico de uma barra é o total
             desenhado de novo, e o total já está logo ali em cima. */}
-        {serie.colunas.length > 1 && picoDa(serie.colunas) > 0 && (
+        {serie.colunas.length > 1 && picoDa(serie.colunas) > 0 ? (
           <GraficoNoTempo colunas={serie.colunas} passo={serie.passo} />
+        ) : (
+          /* Sem série pra desenhar, o lugar dela NÃO some: a seção vira o
+             próprio vazio, com a forma do gráfico apagada atrás e o motivo
+             escrito por cima. Sumindo, a página inteira se remonta quando o
+             recorte muda, e quem mexeu no filtro não descobre que existe um
+             gráfico ali — só vê a tela encurtar. */
+          <GraficoVazio
+            motivo={
+              /* Nenhuma repete o vazio da PÁGINA, que fica logo abaixo e já
+                 dá a saída ("Try a longer period or fewer filters"): dizer a
+                 mesma frase duas vezes na mesma tela ensina a não ler
+                 nenhuma das duas. */
+              chats.length === 0
+                ? "Your tokens land here as you chat."
+                : agg.total.chats === 0
+                  ? "Nothing to plot yet."
+                  : picoDa(serie.colunas) === 0
+                    ? "No tokens recorded in these chats."
+                    : "Just one day so far — the shape fills in as you go."
+            }
+          />
         )}
 
         {visiveis.length > 0 && (
@@ -703,6 +724,61 @@ function LinhaDeFatia({
         </span>
       </span>
     </div>
+  );
+}
+
+/**
+ * As alturas do gráfico FANTASMA — o desenho que ocupa o lugar enquanto não
+ * há série.
+ *
+ * Fixas, e não sorteadas: sorteio muda a cada redesenho e a tela pisca. E
+ * irregulares de propósito, sem subir nem descer, pra não se parecer com uma
+ * tendência — é uma forma, não um dado.
+ */
+const FANTASMA = [22, 34, 26, 42, 30, 47, 26, 38, 30, 44, 25, 35];
+
+/**
+ * O gráfico quando não há o que desenhar.
+ *
+ * Ele fica, apagado, em vez de a seção sumir: o lugar do gráfico é parte do
+ * que a página ensina, e quem apertou um filtro precisa entender que apagou
+ * a série — não que a tela encolheu sozinha.
+ *
+ * As colunas de mentira ficam no cinza de "não usei" (o mesmo do calendário
+ * da home), nunca nas cores das séries: fantasma na cor do dado seria dado
+ * inventado.
+ */
+function GraficoVazio({ motivo }: { motivo: string }) {
+  return (
+    <section className="axxa-home-block" aria-label="Tokens over time">
+      <div className="axxa-home-headrow">
+        <span className="axxa-section-label">Over time</span>
+      </div>
+      <div className="axxa-chart is-empty">
+        {/* A legenda fica: é ela que diz o que este lugar vai mostrar. */}
+        <div className="axxa-chart-legend">
+          <span className="axxa-chart-key">
+            <span className="axxa-chart-swatch is-in" aria-hidden="true" />
+            Sent
+          </span>
+          <span className="axxa-chart-key">
+            <span className="axxa-chart-swatch is-out" aria-hidden="true" />
+            Received
+          </span>
+        </div>
+        <div className="axxa-chart-plot">
+          {FANTASMA.map((h, i) => (
+            <span key={i} className="axxa-chart-col" aria-hidden="true">
+              <span className="axxa-chart-stack">
+                <span className="axxa-chart-air" style={{ flexGrow: 100 - h }} />
+                <span className="axxa-chart-bar is-ghost" style={{ flexGrow: h }} />
+              </span>
+            </span>
+          ))}
+          <p className="axxa-chart-motivo">{motivo}</p>
+        </div>
+      </div>
+    </section>
   );
 }
 

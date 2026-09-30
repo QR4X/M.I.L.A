@@ -265,7 +265,72 @@ describe("o desenho do gráfico", () => {
     expect(VIEW).toContain("axxa-chart-readout");
   });
 
-  it("com uma coluna só não há gráfico — seria o total desenhado de novo", () => {
+  it("com uma coluna só não há série — seria o total desenhado de novo", () => {
     expect(VIEW).toMatch(/serie\.colunas\.length > 1/);
+  });
+});
+
+describe("o gráfico VAZIO", () => {
+  it("o lugar do gráfico não some: sem série, entra o vazio dele", () => {
+    // Sumindo, a página se remonta quando o recorte muda e quem mexeu no
+    // filtro nem descobre que existe um gráfico ali.
+    expect(VIEW).toMatch(
+      /serie\.colunas\.length > 1[\s\S]{0,120}\?\s*\(?\s*<GraficoNoTempo/
+    );
+    expect(VIEW).toContain("<GraficoVazio");
+  });
+
+  it("diz POR QUE está vazio — e cada motivo é um motivo diferente", () => {
+    for (const frase of [
+      "Your tokens land here as you chat.",
+      "Nothing to plot yet.",
+      "No tokens recorded in these chats.",
+      "Just one day so far",
+    ]) {
+      expect(VIEW, frase).toContain(frase);
+    }
+    // Nenhum repete o vazio da PÁGINA, que fica logo abaixo e dá a saída:
+    // a mesma frase duas vezes na mesma tela ensina a não ler nenhuma.
+    const daPagina = "Nothing in this slice.";
+    expect(VIEW).toContain(daPagina);
+    expect(VIEW.split(daPagina)).toHaveLength(2);
+  });
+
+  it("as colunas de mentira nunca usam as cores das séries", () => {
+    // Fantasma na cor do dado seria dado inventado.
+    const b = bloco(".axxa-root .axxa-chart-bar.is-ghost {");
+    expect(b).toMatch(/color-mix\(in srgb, var\(--text-normal\) \d+%/);
+    expect(b).not.toContain("--axxa-serie");
+  });
+
+  it("as alturas de mentira são FIXAS — sorteio faria a tela piscar", () => {
+    const m = VIEW.match(/const FANTASMA = \[([^\]]+)\]/);
+    expect(m, "as alturas do fantasma sumiram").not.toBeNull();
+    const hs = m![1].split(",").map((n) => Number(n.trim()));
+    expect(hs.length).toBeGreaterThan(6);
+    expect(VIEW).not.toMatch(/FANTASMA[\s\S]{0,200}Math\.random/);
+    // Nem sobem nem descem: uma escadinha leria como tendência, e não há
+    // tendência nenhuma pra ler.
+    const subindo = hs.every((h, i) => i === 0 || h >= hs[i - 1]);
+    const descendo = hs.every((h, i) => i === 0 || h <= hs[i - 1]);
+    expect(subindo || descendo).toBe(false);
+  });
+
+  it("sem dado não há piso: o fio do eixo sai", () => {
+    // Ele prometeria uma escala que não está medindo nada.
+    expect(bloco(".axxa-root .axxa-chart.is-empty .axxa-chart-plot {")).toContain(
+      "border-bottom-color: transparent"
+    );
+  });
+
+  it("a faixa da coluna serve ao botão E ao span do vazio", () => {
+    // A regra estava presa em `button.axxa-chart-col`, e o fantasma é span:
+    // sem isto ele nasceria sem largura nenhuma.
+    const b = bloco(".axxa-root .axxa-chart-col {");
+    expect(b).toContain("flex: 1 1 0");
+    expect(b).toContain("height: 100%");
+    expect(bloco(".axxa-root button.axxa-chart-col {")).toContain(
+      "cursor: pointer"
+    );
   });
 });
