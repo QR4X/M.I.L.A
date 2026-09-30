@@ -22,26 +22,42 @@
    `:has`. A revisão automática marca os dois como Warning — não reprovam, e
    ficam de propósito:
 
-   · !important (30×, todos aqui dentro): este bloco estiliza elementos DO
+   · !important (28×, todos aqui dentro): este bloco estiliza elementos DO
      OBSIDIAN (.workspace-drawer, .workspace-leaf-content), disputando com
-     regras do app.css sobre os mesmos elementos. Subir especificidade, que é
-     o que o lint sugere, dependeria da forma exata de cada regra do app.css —
-     e algumas delas também usam !important, contra o que só !important vence.
-     O bloco veio verbatim de uma versão que roda certa no APARELHO; conferir
-     30 regras exigiria repetir aquele teste com teclado aberto, tela cheia e
-     gaveta, em cada estado. Não é exercício de mesa;
+     regras do app.css sobre os mesmos elementos — e o app.css tem 43 regras
+     com !important, contra o que só !important vence.
 
-   · `:has` (6× aqui, 5× no resto do arquivo): pinta um elemento do Obsidian
+     MEDIDO (0.9.6), não achado: no preview, que carrega o app.css REAL, cada
+     declaração teve o !important removido pelo CSSOM e o valor computado foi
+     comparado antes/depois. Resultado: 27 "sem diferença", 1 que MUDA e 3 que
+     o teste não alcança. Por que isso NÃO autoriza remover:
+
+       — as 3 que não alcança são os `display: none`. Eles disputam com o
+         `.hide()` do Obsidian, que escreve display INLINE (está no app.js).
+         Inline vence qualquer especificidade; só !important passa;
+       — a 1 que muda (padding-bottom do :has(.mobile-navbar)) vai de 96px pra
+         0px sozinha. Ou seja: estas regras dependem UMA DA OUTRA pela ordem —
+         tirar de uma faz o !important da outra ganhar. Testar uma por vez não
+         diz o que acontece tirando todas;
+       — e o "sem diferença" das outras 27 vale para o DOM SINTÉTICO do teste,
+         que é uma simplificação. O Obsidian real tem a árvore mais funda e
+         mais classes, então lá podem casar regras do app.css que aqui não
+         casaram. Ausência de conflito no teste não prova ausência no aparelho.
+
+     São Warnings: não reprovam a revisão. O preço de errar é a tela dele no
+     celular. Fica;
+
+   · `:has` (5×, todos fora deste bloco): pinta um elemento do Obsidian
      ACIMA da nossa raiz com base em algo dentro da nossa árvore. Não há
      alternativa em CSS — o pai não é nosso pra receber uma classe, e pôr uma
-     ali pelo JS seria mexer no DOM do app. Os de fora deste bloco já vêm
-     dentro de `@supports selector(:has(*))`.
+     ali pelo JS seria mexer no DOM do app. Já vêm dentro de
+     `@supports selector(:has(*))`. Os 6 dos modais saíram na 0.9.6: os
+     modais passaram a marcar o próprio `containerEl`, que É o
+     `.modal-container` — mesma especificidade, sem `:has`.
 
    O que o lint marca e NÃO é problema:
    · "duplicate height" (2×) — é `100vh` seguido de `100dvh`. O par existe pra
      quem não conhece `dvh` ficar com o `vh`;
-   · "multicolumn" (1×) — o `column-gap` está num `display: grid`, não em
-     layout de colunas. A regra casou pelo nome da propriedade;
    · "text-decoration" (3×) — `text-underline-offset` e afins. Onde não houver
      suporte, o link continua sublinhado, só sem o ajuste fino. */
 
@@ -387,25 +403,22 @@ body.is-mobile .workspace-drawer.axxa-keyboard-open {
    pondo `.axxa-modal-keyboard-aware` em si mesmo, mas ninguém lia mais essa
    classe: com o teclado aberto (o usuário digitou, mandou, o agente pergunta)
    o modal ficava centralizado atrás do teclado. Volta como estava lá. */
-body.is-mobile.axxa-keyboard-open
-  .modal-container:has(.axxa-modal-keyboard-aware) {
+/* `.axxa-modal-container` é posta pelos nossos modais no containerEl (ver
+   ConfirmationModal.ts e modals.ts). Era um `:has(.axxa-modal-keyboard-aware)`:
+   MESMA especificidade, e agora sem `:has` — o que também aposenta o fallback
+   que existia aqui embaixo e que, sem `:has`, alinhava TODO modal do Obsidian
+   e não só os nossos. */
+body.is-mobile.axxa-keyboard-open .modal-container.axxa-modal-container {
   align-items: flex-start !important;
   padding-top: 16px;
 }
 
 body.is-mobile.axxa-keyboard-open
-  .modal-container:has(.axxa-modal-keyboard-aware)
+  .modal-container.axxa-modal-container
   .modal {
   margin-top: 0;
   max-height: calc(100vh - var(--keyboard-height, 50vh) - 32px);
   overflow-y: auto;
-}
-
-@supports not (selector(body:has(*))) {
-  body.is-mobile.axxa-keyboard-open .modal-container {
-    align-items: flex-start !important;
-    padding-top: 16px;
-  }
 }
 
 /* ── tokens ────────────────────────────────────────────────────────────── */
@@ -4434,19 +4447,20 @@ body.is-mobile .axxa-root .axxa-history-more {
    ancora em `.axxa-confirm-modal` — e os seletores de botão levam a classe
    junto pra passar na frente do `button:not(.clickable-icon)` do app.css. */
 
-@supports selector(body:has(*)) {
-  body.is-mobile .modal-container:has(.axxa-confirm-modal) {
-    align-items: flex-end;
-  }
+/* `.axxa-confirm-container` vem do containerEl (ver ConfirmationModal.ts).
+   Era `:has(.axxa-confirm-modal)` dentro de um @supports — mesma
+   especificidade, sem `:has`, e agora vale também onde `:has` não existe. */
+body.is-mobile .modal-container.axxa-confirm-container {
+  align-items: flex-end;
+}
 
-  body.is-mobile .modal-container:has(.axxa-confirm-modal) .modal {
-    width: 100%;
-    max-width: 100%;
-    max-height: 88vh;
-    margin: 0;
-    border-radius: var(--axxa-r-lg) var(--axxa-r-lg) 0 0;
-    padding-bottom: max(var(--safe-area-inset-bottom, 0px), 12px);
-  }
+body.is-mobile .modal-container.axxa-confirm-container .modal {
+  width: 100%;
+  max-width: 100%;
+  max-height: 88vh;
+  margin: 0;
+  border-radius: var(--axxa-r-lg) var(--axxa-r-lg) 0 0;
+  padding-bottom: max(var(--safe-area-inset-bottom, 0px), 12px);
 }
 
 .axxa-confirm-modal h2 {
@@ -6571,9 +6585,11 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   /* Mais ar entre as FILEIRAS que entre as colunas: dois cartões lado a lado
      se leem como um par; dois cartões um embaixo do outro precisam de um
-     corte, senão o rodapé de um parece o topo do outro. */
-  column-gap: var(--axxa-3);
-  row-gap: var(--axxa-5);
+     corte, senão o rodapé de um parece o topo do outro.
+     `gap: <fileira> <coluna>` e não row-gap/column-gap separados: a mesma
+     coisa em uma linha, e sem o `column-gap` que o lint do Obsidian lia como
+     layout de múltiplas colunas (casava pelo nome da propriedade). */
+  gap: var(--axxa-5) var(--axxa-3);
 }
 
 /* O cartão e o ⋯ são dois botões: o ⋯ flutua no canto do cartão, porque botão
@@ -6957,23 +6973,23 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   background-color: var(--interactive-accent-hover);
 }
 
-@supports selector(body:has(*)) {
-  body.is-mobile .modal-container:has(.axxa-prompt-modal) {
-    align-items: flex-end;
-  }
+/* `.axxa-prompt-container` vem do containerEl (ver ui/modals.ts). Mesma
+   troca do modal de confirmação logo acima. */
+body.is-mobile .modal-container.axxa-prompt-container {
+  align-items: flex-end;
+}
 
-  body.is-mobile .modal-container:has(.axxa-prompt-modal) .modal {
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-    border-radius: var(--axxa-r-lg) var(--axxa-r-lg) 0 0;
-    /* A folga acima do teclado. Fechado, `--keyboard-height` é 0 e sobra o
-       respiro da safe-area. */
-    margin-bottom: calc(
-      var(--keyboard-height, 0px) + max(var(--safe-area-inset-bottom, 0px), 12px)
-    );
-    padding-bottom: var(--size-4-4);
-  }
+body.is-mobile .modal-container.axxa-prompt-container .modal {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  border-radius: var(--axxa-r-lg) var(--axxa-r-lg) 0 0;
+  /* A folga acima do teclado. Fechado, `--keyboard-height` é 0 e sobra o
+     respiro da safe-area. */
+  margin-bottom: calc(
+    var(--keyboard-height, 0px) + max(var(--safe-area-inset-bottom, 0px), 12px)
+  );
+  padding-bottom: var(--size-4-4);
 }
 
 /* Chevron do item que abre o segundo nível, e o rótulo que empurra os dois

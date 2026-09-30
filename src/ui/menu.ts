@@ -131,15 +131,15 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
     (ev.currentTarget as HTMLElement | null)?.ownerDocument ?? document;
   const raiz = doc.querySelector<HTMLElement>(".axxa-root") ?? doc.body;
 
-  // createElement e não createDiv: o createDiv do Obsidian ANEXA ao nó, e
-  // estes três nascem soltos de propósito — a camada e o balão só entram na
-  // árvore depois de medidos, e o botão é anexado por quem o desenha.
-  const camada = doc.createElement("div");
-  camada.className = "axxa-pop-layer";
-
-  const balao = doc.createElement("div");
-  balao.className = "axxa-pop";
-  balao.setAttribute("role", "menu");
+  // createDiv do Obsidian já ANEXA ao nó — por isso a camada nasce dentro da
+  // raiz e o balão dentro dela, em vez de serem anexados no fim. Não há
+  // diferença visível: nada pinta até esta tarefa terminar, e a medição do
+  // balão (offsetWidth, em `posicionar`) exige estar na árvore de qualquer jeito.
+  const camada = raiz.createDiv({ cls: "axxa-pop-layer" });
+  const balao = camada.createDiv({
+    cls: "axxa-pop",
+    attr: { role: "menu" },
+  });
 
   // O elemento âncora é guardado AGORA: `currentTarget` de um evento do React
   // é zerado quando o handler termina, e o segundo nível do menu se
@@ -149,11 +149,16 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
 
   let fechar = () => {};
 
-  const item = (a: MenuAction, aoTocar: () => void): HTMLButtonElement => {
-    const b = doc.createElement("button");
-    b.type = "button";
-    b.className = a.danger ? "axxa-pop-item is-danger" : "axxa-pop-item";
-    b.setAttribute("role", "menuitem");
+  /** Cria o botão JÁ dentro de `pai` — o createEl do Obsidian anexa. */
+  const item = (
+    pai: HTMLElement,
+    a: MenuAction,
+    aoTocar: () => void
+  ): HTMLButtonElement => {
+    const b = pai.createEl("button", {
+      cls: a.danger ? "axxa-pop-item is-danger" : "axxa-pop-item",
+      attr: { type: "button", role: "menuitem" },
+    });
     if (a.icon) {
       // Com cor, o ícone ganha a MESMA plaquinha da lista de projetos
       // (`axxa-thing-mark`): mesma forma, mesmo jeito de tingir — o fundo sai
@@ -185,27 +190,22 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
   const desenhar = (itens: MenuAction[], voltar: (() => void) | null): void => {
     while (balao.firstChild) balao.removeChild(balao.firstChild);
     if (voltar) {
-      const volta = item({ label: "Back", icon: "chevron-left" }, voltar);
+      const volta = item(balao, { label: "Back", icon: "chevron-left" }, voltar);
       volta.classList.add("is-back");
-      balao.appendChild(volta);
     }
     for (const a of itens) {
-      balao.appendChild(
-        item(a, () => {
-          if (a.children) {
-            desenhar(a.children, () => desenhar(itens, voltar));
-            return;
-          }
-          fechar();
-          a.run?.();
-        })
-      );
+      item(balao, a, () => {
+        if (a.children) {
+          desenhar(a.children, () => desenhar(itens, voltar));
+          return;
+        }
+        fechar();
+        a.run?.();
+      });
     }
     posicionar();
   };
 
-  camada.appendChild(balao);
-  raiz.appendChild(camada);
 
   /**
    * Onde ele pousa. Medido DEPOIS de estar na árvore — antes disso o balão não

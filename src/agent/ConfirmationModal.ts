@@ -65,6 +65,10 @@ export class ConfirmationModal extends Modal {
     contentEl.empty();
     contentEl.addClass("axxa-confirm-modal");
     this.modalEl.addClass("axxa-modal-keyboard-aware");
+    // O `.modal-container` é do Obsidian e fica ACIMA do nosso modal. Marcá-lo
+    // aqui troca um `:has()` no CSS por uma classe: mesma especificidade, sem
+    // invalidação de seletor, e funciona onde `:has` não existe.
+    this.containerEl.addClass("axxa-modal-container", "axxa-confirm-container");
 
     const irreversible = !!opts.definition.irreversible;
     const strings = opts.strings;

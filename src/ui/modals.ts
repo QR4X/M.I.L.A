@@ -42,6 +42,9 @@ export class PromptModal extends Modal {
     // deixá-lo encostado na primeira fileira de teclas.
     this.modalEl.addClass("axxa-prompt-modal");
     this.modalEl.addClass("axxa-modal-keyboard-aware");
+    // Ver a nota em agent/ConfirmationModal.ts: marca o container do Obsidian
+    // pra o CSS não precisar de `:has()` pra chegar nele.
+    this.containerEl.addClass("axxa-modal-container", "axxa-prompt-container");
     this.titleEl.setText(this.opts.title);
 
     const campo = this.contentEl.createDiv({ cls: "axxa-prompt-field" });
