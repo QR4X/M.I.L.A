@@ -19,31 +19,80 @@ AXXA Agent turns Obsidian into a full AI workspace. It feels like a native featu
 
 ## ✨ Highlights
 
-- **3 modes, one panel** — Chat, Vault Q&A (RAG over your notes), and Agent (tool-calling on your files).
-- **6 providers, bring your own key** — OpenAI, Anthropic (Claude), Google Gemini, OpenRouter, Nvidia NIM, and local Ollama. Switch freely; your keys never leave your device.
-- **Talk to your vault** — local semantic search (RAG) with hybrid keyword + vector ranking and wikilink-graph awareness. 8 embedding models across 4 providers, including free options.
-- **An agent that acts** — create, read, edit, move, and delete notes through a safe, permissioned tool layer. Destructive actions always ask first.
-- **Attach images, notes, and PDFs** — PDFs go straight to the model on Claude, GPT-4o-class models, and OpenRouter. Where a model can't read them, the plugin says so instead of pretending.
-- **Image generation** — generate images right in the chat (OpenAI & Gemini) and save them into your vault with metadata sidecars.
-- **Real cost tracking** — a Usage dashboard estimates spend in USD per provider, model, mode, and day, with PDF / Markdown / HTML export.
-- **Everything is Markdown** — chats, generated media, and skills are saved as `.md` files in your vault. Portable, versionable, yours.
-- **Mobile-first** — built for the Obsidian mobile drawer first: edge-to-edge composer, hold-to-record audio (transcribed and sent with your message), haptics, keyboard-aware layout, screen wake-lock during generation.
-- **English UI** — the interface ships in English (this README is also in Portuguese). A Portuguese UI is on the roadmap.
+- **A tenth of the size.** `main.js` is **425 KB** (136 KB gzipped). The whole
+  plugin — six providers, local RAG, an agent with tools, voice, image
+  generation — fits in less than half a megabyte.
+- **3 modes, one panel** — Chat, Vault Q&A (RAG over your notes), and Agent
+  (tool-calling on your files).
+- **6 providers, bring your own key** — OpenAI, Anthropic, Google Gemini,
+  OpenRouter, Nvidia NIM, and local Ollama. Switch freely; your keys go to your
+  OS keychain, never to `data.json` and never to us.
+- **Talk to your vault** — local semantic search with hybrid keyword + vector
+  ranking and wikilink-graph awareness. 8 embedding models across 4 providers,
+  free options included.
+- **An agent that acts** — create, read, edit, move and delete notes through a
+  permissioned tool layer. Deletes go to your trash, moves rewrite your
+  `[[links]]`, and destructive actions always ask first.
+- **Projects and Skills** — group chats around a set of notes and instructions;
+  save prompts as `.md` files that become slash-commands.
+- **Real cost tracking** — spend in USD by provider, model, mode and day, with a
+  chart of tokens over time and a report you can save as a note.
+- **Everything is Markdown** — chats, skills and generated media are `.md` files
+  in your vault. Portable, versionable, yours.
+- **Mobile-first** — designed for the Obsidian mobile drawer *first*, not ported
+  to it: keyboard-aware layout, edge-to-edge composer, hold-to-record audio,
+  haptics, optional fullscreen.
 
 ### 📸 Screenshots
 
-> Capture targets and naming live in [`docs/screenshots/`](docs/screenshots/). Drop the PNGs there and uncomment below.
-
-<!-- Uncomment as the images land:
-| Desktop — chat | Mobile — drawer | Vault Q&A with citations |
+| Home | Usage & cost | Agent |
 |---|---|---|
-| ![Desktop chat](docs/screenshots/desktop-chat.png) | ![Mobile drawer](docs/screenshots/mobile-drawer.png) | ![Vault Q&A](docs/screenshots/vault-qa.png) |
+| ![Home](assets/screenshots/01-home.jpg) | ![Usage](assets/screenshots/02-usage.jpg) | ![Agent](assets/screenshots/03-agent.jpg) |
 
-| Agent diff approval | Usage dashboard | Starter screen |
+| Model picker | Projects | Skills |
 |---|---|---|
-| ![Agent diff](docs/screenshots/agent-diff.png) | ![Usage](docs/screenshots/usage-dashboard.png) | ![Starter](docs/screenshots/starter.png) |
--->
+| ![Models](assets/screenshots/04-models.jpg) | ![Projects](assets/screenshots/05-projects.jpg) | ![Skills](assets/screenshots/06-skills.jpg) |
 
+<p align="center"><img src="assets/screenshots/07-usage-light.jpg" width="320" alt="Light theme"></p>
+
+---
+
+## 💰 Pricing: this release is free. All of it. Forever.
+
+**Every feature you can see in this app today is free, with no tier, no account
+and no license key — and it stays that way.** Nothing listed above or shown in
+those screenshots will ever move behind a paywall.
+
+If paid options appear later, they will be **new, additional** things built on
+top — never a lock placed on something that already worked for free. You bring
+your own API keys and pay your provider directly; the plugin takes no cut and
+has no hosted service in the middle.
+
+---
+
+## ⚖️ How it compares
+
+Copilot for Obsidian is the reference in this space and it is a good plugin —
+its free tier is genuinely generous. So here is an honest table rather than a
+list of things we both do.
+
+| | AXXA Agent | Copilot for Obsidian |
+|---|---|---|
+| **Plugin size (`main.js`)** | **425 KB** | ~4.99 MB — 12 KB under Obsidian Sync's 5 MB per-file limit |
+| **License** | **MIT** — fork it, embed it, ship it | AGPL-3.0 — copyleft, extends to anything you build on it |
+| **Paid tier** | **None.** No hosted models, no subscription | Plus from $11.67/mo (hosted models, multi-agent, web search, PDF parsing) |
+| **Chat / Vault Q&A / agent that edits notes** | Free | Free (bring your own key) |
+| **Projects, Skills, semantic search** | Free | Free |
+| **Runs fully local (Ollama)** | Yes | Yes |
+| **Mobile** | Designed phone-first | Supported |
+
+**Where the size matters, concretely:** Obsidian Sync refuses any single file
+over 5 MB. A plugin that sits 12 KB under that ceiling has nowhere left to grow
+without breaking sync for the people who use it. This one sits at 8% of the
+limit. On a phone, that same number is parse time on every single launch.
+
+*Figures checked on 2026-09-30 from public sources — see the links at the
+bottom of this README. Copilot is actively developed; verify before quoting.*
 
 ---
 
@@ -200,6 +249,17 @@ wrapped in try/catch, checked for shape, and falls back to Obsidian's
 ---
 ---
 
+## 📚 Sources for the comparison
+
+- Copilot pricing and free-tier contents — <https://www.obsidiancopilot.com/en/pricing>
+- Copilot bundle size against Obsidian Sync's 5 MB per-file limit —
+  <https://github.com/logancyang/obsidian-copilot/pull/3428>
+- Copilot repository and license (AGPL-3.0) —
+  <https://github.com/logancyang/obsidian-copilot>
+- AXXA Agent size: run `npm run size` in this repo.
+
+---
+
 # 🇧🇷 AXXA Agent (Português)
 
 > **Seu workspace de IA, nativo no Obsidian.** Converse, pergunte ao seu vault e deixe um agente agir nas suas notas — em 6 provedores de LLM, com suas próprias chaves. Mobile-first.
@@ -218,6 +278,19 @@ O AXXA Agent transforma o Obsidian num workspace de IA completo. Parece uma feat
 - **Tudo é Markdown** — conversas, mídia gerada e skills viram arquivos `.md` no seu vault. Portátil, versionável, seu.
 - **Mobile-first** — feito pro drawer do Obsidian mobile primeiro: composer edge-to-edge, gravação de áudio segurando (transcrita e enviada junto com a mensagem), háptico, layout que respeita o teclado, wake-lock de tela durante a geração.
 - **Interface em inglês** — a UI do plugin é em inglês (este README também está em português). A UI em PT-BR está no roadmap.
+
+## 💰 Preço: esta versão é gratuita. Inteira. Para sempre.
+
+**Tudo que este app faz hoje é grátis — sem plano, sem conta, sem chave de
+licença — e continua assim.** Nada do que está nas telas acima vai passar a ser
+pago depois.
+
+Se um dia existirem opções pagas, serão coisas **novas**, construídas por cima —
+nunca um cadeado colocado em algo que já funcionava de graça. Você usa a sua
+própria chave de API e paga direto ao provedor: o plugin não fica com nada no
+meio e não tem serviço hospedado nenhum.
+
+---
 
 ## 🚀 Instalação
 
