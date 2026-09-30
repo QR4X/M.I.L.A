@@ -19,6 +19,12 @@
 //   ?s=empty|thread            → tela inicial ou conversa com mensagens
 //   &theme=light|dark
 //   &device=mobile|desktop     → liga/desliga a classe body.is-mobile
+//
+// Versão do Obsidian: por padrão, o asar do INSTALADOR. O app de verdade
+// carrega a atualização que ele mesmo baixa (no Windows,
+// %APPDATA%/obsidian/obsidian-X.Y.Z.asar) quando ela é mais nova — pra
+// desenhar com o CSS dela, aponte o arquivo:
+//   npm run preview -- --asar "$APPDATA/obsidian/obsidian-1.13.7.asar"
 
 import fs from "node:fs";
 import path from "node:path";
@@ -33,6 +39,8 @@ const OUT = path.join(HERE, ".out");
 
 const portArg = process.argv.indexOf("--port");
 const PORT = portArg > -1 ? Number(process.argv[portArg + 1]) : 8777;
+const asarArg = process.argv.indexOf("--asar");
+const ASAR = asarArg > -1 ? process.argv[asarArg + 1] : null;
 
 // ── 1. app.css real, de dentro do obsidian.asar ─────────────────────────────
 
@@ -83,7 +91,7 @@ let obsidianVersion = "0.0.0";
 
 function extractAppCss() {
   const target = path.join(OUT, "app.css");
-  const asar = asarCandidates().find((p) => fs.existsSync(p));
+  const asar = ASAR ?? asarCandidates().find((p) => fs.existsSync(p));
   if (!asar) {
     console.error(
       "[preview] obsidian.asar não encontrado. O preview SÓ vale com o CSS\n" +

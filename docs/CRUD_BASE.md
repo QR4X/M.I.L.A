@@ -142,8 +142,16 @@ item ativo, sheets.
   (com uma **sub-aba por provider**, ponto indicando quem já está configurado),
   Chat (defaults da conversa nova), Vault (pastas), Vault Q&A (embedding +
   índice), Agent (permissões) e Mobile (fullscreen, só no celular). A aba
-  escolhida sobrevive ao re-render. Preview: `npm run preview` com `?s=settings`
-  (o stub do Obsidian implementa a `Setting` API o bastante pra renderizar).
+  escolhida sobrevive ao re-render. Desde a 0.9.14 as linhas moram numa
+  ÁRVORE (`settings/tree.ts`): no Obsidian 1.13+ ela vai pelo
+  `getSettingDefinitions()` (cartões nativos e busca das settings); antes do
+  1.13 o `display()` desenha a mesma árvore (`settings/legacy.ts`). As abas
+  são classes nos grupos + um atributo no container, escondidas por CSS — por
+  isso a busca acha tudo. Toda gravação de `control` passa por
+  `settings/values.ts` (→ `saveSettings()`, chaves no keychain). Preview:
+  `npm run preview` com `?s=settings` (o stub monta `Setting`/`SettingGroup`
+  com o DOM de cada versão); `-- --asar <obsidian-X.asar>` troca o CSS pro de
+  outra versão.
 - `modals.ts` — `PromptModal`, `ConfirmModal`, `NotePickerModal`,
   `openPluginSettings`.
 - `Markdown.tsx` — `MarkdownRenderer` nativo (texto puro enquanto streama).

@@ -1,0 +1,293 @@
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import {
+  buildSettingsTree,
+  TABS,
+  type RowRender,
+  type SettingsUi,
+} from "../src/ui/settings/tree";
+import { isControlKey } from "../src/ui/settings/values";
+import { PROVIDERS } from "../src/core/providersMeta";
+import type { AxxaSettings } from "../src/main";
+
+// A árvore é o que o Obsidian 1.13 desenha e indexa na busca, e o que o
+// display() desenha antes do 1.13. Estes testes cobram as regras que o
+// desenhista do 1.13 impõe (app.js 1.13.7) — quebrar uma delas não dá erro
+// na hora: dá "duplicate setting key" no console e linha reaproveitada errada.
+
+type Row = {
+  name?: unknown;
+  desc?: unknown;
+  control?: { key: string; type: string };
+  render?: RowRender;
+  searchable?: boolean;
+  visible?: () => boolean;
+  aliases?: string[];
+};
+type Group = { type: string; heading?: string; cls?: string; items: Row[] };
+
+const noop: RowRender = () => {};
+
+function fakeUi(
+  over: {
+    isMobile?: boolean;
+    settings?: Partial<AxxaSettings>;
+    creds?: string[];
+  } = {}
+): SettingsUi {
+  const s = {
+    voiceEnabled: true,
+    ttsEnabled: true,
+    ttsProvider: "openai",
+    elevenVoices: [],
+    elevenApiKey: "",
+    openaiDataSharing: false,
+    ...over.settings,
+  } as AxxaSettings;
+  return {
+    isMobile: over.isMobile ?? false,
+    settings: () => s,
+    hasCredential: (id) => (over.creds ?? []).includes(id),
+    freeOfferCount: () => 0,
+    nav: noop,
+    rail: noop,
+    credential: () => noop,
+    connection: () => noop,
+    newChatModel: () => noop,
+    fetchModels: () => noop,
+    catalog: () => noop,
+    freeOffer: noop,
+    assistantModel: noop,
+    ttsProvider: noop,
+    elevenKey: noop,
+    elevenFetch: noop,
+    elevenVoice: noop,
+    testVoice: noop,
+    embeddingModel: noop,
+    index: noop,
+    hint: () => noop,
+  };
+}
+
+function groupsOf(ui: SettingsUi): Group[] {
+  return buildSettingsTree(ui).items as unknown as Group[];
+}
+
+/** A chave que o 1.13 dá a uma linha (Q2 no app.js 1.13.7). */
+function rowKey(r: Row, i: number): string {
+  if (r.control) return "ctrl:" + r.control.key;
+  if (typeof r.name === "string" && r.name) return "name:" + r.name;
+  return "item#" + i;
+}
+
+const all = (ui = fakeUi()) => groupsOf(ui).flatMap((g) => g.items);
+const byName = (name: string, ui = fakeUi()) =>
+  all(ui).find((r) => r.name === name);
+
+describe("regras do desenhista do 1.13", () => {
+  it("só grupos no topo, com chave única", () => {
+    const gs = groupsOf(fakeUi({ isMobile: true }));
+    expect(gs.every((g) => g.type === "group")).toBe(true);
+    const keys = gs.map((g, i) => (g.heading ? `group:${g.heading}` : `group#${i}`));
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("dentro de cada grupo, linhas com chave única", () => {
+    for (const g of groupsOf(fakeUi({ isMobile: true }))) {
+      const keys = g.items.map(rowKey);
+      expect(new Set(keys).size, g.heading ?? g.cls).toBe(keys.length);
+    }
+  });
+
+  it("todo nome é string (um que não é quebra a busca inteira)", () => {
+    for (const r of all(fakeUi({ isMobile: true }))) {
+      expect(typeof r.name).toBe("string");
+    }
+  });
+
+  it("toda linha sem nome fica fora da busca", () => {
+    for (const r of all(fakeUi({ isMobile: true }))) {
+      if (r.name === "") expect(r.searchable).toBe(false);
+    }
+  });
+
+  it("todo control é uma chave que values.ts sabe gravar — nenhuma chave de API", () => {
+    for (const r of all(fakeUi({ isMobile: true }))) {
+      if (!r.control) continue;
+      expect(isControlKey(r.control.key), r.control.key).toBe(true);
+      expect(r.control.key).not.toMatch(/ApiKey$/);
+    }
+  });
+});
+
+describe("o que a busca acha", () => {
+  // Os nomes que a pessoa procura. Sumir um daqui é sumir uma setting.
+  const NOMES = [
+    ...PROVIDERS.filter((p) => p.id !== "ollama").map((p) => `${p.name} API key`),
+    "Ollama endpoint",
+    ...PROVIDERS.map((p) => `${p.name} connection`),
+    ...PROVIDERS.map((p) => `${p.name} model for new chats`),
+    ...PROVIDERS.map((p) => `${p.name} models`),
+    "I share API data with OpenAI",
+    "Usage tier",
+    "Provider",
+    "Mode",
+    "Effort",
+    "Language",
+    "Assistant model",
+    "Let it see your note names",
+    "Talk instead of typing",
+    "Ears",
+    "What you speak",
+    "Read answers out loud",
+    "Who reads",
+    "Voice",
+    "Quality",
+    "Test OpenAI voice",
+    "ElevenLabs key",
+    "Your voices",
+    "ElevenLabs voice",
+    "Test ElevenLabs voice",
+    "Chats folder",
+    "Skills folder",
+    "Embedding model",
+    "Auto re-index on note changes",
+    "Index",
+    "Permission level",
+    "Show diff before applying edits",
+    "Fullscreen",
+    "Haptics",
+  ];
+
+  it("toda setting está na árvore", () => {
+    const nomes = new Set(all(fakeUi({ isMobile: true })).map((r) => r.name));
+    expect(NOMES.filter((n) => !nomes.has(n))).toEqual([]);
+  });
+
+  it("nome repetido só entre linhas que nunca aparecem juntas", () => {
+    // A busca mostra só o nome: dois "Quality" à vista seriam ambíguos. Os
+    // dois que existem são da OpenAI e da ElevenLabs — um esconde o outro.
+    const nomes = all(fakeUi({ isMobile: true }))
+      .filter((r) => r.searchable !== false)
+      .map((r) => r.name as string);
+    const repetidos = [...new Set(nomes.filter((n, i) => nomes.indexOf(n) !== i))];
+    expect(repetidos).toEqual(["Quality"]);
+    const [a, b] = all().filter((r) => r.name === "Quality");
+    for (const provider of ["openai", "eleven"]) {
+      const ui = fakeUi({ settings: { ttsProvider: provider } });
+      const vis = all(ui).filter((r) => r.name === "Quality").map((r) => r.visible?.());
+      expect(vis.filter(Boolean).length, provider).toBe(1);
+    }
+    expect(a && b).toBeTruthy();
+  });
+
+  it('"voice" acha os interruptores de voz mesmo com tudo desligado', () => {
+    // A busca do 1.13 casa cada palavra no nome, na descrição ou num alias, e
+    // pula linha com `visible` falso. Com ditado e leitura desligados, só os
+    // dois interruptores estão à vista — e nenhum tem "voice" no nome.
+    const ui = fakeUi({ settings: { voiceEnabled: false, ttsEnabled: false } });
+    const casa = (r: Row) =>
+      [r.name, r.desc, ...(r.aliases ?? [])].some(
+        (t) => typeof t === "string" && t.toLowerCase().includes("voice")
+      );
+    const achados = all(ui)
+      .filter((r) => r.searchable !== false && (r.visible ? r.visible() : true))
+      .filter(casa)
+      .map((r) => r.name);
+    expect(achados).toEqual(
+      expect.arrayContaining(["Talk instead of typing", "Read answers out loud"])
+    );
+  });
+
+  it("uma linha que explode ao desenhar não derruba as outras", () => {
+    const ui = { ...fakeUi(), index: (() => { throw new Error("boom"); }) as RowRender };
+    const row = all(ui).find((r) => r.name === "Index");
+    const descs: string[] = [];
+    const fake = { setName() {}, setDesc: (d: string) => descs.push(d) };
+    expect(() => row?.render?.(fake as never, {} as never)).not.toThrow();
+    expect(descs[0]).toMatch(/failed to draw/);
+  });
+
+  it("a linha mostra o nome curto e a busca o longo", () => {
+    const row = byName("Anthropic API key");
+    const nomes: string[] = [];
+    row?.render?.({ setName: (n: string) => nomes.push(n) } as never, {} as never);
+    expect(nomes).toEqual(["API key"]);
+  });
+});
+
+describe("abas", () => {
+  it("Mobile só existe no celular", () => {
+    const tem = (ui: SettingsUi) =>
+      groupsOf(ui).some((g) => g.cls?.includes("axxa-set-tab-mobile"));
+    expect(tem(fakeUi({ isMobile: false }))).toBe(false);
+    expect(tem(fakeUi({ isMobile: true }))).toBe(true);
+  });
+
+  it("todo grupo (menos a barra de abas) sabe a sua aba, e toda linha também", () => {
+    const tree = buildSettingsTree(fakeUi({ isMobile: true }));
+    for (const g of tree.items as unknown as Group[]) {
+      if (g.cls?.includes("axxa-set-navgroup")) continue;
+      const tab = /axxa-set-tab-(\w+)/.exec(g.cls ?? "")?.[1];
+      expect(tab, g.heading ?? g.cls).toBeTruthy();
+      for (const r of g.items) expect(tree.places.get(r)?.tab).toBe(tab);
+    }
+  });
+
+  it("a linha de um provider leva o provider (a busca acende o logo certo)", () => {
+    const tree = buildSettingsTree(fakeUi());
+    const row = (tree.items as unknown as Group[])
+      .flatMap((g) => g.items)
+      .find((r) => r.name === "Gemini API key");
+    expect(row && tree.places.get(row)).toEqual({ tab: "providers", provider: "gemini" });
+  });
+
+  it("o CSS esconde cada aba e cada provider que a árvore usa", () => {
+    // Uma aba ou provider novo sem a regra apareceria EMPILHADO com os outros.
+    const css = readFileSync(resolve(__dirname, "../styles/main.css"), "utf8");
+    for (const t of TABS) {
+      expect(css, t.id).toContain(
+        `.axxa-settings-root:not([data-axxa-tab="${t.id}"]) .axxa-set-tab-${t.id}`
+      );
+    }
+    for (const p of PROVIDERS) {
+      expect(css, p.id).toContain(
+        `.axxa-settings-root:not([data-axxa-prov="${p.id}"]) .axxa-set-prov-${p.id}`
+      );
+    }
+  });
+});
+
+describe("visibilidade (o que some junto do interruptor)", () => {
+  const vis = (name: string, ui: SettingsUi) => {
+    const r = all(ui).find((x) => x.name === name);
+    return r?.visible ? r.visible() : true;
+  };
+
+  it("ditado desligado esconde o que é do ditado", () => {
+    expect(vis("Ears", fakeUi({ settings: { voiceEnabled: false } }))).toBe(false);
+    expect(vis("Ears", fakeUi({ settings: { voiceEnabled: true } }))).toBe(true);
+  });
+
+  it("quem lê decide quais linhas aparecem", () => {
+    const eleven = fakeUi({ settings: { ttsProvider: "eleven" } });
+    expect(vis("ElevenLabs key", eleven)).toBe(true);
+    expect(vis("Test OpenAI voice", eleven)).toBe(false);
+    const openai = fakeUi({ settings: { ttsProvider: "openai" } });
+    expect(vis("ElevenLabs key", openai)).toBe(false);
+    expect(vis("Test OpenAI voice", openai)).toBe(true);
+    const off = fakeUi({ settings: { ttsEnabled: false } });
+    expect(vis("Who reads", off)).toBe(false);
+    expect(vis("Test OpenAI voice", off)).toBe(false);
+  });
+
+  it("a voz da ElevenLabs só aparece depois de buscar as vozes", () => {
+    const sem = fakeUi({ settings: { ttsProvider: "eleven", elevenVoices: [] } });
+    expect(vis("ElevenLabs voice", sem)).toBe(false);
+    const com = fakeUi({
+      settings: { ttsProvider: "eleven", elevenVoices: [{ id: "v", name: "V" }] },
+    });
+    expect(vis("ElevenLabs voice", com)).toBe(true);
+  });
+});

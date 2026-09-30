@@ -181,8 +181,12 @@ function silentWav(): ArrayBuffer {
 export class Plugin {}
 export class PluginSettingTab {
   containerEl: HTMLElement = document.createElement("div");
+  icon = "";
   constructor(public app?: unknown, _plugin?: unknown) {}
   display(): void {}
+  hide(): void {}
+  /** 1.13: o SettingsTab só chama atrás de requireApiVersion("1.13.0"). */
+  refreshDomState(): void {}
 }
 export class ItemView {}
 /**
@@ -231,74 +235,126 @@ export class Modal {
 export class FuzzySuggestModal extends Modal {
   setPlaceholder() {}
 }
-/** Setting API o bastante pra renderizar a aba de settings no preview. */
+/**
+ * Setting e SettingGroup com o DOM REAL de cada versão (app.js 1.12.7 e
+ * 1.13.7): o app.css pinta os cartões por essas classes, então uma árvore
+ * inventada aqui mostraria um cartão que o aparelho nunca teve. No 1.13 a
+ * linha ganha `tabindex=-1` e o grupo um `.setting-group-search` (vazio,
+ * escondido por `:empty`) antes da lista.
+ *
+ * O desenho declarativo do 1.13 (getSettingDefinitions) usa estas MESMAS duas
+ * classes por dentro — por isso desenhar a árvore pelo display() aqui mostra o
+ * mesmo DOM que o Obsidian 1.13 monta sozinho.
+ */
+const V113 = () => requireApiVersion("1.13.0");
+
+function divCls(cls: string): HTMLDivElement {
+  const d = document.createElement("div");
+  d.className = cls;
+  return d;
+}
+
+function putText(el: HTMLElement, v: string | DocumentFragment) {
+  el.textContent = "";
+  if (typeof v === "string") el.textContent = v;
+  else el.appendChild(v);
+}
+
+type Disableable = { setDisabled(v: boolean): unknown };
+
 export class Setting {
   settingEl: HTMLElement;
   infoEl: HTMLElement;
-  // Publicos como no Obsidian de verdade: a casca decora o nameEl (logo do
-  // provider). Criados no construtor, iguais aos de la.
   nameEl: HTMLElement;
   descEl: HTMLElement;
   controlEl: HTMLElement;
+  components: Disableable[] = [];
 
-  constructor(el?: HTMLElement) {
-    this.settingEl = document.createElement("div");
-    this.settingEl.className = "setting-item";
-    this.infoEl = document.createElement("div");
-    this.infoEl.className = "setting-item-info";
-    this.nameEl = document.createElement("div");
-    this.nameEl.className = "setting-item-name";
-    this.descEl = document.createElement("div");
-    this.descEl.className = "setting-item-description";
+  constructor(el: HTMLElement) {
+    this.settingEl = divCls("setting-item");
+    if (V113()) this.settingEl.tabIndex = -1;
+    this.infoEl = divCls("setting-item-info");
+    this.nameEl = divCls("setting-item-name");
+    this.descEl = divCls("setting-item-description");
     this.infoEl.append(this.nameEl, this.descEl);
-    this.controlEl = document.createElement("div");
-    this.controlEl.className = "setting-item-control";
+    this.controlEl = divCls("setting-item-control");
     this.settingEl.append(this.infoEl, this.controlEl);
-    el?.appendChild(this.settingEl);
+    el.appendChild(this.settingEl);
   }
-  setName(v: string) {
-    this.nameEl.textContent = v;
+  setName(v: string | DocumentFragment) {
+    putText(this.nameEl, v);
     return this;
   }
-  setDesc(v: string) {
-    this.descEl.textContent = v;
+  setDesc(v: string | DocumentFragment) {
+    putText(this.descEl, v);
+    return this;
+  }
+  setClass(cls: string) {
+    this.settingEl.classList.add(cls);
     return this;
   }
   setHeading() {
     this.settingEl.classList.add("setting-item-heading");
     return this;
   }
+  setDisabled(v: boolean) {
+    this.settingEl.classList.toggle("is-disabled", v);
+    for (const c of this.components) c.setDisabled(v);
+    return this;
+  }
+  /** Como o de verdade: só esvazia o controle (nome, descrição e classes ficam). */
+  clear() {
+    this.controlEl.textContent = "";
+    this.components = [];
+    return this;
+  }
+  then(cb: (s: this) => void) {
+    cb(this);
+    return this;
+  }
   addText(cb: (t: unknown) => void) {
     const input = document.createElement("input");
     input.type = "text";
+    input.spellcheck = false;
     this.controlEl.appendChild(input);
     const api = {
       inputEl: input,
       setPlaceholder(v: string) { input.placeholder = v; return api; },
       setValue(v: string) { input.value = v ?? ""; return api; },
-      onChange(cb: (v: string) => void) {
-        input.addEventListener("input", () => cb(input.value));
+      getValue() { return input.value; },
+      setDisabled(v: boolean) { input.disabled = v; return api; },
+      onChange(fn: (v: string) => void) {
+        input.addEventListener("input", () => fn(input.value));
         return api;
       },
     };
+    this.components.push(api);
     cb(api);
     return this;
   }
   addToggle(cb: (t: unknown) => void) {
-    const wrap = document.createElement("div");
-    wrap.className = "checkbox-container";
+    const wrap = divCls("checkbox-container");
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.tabIndex = 0;
+    wrap.appendChild(box);
     this.controlEl.appendChild(wrap);
+    let handler: ((v: boolean) => void) | null = null;
     const api = {
-      setValue(v: boolean) { wrap.classList.toggle("is-enabled", !!v); return api; },
-      onChange(cb: (v: boolean) => void) {
-        wrap.addEventListener("click", () => {
-          wrap.classList.toggle("is-enabled");
-          cb(wrap.classList.contains("is-enabled"));
-        });
-        return api;
-      },
+      toggleEl: wrap,
+      getValue() { return wrap.classList.contains("is-enabled"); },
+      setValue(v: boolean) { wrap.classList.toggle("is-enabled", !!v); box.checked = !!v; return api; },
+      setDisabled(v: boolean) { wrap.classList.toggle("is-disabled", v); return api; },
+      onChange(fn: (v: boolean) => void) { handler = fn; return api; },
     };
+    wrap.addEventListener("click", (e) => {
+      e.preventDefault();
+      api.setValue(!api.getValue());
+      handler?.(api.getValue());
+    });
+    this.components.push(api);
     cb(api);
+    this.settingEl.classList.add("mod-toggle");
     return this;
   }
   addDropdown(cb: (d: unknown) => void) {
@@ -306,16 +362,27 @@ export class Setting {
     sel.className = "dropdown";
     this.controlEl.appendChild(sel);
     const api = {
+      selectEl: sel,
       addOption(value: string, label: string) {
         const o = document.createElement("option");
-        o.value = value; o.textContent = label; sel.appendChild(o); return api;
+        o.value = value;
+        o.textContent = label;
+        sel.appendChild(o);
+        return api;
       },
+      addOptions(opts: Record<string, string>) {
+        for (const [v, l] of Object.entries(opts)) api.addOption(v, l);
+        return api;
+      },
+      getValue() { return sel.value; },
       setValue(v: string) { sel.value = v; return api; },
-      onChange(cb: (v: string) => void) {
-        sel.addEventListener("change", () => cb(sel.value));
+      setDisabled(v: boolean) { sel.disabled = v; return api; },
+      onChange(fn: (v: string) => void) {
+        sel.addEventListener("change", () => fn(sel.value));
         return api;
       },
     };
+    this.components.push(api);
     cb(api);
     return this;
   }
@@ -327,13 +394,57 @@ export class Setting {
       setButtonText(v: string) { btn.textContent = v; return api; },
       setCta() { btn.classList.add("mod-cta"); return api; },
       setWarning() { btn.classList.add("mod-warning"); return api; },
+      setClass(c: string) { btn.classList.add(c); return api; },
       setDisabled(v: boolean) { btn.disabled = !!v; return api; },
-      onClick(cb: () => void) {
-        btn.addEventListener("click", cb);
+      onClick(fn: () => void) {
+        btn.addEventListener("click", fn);
         return api;
       },
     };
+    this.components.push(api);
     cb(api);
+    return this;
+  }
+}
+
+/** O cartão de settings — existe desde o 1.11.0. */
+export class SettingGroup {
+  groupEl: HTMLElement;
+  headerEl: HTMLElement;
+  headerInnerEl: HTMLElement;
+  controlEl: HTMLElement;
+  searchContainerEl: HTMLElement | null = null;
+  listEl: HTMLElement;
+
+  constructor(containerEl: HTMLElement) {
+    this.groupEl = divCls("setting-group");
+    containerEl.appendChild(this.groupEl);
+    this.headerEl = divCls("setting-item setting-item-heading");
+    this.headerInnerEl = divCls("setting-item-name");
+    this.controlEl = divCls("setting-item-control");
+    this.headerEl.append(this.headerInnerEl, this.controlEl);
+    if (V113()) {
+      this.searchContainerEl = divCls("setting-group-search");
+      this.searchContainerEl.tabIndex = -1;
+      this.groupEl.appendChild(this.searchContainerEl);
+    }
+    this.listEl = divCls("setting-items");
+    this.groupEl.appendChild(this.listEl);
+  }
+  setHeading(text: string) {
+    this.headerInnerEl.textContent = text;
+    const shown = this.headerEl.parentElement === this.groupEl;
+    if (text && !shown) this.groupEl.prepend(this.headerEl);
+    else if (!text && shown) this.headerEl.remove();
+    return this;
+  }
+  /** No 1.12 é UMA classe; `classList.add` com espaço explode igual ao real. */
+  addClass(...cls: string[]) {
+    this.groupEl.classList.add(...cls);
+    return this;
+  }
+  addSetting(cb: (s: Setting) => void) {
+    cb(new Setting(this.listEl));
     return this;
   }
 }

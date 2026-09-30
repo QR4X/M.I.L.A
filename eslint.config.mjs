@@ -4,21 +4,14 @@
 // submeter, em vez de descobrir na reprovação: `npm run lint`.
 //
 // Duas categorias reprovam a submissão (Error); o resto é aviso. Desde a
-// 0.9.10 o que fica aberto neste linter são 2 avisos, os dois deliberados:
+// 0.9.14 o que fica aberto neste linter é 1 aviso, deliberado:
 //
 //   no-restricted-globals (1×, `fetchStream` em src/providers/_shared.ts)
 //     requestUrl não faz streaming, e streaming é o produto. Os cinco
 //     providers que fazem SSE por fetch passam por esse helper só; o resto do
 //     tráfego vai por requestUrl (e o NIM, no desktop, por Node https).
 //
-//   settings-tab/prefer-setting-definitions (1×)
-//     a API declarativa de settings do 1.13. Um `getSettingDefinitions()` que
-//     devolva [] calaria o aviso sem pôr nenhuma configuração na busca — o
-//     aviso continuaria verdadeiro, só que escondido. Implementar de verdade
-//     troca a nossa aba pelo layout declarativo do Obsidian no 1.13+, e exige
-//     `update()`, que é API 1.13 (o mínimo declarado é 1.11.4). Tarefa própria.
-//
-//   ui/sentence-case (20×) — ruído deste linter, não da revisão
+//   ui/sentence-case (7×) — ruído deste linter, não da revisão
 //     falso positivo de nome próprio: a regra quer "HTTP://localhost",
 //     "Elevenlabs", "iphone". O bot da revisão nem roda esta regra.
 //
@@ -27,6 +20,10 @@
 //     razão escrita na linha.
 //
 // O que já saiu, e como — pra ninguém refazer o caminho:
+//   - settings-tab/prefer-setting-definitions (0.9.14): a aba descreve as
+//     settings numa árvore (src/ui/settings/tree.ts) que o 1.13 desenha e
+//     indexa na busca, e que o `display()` desenha antes do 1.13. Sem
+//     `update()`: o que muda de texto se redesenha no lugar (ver SettingsTab);
 //   - prefer-create-el: o temporário do Markdown.tsx nasce de
 //     `(el.win as typeof window).createDiv()` — o `createDiv` da janela do
 //     próprio nó, instalado pelo enhance.js do Obsidian em TODA janela;

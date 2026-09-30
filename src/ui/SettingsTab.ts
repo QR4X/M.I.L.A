@@ -11,10 +11,33 @@
 //   Agent      → o que o agente pode fazer sem perguntar.
 //   Mobile     → só aparece no celular.
 //
-// A aba escolhida sobrevive ao re-render (indexar chama display() de novo).
+// DUAS maneiras de chegar na tela, UMA árvore (ui/settings/tree.ts):
+//
+//   • Obsidian 1.13+: `getSettingDefinitions()` devolve a árvore e o Obsidian
+//     desenha — cartões nativos, e toda linha entra na busca das settings.
+//   • 1.11.4–1.12.x: não existe `getSettingDefinitions`; o `display()` desenha
+//     a mesma árvore (ui/settings/legacy.ts).
+//
+// A barra de abas e o trilho de providers NÃO são páginas do Obsidian: trocar
+// de aba só troca um atributo do container (`data-axxa-tab`), e o CSS esconde
+// os grupos das outras abas. Nada é redesenhado, nada perde o foco — e a busca
+// continua achando tudo, porque pra ela nenhuma linha está escondida.
+//
+// O que muda de texto ou de opções (a bolinha da conexão, o catálogo, a lista
+// de vozes…) é uma linha VIVA (`slot`): ela guarda o próprio Setting e se
+// redesenha no lugar. É o que troca o `update()` do 1.13 — que redesenharia a
+// aba inteira e roubaria o foco do campo em que a pessoa está digitando.
 
-import { App, Notice, Platform, PluginSettingTab, Setting, setIcon } from "obsidian";
-import type { ButtonComponent } from "obsidian";
+import {
+  App,
+  Notice,
+  Platform,
+  PluginSettingTab,
+  requireApiVersion,
+  Setting,
+  setIcon,
+} from "obsidian";
+import type { SettingDefinitionItem } from "obsidian";
 import type AxxaPlugin from "../main";
 import {
   PROVIDERS,
@@ -22,68 +45,29 @@ import {
   providerHealth,
   type ProviderHealth,
 } from "../core/providersMeta";
-import { EFFORT_LEVELS, EFFORT_LABELS } from "../core/effort";
-import { AXXA_HIDDEN } from "../core/vaultPaths";
 import { escolherAssistente, ehFree } from "../assistant/model";
-import { LOCALES } from "../i18n";
-import { CHAT_MODES } from "../core/session";
 import { getAllEmbeddingModels } from "../rag/types";
 import { deleteIndex } from "../rag/vectorIndex";
 import { getModelCapabilities } from "../providers/modelCapabilities";
 import { freeTag } from "../usage/freeTag";
-import {
-  FREE_TOKENS_AS_OF,
-  openaiFreeTierForModel,
-} from "../usage/freeTokens";
+import { openaiFreeTierForModel } from "../usage/freeTokens";
 import { buildModelCatalog } from "./modelCatalog";
 import { prettyModelName } from "../providers/modelDescriptions";
-import {
-  OPENAI_TTS_MODELS,
-  OPENAI_VOICES,
-  speak,
-  STT_MODELS,
-  TTS_PROVIDERS,
-  ttsReady,
-} from "./readAloud";
-import { ELEVEN_MODELS, elevenVoices } from "../providers/elevenlabs";
+import { speak, TTS_PROVIDERS, ttsReady } from "./readAloud";
+import { elevenVoices } from "../providers/elevenlabs";
 import { hapticsOn, setHapticsEnabled, tap } from "./haptics";
-import { PERMISSION_LABELS } from "../agent/permissions";
 import { marcarPerigoso } from "./modals";
-
-type KeyField =
-  | "openaiApiKey"
-  | "anthropicApiKey"
-  | "geminiApiKey"
-  | "openrouterApiKey"
-  | "nimApiKey";
-type ModelField =
-  | "defaultModel"
-  | "anthropicModel"
-  | "geminiModel"
-  | "openrouterModel"
-  | "nimModel"
-  | "ollamaModel";
-
-const PROVIDER_FIELDS: Record<string, { key?: KeyField; model: ModelField }> = {
-  openai: { key: "openaiApiKey", model: "defaultModel" },
-  anthropic: { key: "anthropicApiKey", model: "anthropicModel" },
-  gemini: { key: "geminiApiKey", model: "geminiModel" },
-  openrouter: { key: "openrouterApiKey", model: "openrouterModel" },
-  nim: { key: "nimApiKey", model: "nimModel" },
-  ollama: { model: "ollamaModel" },
-};
-
-/** Idiomas oferecidos pro ditado. Vazio = deixa o modelo detectar. */
-const SPEECH_LANGS: [string, string][] = [
-  ["", "Auto (detect)"],
-  ["pt", "Português"],
-  ["en", "English"],
-  ["es", "Español"],
-  ["fr", "Français"],
-  ["de", "Deutsch"],
-  ["it", "Italiano"],
-  ["ja", "日本語"],
-];
+import {
+  buildSettingsTree,
+  PROVIDER_FIELDS,
+  tabsFor,
+  type Place,
+  type RowRender,
+  type SettingsUi,
+  type TabId,
+} from "./settings/tree";
+import { drawLegacyTree, type LegacyTree } from "./settings/legacy";
+import { isControlKey, readControl, writeControl } from "./settings/values";
 
 /** Frase do botão Test — curta, pra não virar conta. */
 const SAMPLE_LINE = "This is the voice that will read your answers out loud.";
@@ -114,48 +98,21 @@ interface ConnState {
   detail?: string;
 }
 
-type TabId = "providers" | "chat" | "vault" | "rag" | "agent" | "mobile";
-
-interface TabDef {
-  id: TabId;
-  label: string;
-  /** Uma linha explicando o que mora aqui. */
-  blurb: string;
-  mobileOnly?: boolean;
+/** Uma linha VIVA: guarda o próprio Setting e sabe se redesenhar no lugar. */
+interface Slot {
+  row: Setting;
+  paint: (row: Setting) => void;
+  /** A aba onde mora — trocar pra ela redesenha as linhas dela. */
+  tab: TabId;
 }
 
-const TABS: TabDef[] = [
-  {
-    id: "providers",
-    label: "Providers",
-    blurb: "Your keys and the model each provider uses. Keys stay on this device.",
-  },
-  {
-    id: "chat",
-    label: "Chat",
-    blurb: "What every new conversation starts with.",
-  },
-  { id: "vault", label: "Vault", blurb: "Where the plugin writes in your vault." },
-  {
-    id: "rag",
-    label: "Q&A",
-    blurb: "Vault Q&A: the local index that grounds answers in your notes.",
-  },
-  {
-    id: "agent",
-    label: "Agent",
-    blurb: "What the agent may do to your notes without asking.",
-  },
-  {
-    id: "mobile",
-    label: "Mobile",
-    blurb: "Options that only exist on the phone.",
-    mobileOnly: true,
-  },
-];
+/** O método interno do 1.13 que acha a linha de um resultado da busca. */
+interface DefinitionLookup {
+  getElementForDefinition?: (def: unknown) => HTMLElement | null | undefined;
+}
 
 export class AxxaSettingsTab extends PluginSettingTab {
-  /** Sobrevivem ao display(): re-render não joga o usuário pra primeira aba. */
+  /** Sobrevivem ao redesenho: reabrir as settings volta pra mesma aba. */
   private tab: TabId = "providers";
   private provider = "openai";
   /** Catálogo buscado no provider (não persiste — é sempre "o que há hoje"). */
@@ -168,108 +125,282 @@ export class AxxaSettingsTab extends PluginSettingTab {
   private openFam: string | null = null;
   /** Resultado do último teste de conexão de cada provider (só na sessão). */
   private conn: Record<string, ConnState> = {};
-  private fetching = false;
+  /** Provider cujo catálogo está sendo buscado agora (um de cada vez). */
+  private fetchingFor: string | null = null;
   private fetchingVoices = false;
   private hapticsOff: (() => void) | null = null;
 
-  // Nós que o re-render PARCIAL reaproveita. Trocar de aba ou de provider
-  // chamava display(), que esvazia o container inteiro: a tela piscava como se
-  // recarregasse tudo (e recarregava mesmo — nav, blurb, todos os Setting).
-  // Agora cada controle troca só a região que ele manda.
-  private navEl: HTMLElement | null = null;
+  /** As linhas vivas, por nome (ver `slot`). */
+  private slots = new Map<string, Slot>();
+  /** Linha/grupo da árvore → aba e provider: o pouso da busca. */
+  private places = new WeakMap<object, Place>();
+  /** O desenho do caminho antigo, quando é ele que está na tela. */
+  private legacy: LegacyTree | null = null;
+
+  // NÃO chamar de `navEl`: esse nome é do Obsidian — é o item da barra lateral
+  // das settings que ele guarda em cada aba (openTab faz navEl.addClass
+  // ("is-active"), e a lista lateral é remontada com os navEl). Até a 0.9.13
+  // este campo se chamava assim e sobrescrevia o dele; no 1.13, zerado na
+  // limpeza, reabrir as settings quebrava. tests/settingsTabFields.test.ts
+  // impede a volta.
+  private tabBarEl: HTMLElement | null = null;
   private blurbEl: HTMLElement | null = null;
-  private bodyEl: HTMLElement | null = null;
-  private subnavEl: HTMLElement | null = null;
-  private providerBodyEl: HTMLElement | null = null;
-  private modelsEl: HTMLElement | null = null;
-  private fetchBtn: ButtonComponent | null = null;
+  private railEl: HTMLElement | null = null;
 
   constructor(
     app: App,
     private readonly plugin: AxxaPlugin
   ) {
     super(app, plugin);
+    // Aparece nos resultados da busca das settings, ao lado de cada linha.
+    this.icon = "bot";
+    this.prepareRoot();
   }
 
-  /** Monta a casca UMA vez: nav + blurb + corpo. Só o corpo troca depois. */
+  // ── os dois caminhos ──────────────────────────────────────────────────────
+
+  /** 1.13+: a árvore, pro Obsidian desenhar e indexar. Lida uma vez, no
+   *  `addSettingTab`; quem muda depois são as linhas vivas, não a árvore. */
+  getSettingDefinitions(): SettingDefinitionItem[] {
+    try {
+      return this.buildTree();
+    } catch (err) {
+      // Sem try/catch, um erro aqui derrubaria o `onload` do plugin inteiro
+      // (o addSettingTab chama isto). Com a lista vazia, o 1.13 volta a
+      // chamar o `display()`.
+      console.error("[axxa] settings: a árvore falhou — a aba cai no display()", err);
+      return [];
+    }
+  }
+
+  /** 1.11.4–1.12.x (e o 1.13, se a árvore falhar): a MESMA árvore, por nós. */
   display(): void {
-    const { containerEl } = this;
-    containerEl.empty();
-    containerEl.addClass("axxa-settings-root");
+    this.legacy?.dispose();
+    this.slots.clear();
+    this.containerEl.empty();
+    this.prepareRoot();
+    this.legacy = drawLegacyTree(this.containerEl, this.buildTree(), {
+      get: (key) => this.readValue(key),
+      set: (key, value) => this.writeValue(key, value),
+    });
+  }
+
+  /** O Obsidian lê um `control` por aqui. */
+  getControlValue(key: string): unknown {
+    return this.readValue(key);
+  }
+
+  /**
+   * O Obsidian grava um `control` por aqui. O padrão dele grava com
+   * `saveData(settings)` e mandaria as chaves de API em texto puro pro
+   * data.json — ver ui/settings/values.ts.
+   */
+  async setControlValue(key: string, value: unknown): Promise<void> {
+    await this.writeValue(key, value);
+  }
+
+  /**
+   * O POUSO DA BUSCA (1.13). Clicar num resultado abre a aba e chama este
+   * método — interno, não está nas tipagens — pra achar a linha e rolar até
+   * ela. A linha pode estar numa aba ou num provider escondidos por CSS, então
+   * primeiro mostramos a aba dela e depois devolvemos o que o Obsidian
+   * devolveria. Se um dia o método mudar de nome, a busca continua achando e
+   * abrindo a aba; só o pouso numa aba escondida deixa de acontecer.
+   */
+  getElementForDefinition(def: unknown): HTMLElement | null | undefined {
+    const place = def && typeof def === "object" ? this.places.get(def) : undefined;
+    if (place) {
+      this.setTab(place.tab);
+      if (place.provider) this.setProvider(place.provider);
+    }
+    const base = (PluginSettingTab.prototype as unknown as DefinitionLookup)
+      .getElementForDefinition;
+    return base?.call(this, def) as HTMLElement | null | undefined;
+  }
+
+  private buildTree(): SettingDefinitionItem[] {
+    const tree = buildSettingsTree(this.ui());
+    this.places = tree.places;
+    return tree.items;
+  }
+
+  private readValue(key: string): unknown {
+    return isControlKey(key) ? readControl(this.s, key) : undefined;
+  }
+
+  private async writeValue(key: string, value: unknown): Promise<void> {
+    // O tato espelha a setting ANTES de gravar: o pulso de confirmação abaixo
+    // já sai (ou não) conforme o que acabou de ser escolhido.
+    if (key === "hapticsEnabled") setHapticsEnabled(value === true);
+    if (!(await writeControl(this.plugin, key, value))) return;
+    switch (key) {
+      case "chatsPath":
+        void this.plugin.loadChatSummaries(true);
+        break;
+      case "skillsPath":
+        await this.plugin.reloadSkills();
+        break;
+      case "hapticsEnabled":
+        // Sente na hora o que acabou de ligar.
+        if (value === true) tap();
+        break;
+      case "openaiDataSharing":
+      case "openaiTier":
+        // Os dois mudam a etiqueta de cota de cada modelo da OpenAI.
+        this.repaint("catalog:openai");
+        this.repaint("freeOffer");
+        break;
+    }
+  }
+
+  /** Reavalia os `visible` da árvore depois de uma mudança feita à mão. */
+  private refreshVisibility(): void {
+    this.legacy?.refresh();
+    if (requireApiVersion("1.13.0")) this.refreshDomState();
+  }
+
+  /** O que a árvore pede: estado e os desenhos de cada linha. */
+  private ui(): SettingsUi {
+    return {
+      isMobile: Platform.isMobile,
+      settings: () => this.plugin.settings,
+      hasCredential: (id) => !!this.plugin.providerCredential(id),
+      freeOfferCount: () => this.freeOfferCount(),
+      nav: (row) => this.renderNav(row),
+      rail: (row) => this.renderRail(row),
+      credential: (id) =>
+        this.slot(`cred:${id}`, "providers", (row) => this.paintCredential(row, id)),
+      connection: (id) =>
+        this.slot(`conn:${id}`, "providers", (row) => this.paintConnection(row, id)),
+      newChatModel: (id) => (row) => this.paintNewChatModel(row, id),
+      fetchModels: (id) =>
+        this.slot(`fetch:${id}`, "providers", (row) => this.paintFetch(row, id)),
+      catalog: (id) =>
+        this.slot(`catalog:${id}`, "providers", (row) => this.paintCatalog(row, id)),
+      freeOffer: this.slot("freeOffer", "providers", (row) =>
+        this.paintHint(row, this.freeOfferText())
+      ),
+      assistantModel: this.slot("assistant", "chat", (row) =>
+        this.paintAssistantModel(row)
+      ),
+      ttsProvider: this.slot("ttsWho", "chat", (row) => this.paintTtsProvider(row)),
+      elevenKey: (row) => this.paintElevenKey(row),
+      elevenFetch: this.slot("elevenFetch", "chat", (row) => this.paintElevenFetch(row)),
+      elevenVoice: this.slot("elevenVoice", "chat", (row) => this.paintElevenVoice(row)),
+      testVoice: (row) => this.paintTestVoice(row),
+      embeddingModel: this.slot("embedding", "rag", (row) =>
+        this.paintEmbeddingModel(row)
+      ),
+      index: this.slot("index", "rag", (row) => this.paintIndex(row)),
+      hint: (text) => (row) => this.paintHint(row, text),
+    };
+  }
+
+  /**
+   * Uma linha VIVA. O render guarda o Setting que recebeu; `repaint(id)` o
+   * limpa e pinta de novo, no lugar. A limpeza devolvida roda quando o
+   * Obsidian desmonta a linha (sair da aba, fechar as settings).
+   */
+  private slot(id: string, tab: TabId, paint: (row: Setting) => void): RowRender {
+    return (row) => {
+      const entry: Slot = { row, paint, tab };
+      this.slots.set(id, entry);
+      paint(row);
+      return () => {
+        if (this.slots.get(id) === entry) this.slots.delete(id);
+      };
+    };
+  }
+
+  private repaint(id: string): void {
+    const entry = this.slots.get(id);
+    if (!entry) return;
+    entry.row.clear();
+    entry.paint(entry.row);
+  }
+
+  // ── a casca: container, barra de abas, trilho ─────────────────────────────
+
+  /** A classe e os atributos de que o CSS das abas depende. */
+  private prepareRoot(): void {
+    const el = this.containerEl;
+    el.addClass("axxa-settings-root");
+    const tabs = tabsFor(Platform.isMobile);
+    if (!tabs.some((t) => t.id === this.tab)) this.tab = tabs[0].id;
+    if (!PROVIDER_FIELDS[this.provider]) this.provider = PROVIDERS[0].id;
+    el.dataset.axxaTab = this.tab;
+    el.dataset.axxaProv = this.provider;
+  }
+
+  private blurbOf(id: TabId): string {
+    return tabsFor(Platform.isMobile).find((t) => t.id === id)?.blurb ?? "";
+  }
+
+  /** Segmented control, igual ao da tela inicial: trilho + thumb que desliza
+   *  até o item ativo. Colunas do tamanho do conteúdo, nada de quebrar linha. */
+  private renderNav(row: Setting): () => void {
+    this.prepareRoot();
     // Tato em tudo que se toca aqui dentro, sem precisar lembrar botão a botão.
     this.hapticsOff?.();
-    this.hapticsOff = hapticsOn(containerEl);
+    const off = hapticsOn(this.containerEl);
+    this.hapticsOff = off;
 
-    const tabs = this.tabs();
-    if (!tabs.some((t) => t.id === this.tab)) this.tab = tabs[0].id;
-
-    // Segmented control, igual ao da tela inicial: trilho + thumb que desliza
-    // pelo índice ativo (--axxa-seg). Colunas iguais e nada de quebrar linha.
-    const nav = containerEl.createDiv({ cls: "axxa-seg axxa-settings-nav" });
-    for (const t of tabs) {
+    const el = row.settingEl;
+    el.empty();
+    el.addClass("axxa-set-block", "axxa-set-navrow");
+    const nav = el.createDiv({ cls: "axxa-seg axxa-settings-nav" });
+    for (const t of tabsFor(Platform.isMobile)) {
+      const active = t.id === this.tab;
       const btn = nav.createEl("button", {
         text: t.label,
-        cls: t.id === this.tab ? "axxa-seg-item is-active" : "axxa-seg-item",
+        cls: active ? "axxa-seg-item is-active" : "axxa-seg-item",
+        attr: { type: "button", "aria-pressed": String(active), "data-tab": t.id },
       });
-      btn.setAttribute("type", "button");
-      btn.setAttribute("aria-pressed", String(t.id === this.tab));
-      btn.dataset.tab = t.id;
       btn.onclick = () => this.setTab(t.id);
     }
-    this.navEl = nav;
+    const blurb = el.createEl("p", {
+      cls: "axxa-settings-blurb",
+      text: this.blurbOf(this.tab),
+    });
+    this.tabBarEl = nav;
+    this.blurbEl = blurb;
     this.placeThumb(nav);
 
-    this.blurbEl = containerEl.createEl("p", { cls: "axxa-settings-blurb" });
-    this.bodyEl = containerEl.createDiv({ cls: "axxa-settings-body" });
-    this.renderBody();
+    return () => {
+      off();
+      if (this.hapticsOff === off) this.hapticsOff = null;
+      if (this.tabBarEl === nav) this.tabBarEl = null;
+      if (this.blurbEl === blurb) this.blurbEl = null;
+    };
   }
 
-  private tabs(): TabDef[] {
-    return TABS.filter((t) => !t.mobileOnly || Platform.isMobile);
-  }
-
-  /** Troca de aba SEM remontar a casca: só o estado do trilho e o corpo. */
+  /** Troca de aba mexendo SÓ no atributo do container e na barra. */
   private setTab(id: TabId): void {
-    if (id === this.tab) return;
+    if (!tabsFor(Platform.isMobile).some((t) => t.id === id)) return;
+    const changed = id !== this.tab;
     this.tab = id;
-    if (this.navEl) {
+    this.containerEl.dataset.axxaTab = id;
+    if (this.tabBarEl) {
       for (const btn of Array.from(
-        this.navEl.querySelectorAll<HTMLElement>(".axxa-seg-item")
+        this.tabBarEl.querySelectorAll<HTMLElement>(".axxa-seg-item")
       )) {
         const active = btn.dataset.tab === id;
         btn.toggleClass("is-active", active);
         btn.setAttribute("aria-pressed", String(active));
       }
-      this.placeThumb(this.navEl);
+      this.placeThumb(this.tabBarEl);
     }
-    this.renderBody();
-  }
-
-  private renderBody(): void {
-    const body = this.bodyEl;
-    if (!body) return;
-    body.empty();
-    this.blurbEl?.setText(this.tabs().find((t) => t.id === this.tab)?.blurb ?? "");
-    switch (this.tab) {
-      case "providers":
-        this.renderProviders(body);
-        break;
-      case "chat":
-        this.renderChat(body);
-        break;
-      case "vault":
-        this.renderVault(body);
-        break;
-      case "rag":
-        this.renderRag(body);
-        break;
-      case "agent":
-        this.renderAgent(body);
-        break;
-      case "mobile":
-        this.renderMobile(body);
-        break;
+    this.blurbEl?.setText(this.blurbOf(id));
+    // Escondido, o trilho mede zero: o thumb só acha o lugar quando aparece.
+    if (id === "providers" && this.railEl) this.placeThumb(this.railEl);
+    if (!changed) return;
+    // O que uma aba mostra pode ter mudado em outra (uma chave digitada em
+    // Providers muda o "Who reads"). Antes o corpo inteiro era redesenhado a
+    // cada troca; agora só as linhas vivas da aba que entrou.
+    for (const [slotId, slot] of this.slots) {
+      if (slot.tab === id) this.repaint(slotId);
     }
+    this.refreshVisibility();
   }
 
   /**
@@ -285,73 +416,73 @@ export class AxxaSettingsTab extends PluginSettingTab {
       row.style.setProperty("--axxa-seg-w", `${active.offsetWidth}px`);
     };
     put();
-    // De novo no frame seguinte: na primeira passada as fontes podem não ter
-    // assentado e a medida sai errada por alguns píxeis.
-    window.requestAnimationFrame(put);
+    // De novo no frame seguinte: na primeira passada a linha pode nem estar
+    // no documento ainda, ou as fontes não assentaram. A janela é a da linha —
+    // no 1.13 as settings do desktop abrem em janela própria.
+    row.win.requestAnimationFrame(put);
   }
 
-  private get s() {
-    return this.plugin.settings;
-  }
-  private save = () => this.plugin.saveSettings();
-
-  // ── Providers (com sub-abas) ──────────────────────────────────────────────
-
-  private renderProviders(el: HTMLElement): void {
-    if (!PROVIDER_FIELDS[this.provider]) this.provider = PROVIDERS[0].id;
-
-    // Sub-abas: quem já tem credencial aparece em texto normal, quem não tem
-    // fica apagado — dá pra ver o estado dos seis sem abrir um por um.
+  /** O trilho de providers: quem já tem credencial aparece aceso, quem não
+   *  tem fica apagado — dá pra ver o estado dos seis sem abrir um por um. */
+  private renderRail(row: Setting): () => void {
+    const el = row.settingEl;
+    el.empty();
+    el.addClass("axxa-set-block", "axxa-set-railrow");
     const sub = el.createDiv({ cls: "axxa-seg axxa-settings-subnav" });
     for (const p of PROVIDERS) {
-      const ready = providerConfigured(this.plugin, p.id);
+      const active = p.id === this.provider;
       const btn = sub.createEl("button", {
-        cls:
-          "axxa-seg-item" +
-          (p.id === this.provider ? " is-active" : "") +
-          (ready ? " is-ready" : ""),
+        cls: "axxa-seg-item" + (active ? " is-active" : ""),
+        // O LOGO no lugar do nome: com seis providers, nome + logo não cabem
+        // em uma linha, e o logo identifica mais rápido. O nome fica no
+        // aria-label, no tooltip e no título do cartão logo abaixo.
+        attr: {
+          type: "button",
+          "aria-pressed": String(active),
+          "aria-label": p.name,
+          title: p.name,
+          "data-provider": p.id,
+        },
       });
-      btn.setAttribute("type", "button");
-      btn.setAttribute("aria-pressed", String(p.id === this.provider));
-      // O LOGO no lugar do nome: com seis providers, nome + logo não cabem em
-      // uma linha, e o logo identifica mais rápido. O nome fica no aria-label,
-      // no tooltip e no conteúdo logo abaixo ("OpenAI API key").
       const mark = btn.createSpan({ cls: "axxa-seg-logo" });
       setIcon(mark, p.icon);
-      // Bolinha de conexão: cinza vazado = sem credencial, cinza cheio = tem
-      // mas nunca testou, verde = testou e respondeu, vermelho = recusou.
+      // Bolinha de conexão: vazada = sem credencial, cinza cheio = tem mas
+      // nunca testou, verde = testou e respondeu, vermelho = recusou.
       mark.createSpan({ cls: "axxa-seg-dot" });
-      btn.setAttribute("aria-label", p.name);
-      btn.setAttribute("title", p.name);
-      btn.dataset.provider = p.id;
       btn.onclick = () => this.setProvider(p.id);
     }
-    this.subnavEl = sub;
+    this.railEl = sub;
     this.syncReady();
     this.placeThumb(sub);
-
-    this.providerBodyEl = el.createDiv();
-    this.renderProviderBody();
+    return () => {
+      if (this.railEl === sub) this.railEl = null;
+    };
   }
 
-  /** Troca de provider mexendo só no trilho e no corpo da sub-aba. */
+  /** Troca de provider mexendo só no atributo, no trilho e no catálogo. */
   private setProvider(id: string): void {
-    if (id === this.provider) return;
+    if (!PROVIDER_FIELDS[id]) return;
+    const old = this.provider;
     this.provider = id;
-    // Outro provider, outros papéis: um filtro herdado mostraria uma lista
-    // vazia sem explicar por quê.
-    this.kind = "all";
-    if (this.subnavEl) {
+    this.containerEl.dataset.axxaProv = id;
+    if (this.railEl) {
       for (const btn of Array.from(
-        this.subnavEl.querySelectorAll<HTMLElement>(".axxa-seg-item")
+        this.railEl.querySelectorAll<HTMLElement>(".axxa-seg-item")
       )) {
         const active = btn.dataset.provider === id;
         btn.toggleClass("is-active", active);
         btn.setAttribute("aria-pressed", String(active));
       }
-      this.placeThumb(this.subnavEl);
+      this.placeThumb(this.railEl);
     }
-    this.renderProviderBody();
+    if (old === id) return;
+    // Outro provider, outros papéis: um filtro herdado mostraria uma lista
+    // vazia sem explicar por quê.
+    this.kind = "all";
+    // Só o catálogo do provider à vista existe desenhado: seis catálogos de
+    // dezenas de linhas, escondidos, seriam DOM à toa.
+    this.repaint(`catalog:${old}`);
+    this.repaint(`catalog:${id}`);
   }
 
   /** Estado da conexão: o desta sessão, senão o último teste gravado. */
@@ -363,6 +494,102 @@ export class AxxaSettingsTab extends PluginSettingTab {
     return { state: saved.ok ? "ok" : "fail", detail: saved.detail };
   }
 
+  /** Saúde mostrada na bolinha — o teste desta sessão manda na frente do
+   *  gravado (acabou de testar e ainda não fechou as settings). */
+  private healthOf(id: string): ProviderHealth {
+    if (!providerConfigured(this.plugin, id)) return "off";
+    const live = this.conn[id];
+    if (live?.state === "ok") return "ok";
+    if (live?.state === "fail") return "fail";
+    return providerHealth(this.plugin, id);
+  }
+
+  /** Reacende os logos do trilho conforme quem tem credencial. */
+  private syncReady(): void {
+    if (!this.railEl) return;
+    for (const btn of Array.from(
+      this.railEl.querySelectorAll<HTMLElement>(".axxa-seg-item")
+    )) {
+      const id = btn.dataset.provider;
+      if (!id) continue;
+      btn.toggleClass("is-ready", providerConfigured(this.plugin, id));
+      const health = this.healthOf(id);
+      const dot = btn.querySelector<HTMLElement>(".axxa-seg-dot");
+      if (dot) {
+        dot.className = `axxa-seg-dot is-${health}`;
+        dot.setAttribute("aria-hidden", "true");
+      }
+      btn.setAttribute(
+        "title",
+        `${PROVIDERS.find((x) => x.id === id)?.name ?? id} · ${HEALTH_TEXT[health]}`
+      );
+    }
+  }
+
+  private get s() {
+    return this.plugin.settings;
+  }
+  private save = () => this.plugin.saveSettings();
+
+  // ── Providers ─────────────────────────────────────────────────────────────
+
+  private paintCredential(row: Setting, providerId: string): void {
+    const f = PROVIDER_FIELDS[providerId];
+    if (!f) return;
+    const s = this.s;
+    // Depois de cada tecla: o trilho acende, o botão Test destrava e os
+    // recados que dependem da chave (o ditado, a leitura) se reavaliam.
+    const changed = () => {
+      this.syncReady();
+      this.repaint(`conn:${providerId}`);
+      this.refreshVisibility();
+    };
+    if (f.key) {
+      const key = f.key;
+      row.addText((t) => {
+        t.inputEl.type = "password";
+        t.setPlaceholder("key…")
+          .setValue(s[key])
+          .onChange(async (v) => {
+            s[key] = v.trim();
+            await this.save();
+            changed();
+          });
+      });
+    } else {
+      row.addText((t) =>
+        t
+          .setPlaceholder("http://localhost:11434")
+          .setValue(s.ollamaEndpoint)
+          .onChange(async (v) => {
+            s.ollamaEndpoint = v.trim();
+            await this.save();
+            changed();
+          })
+      );
+    }
+  }
+
+  // "Tem chave" e "a chave funciona" são coisas diferentes; o trilho mostra a
+  // primeira, esta linha mostra a segunda. O teste é o listModels do próprio
+  // provider (o motor já tem) — se ele responde, a credencial vale.
+  private paintConnection(row: Setting, providerId: string): void {
+    const st = this.connOf(providerId);
+    row.setDesc(CONN_TEXT[st.state](st.detail));
+    row.addButton((b) => {
+      b.setButtonText(st.state === "testing" ? "Testing…" : "Test")
+        .setDisabled(
+          st.state === "testing" || !providerConfigured(this.plugin, providerId)
+        )
+        .onClick(() => void this.testConnection(providerId));
+    });
+    row.nameEl.addClass("axxa-conn-name");
+    row.nameEl.querySelector(".axxa-conn-dot")?.remove();
+    row.nameEl.prepend(row.nameEl.createSpan({ cls: `axxa-conn-dot is-${st.state}` }));
+    row.descEl.removeClass("is-unknown", "is-testing", "is-ok", "is-fail");
+    row.descEl.addClass("axxa-conn-desc", `is-${st.state}`);
+  }
+
   /**
    * Testa a credencial pedindo a lista de modelos ao provider. É o mesmo
    * caminho do "Fetch models" — e como a resposta JÁ é o catálogo, guardar ele
@@ -371,7 +598,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
   private async testConnection(providerId: string): Promise<void> {
     if (this.conn[providerId]?.state === "testing") return;
     this.conn[providerId] = { state: "testing" };
-    this.renderProviderBody();
+    this.repaint(`conn:${providerId}`);
     try {
       const models = await this.plugin.scanModels(providerId);
       if (models.length > 0) this.catalog[providerId] = models;
@@ -397,227 +624,128 @@ export class AxxaSettingsTab extends PluginSettingTab {
       detail: now.detail,
     };
     await this.save();
-    this.renderProviderBody();
+    this.repaint(`conn:${providerId}`);
+    this.repaint(`catalog:${providerId}`);
     this.syncReady();
+    if (providerId === "openai") this.freeOfferChanged();
   }
 
-  /** Saúde mostrada na bolinha — o teste desta sessão manda na frente do
-   *  gravado (acabou de testar e ainda não fechou as settings). */
-  private healthOf(id: string): ProviderHealth {
-    if (!providerConfigured(this.plugin, id)) return "off";
-    const live = this.conn[id];
-    if (live?.state === "ok") return "ok";
-    if (live?.state === "fail") return "fail";
-    return providerHealth(this.plugin, id);
-  }
-
-  /** Reacende os logos do trilho conforme quem tem credencial. */
-  private syncReady(): void {
-    if (!this.subnavEl) return;
-    for (const btn of Array.from(
-      this.subnavEl.querySelectorAll<HTMLElement>(".axxa-seg-item")
-    )) {
-      const id = btn.dataset.provider;
-      if (!id) continue;
-      btn.toggleClass("is-ready", providerConfigured(this.plugin, id));
-      const health = this.healthOf(id);
-      const dot = btn.querySelector<HTMLElement>(".axxa-seg-dot");
-      if (dot) {
-        dot.className = `axxa-seg-dot is-${health}`;
-        dot.setAttribute("aria-hidden", "true");
-      }
-      btn.setAttribute("title", `${PROVIDERS.find((x) => x.id === id)?.name ?? id} · ${HEALTH_TEXT[health]}`);
-    }
-  }
-
-  private renderProviderBody(): void {
-    const el = this.providerBodyEl;
-    if (!el) return;
-    el.empty();
-
-    const p = PROVIDERS.find((x) => x.id === this.provider);
-    const f = PROVIDER_FIELDS[this.provider];
-    if (!p || !f) return;
-    const s = this.s;
-
-    // O nome do provider vira CABEÇALHO (com o logo), não rótulo de linha:
-    // "OpenRouter API key" na coluna estreita do setting-item trunca no
-    // celular ("OpenR… API key"). Cabeçalho ocupa a largura toda.
-    const brand = new Setting(el).setName(p.name).setHeading();
-    const mark = brand.nameEl.createSpan({ cls: "axxa-settings-brand" });
-    setIcon(mark, p.icon);
-    brand.nameEl.prepend(mark);
-
-    if (f.key) {
-      const key = f.key;
-      new Setting(el)
-        .setName("API key")
-        .setDesc("Stored in the OS keychain (not in data.json).")
-        .addText((t) => {
-          t.inputEl.type = "password";
-          t.setPlaceholder("key…")
-            .setValue(s[key])
-            .onChange(async (v) => {
-              s[key] = v.trim();
-              await this.save();
-              // O trilho mostra quem já tem credencial: sem isto o logo só
-              // acenderia na próxima vez que o corpo fosse remontado.
-              this.syncReady();
-            });
-        });
-    } else {
-      new Setting(el)
-        .setName("Endpoint")
-        .setDesc("Local server address. Ollama needs no key.")
-        .addText((t) =>
-          t
-            .setPlaceholder("http://localhost:11434")
-            .setValue(s.ollamaEndpoint)
-            .onChange(async (v) => {
-              s.ollamaEndpoint = v.trim();
-              await this.save();
-              this.syncReady();
-            })
-        );
-    }
-
-    // ── conexão ───────────────────────────────────────────────────────────
-    // "Tem chave" e "a chave funciona" são coisas diferentes; o trilho mostra a
-    // primeira, esta linha mostra a segunda. O teste é o listModels do próprio
-    // provider (o motor já tem) — se ele responde, a credencial vale.
-    const st = this.connOf(p.id);
-    const conn = new Setting(el)
-      .setName("Connection")
-      .setDesc(CONN_TEXT[st.state](st.detail))
-      .addButton((b) => {
-        b.setButtonText(st.state === "testing" ? "Testing…" : "Test")
-          .setDisabled(st.state === "testing" || !providerConfigured(this.plugin, p.id))
-          .onClick(() => void this.testConnection(p.id));
-      });
-    conn.nameEl.addClass("axxa-conn-name");
-    const dot = conn.nameEl.createSpan({ cls: `axxa-conn-dot is-${st.state}` });
-    conn.nameEl.prepend(dot);
-    conn.descEl.addClass(`axxa-conn-desc`, `is-${st.state}`);
-
-    const modelField = f.model;
-    new Setting(el)
-      .setName("Model for new chats")
-      .setDesc("Used when this provider is selected and nothing else was picked.")
-      .addText((t) =>
-        t.setValue(s[modelField]).onChange(async (v) => {
-          const m = v.trim();
-          if (!m) return;
-          s[modelField] = m;
-          this.addToList("activeModels", p.id, m);
-          await this.save();
-        })
-      );
-
-    // ── a cota diária da OpenAI ───────────────────────────────────────────
-    // Só aqui: é um programa DELES, e prometer a cota nos outros providers
-    // seria inventar desconto.
-    if (p.id === "openai") this.renderFreeTokens(el);
-
-    // ── catálogo ──────────────────────────────────────────────────────────
-    new Setting(el)
-      .setName("Models")
-      .setDesc(
-        "Fetch what this provider offers today, then choose what shows up where."
-      )
-      .addButton((b) => {
-        this.fetchBtn = b;
-        b.setButtonText(this.fetching ? "Fetching…" : "Fetch models")
-          .setCta()
-          .setDisabled(this.fetching)
-          .onClick(() => void this.fetchModels(p.id));
-      });
-
-    this.modelsEl = el.createDiv({ cls: "axxa-models" });
-    this.renderModels();
-  }
-
-  /**
-   * A cota diária de tokens da OpenAI (o "Data controls" do painel deles).
-   *
-   * Isto não LIGA nada: o interruptor é da OpenAI, e mora na conta. O que a
-   * gente guarda aqui é se ele está ligado e em que tier a conta está — as
-   * duas coisas que decidem o NÚMERO. Sem elas, a lista de modelos teria que
-   * escolher entre mostrar uma cota que talvez não exista ou não mostrar
-   * nenhuma; as duas mentem pra metade das contas.
-   */
-  private renderFreeTokens(el: HTMLElement): void {
-    const s = this.s;
-    new Setting(el).setName("Free daily tokens").setHeading();
-
-    new Setting(el)
-      .setName("I share API data with OpenAI")
-      .setDesc(
-        "Their switch, in Data controls on platform.openai.com. Turning it on there gives your account a daily quota at no cost; telling us here is what makes this list show the real numbers."
-      )
-      .addToggle((t) =>
-        t.setValue(s.openaiDataSharing === true).onChange(async (v) => {
-          s.openaiDataSharing = v;
-          await this.save();
-          this.renderModels();
-        })
-      );
-
-    new Setting(el)
-      .setName("Usage tier")
-      .setDesc(
-        "Tiers 1–2 get 250k tokens/day on the big models and 2.5M/day on mini and nano. Tier 3 and up get 1M and 10M."
-      )
-      .addDropdown((d) => {
-        for (const n of [1, 2, 3, 4, 5]) d.addOption(String(n), `Tier ${n}`);
-        d.setValue(String(s.openaiTier ?? 1)).onChange(async (v) => {
-          s.openaiTier = Number(v) || 1;
-          await this.save();
-          this.renderModels();
-        });
-      });
-
-    // Com o programa desligado, a lista abaixo marca com "+" o que ele DARIA.
-    // A conta aqui diz de quantos modelos se está falando — sem ela, o "+"
-    // seria um sinal sem tamanho.
-    if (!s.openaiDataSharing) {
-      const cobertos = (
-        this.catalog.openai ?? s.activeModels.openai ?? []
-      ).filter((m) => openaiFreeTierForModel(m) !== null).length;
-      if (cobertos > 0) {
-        this.hint(
-          el,
-          `${cobertos} model${cobertos === 1 ? "" : "s"} in this list would get a daily quota — they are the ones marked with a "+".`
-        );
-      }
-    }
-
-    this.hint(
-      el,
-      `The quota counts ALL your OpenAI API use, not just this vault — so anything the app says you have left is optimistic. Image models are never covered. Program terms as of ${FREE_TOKENS_AS_OF}.`
+  private paintNewChatModel(row: Setting, providerId: string): void {
+    const f = PROVIDER_FIELDS[providerId];
+    if (!f) return;
+    const field = f.model;
+    row.addText((t) =>
+      t.setValue(this.s[field]).onChange(async (v) => {
+        const m = v.trim();
+        if (!m) return;
+        this.s[field] = m;
+        this.addToList("activeModels", providerId, m);
+        await this.save();
+      })
     );
   }
 
+  private paintFetch(row: Setting, providerId: string): void {
+    const busy = this.fetchingFor === providerId;
+    row.addButton((b) =>
+      b
+        .setButtonText(busy ? "Fetching…" : "Fetch models")
+        .setCta()
+        .setDisabled(this.fetchingFor !== null)
+        .onClick(() => void this.fetchModels(providerId))
+    );
+  }
+
+  /** Busca o catálogo do provider (o motor já tem: plugin.scanModels). */
+  private async fetchModels(providerId: string): Promise<void> {
+    if (this.fetchingFor) return;
+    this.fetchingFor = providerId;
+    this.repaint(`fetch:${providerId}`);
+    this.repaint(`catalog:${providerId}`);
+    try {
+      const models = await this.plugin.scanModels(providerId);
+      this.catalog[providerId] = models;
+      new Notice(
+        models.length > 0
+          ? `${models.length} models found.`
+          : "No models returned — check the key or the endpoint."
+      );
+    } catch (err) {
+      console.error("[axxa] scanModels falhou:", err);
+      new Notice(
+        `Fetch failed: ${err instanceof Error ? err.message : String(err)}`
+      );
+    } finally {
+      this.fetchingFor = null;
+      this.repaint(`fetch:${providerId}`);
+      this.repaint(`catalog:${providerId}`);
+      if (providerId === "openai") this.freeOfferChanged();
+    }
+  }
+
+  // ── a cota diária da OpenAI ───────────────────────────────────────────────
+  // Isto não LIGA nada: o interruptor é da OpenAI, e mora na conta. O que a
+  // gente guarda é se ele está ligado e em que tier a conta está — as duas
+  // coisas que decidem o NÚMERO. Sem elas, a lista de modelos teria que
+  // escolher entre mostrar uma cota que talvez não exista ou não mostrar
+  // nenhuma; as duas mentem pra metade das contas.
+
+  /** Com o programa desligado, a lista marca com "+" o que ele DARIA. A conta
+   *  diz de quantos modelos se está falando — sem ela, o "+" seria um sinal
+   *  sem tamanho. */
+  private freeOfferCount(): number {
+    return (this.catalog.openai ?? this.s.activeModels.openai ?? []).filter(
+      (m) => openaiFreeTierForModel(m) !== null
+    ).length;
+  }
+
+  private freeOfferText(): string {
+    const n = this.freeOfferCount();
+    return `${n} model${n === 1 ? "" : "s"} in this list would get a daily quota — they are the ones marked with a "+".`;
+  }
+
+  private freeOfferChanged(): void {
+    this.repaint("freeOffer");
+    this.refreshVisibility();
+  }
+
+  /** Recado curto entre linhas: o que falta pra linha de cima funcionar. */
+  private paintHint(row: Setting, text: string): void {
+    const el = row.settingEl;
+    el.empty();
+    el.addClass("axxa-set-block", "axxa-set-hint");
+    el.createEl("p", { cls: "axxa-settings-hint", text });
+  }
+
+  // ── o catálogo ────────────────────────────────────────────────────────────
+
+  private paintCatalog(row: Setting, providerId: string): void {
+    const el = row.settingEl;
+    el.empty();
+    el.addClass("axxa-set-block", "axxa-set-catalog");
+    if (providerId !== this.provider) return;
+    this.drawModels(el.createDiv({ cls: "axxa-models" }), providerId);
+  }
+
   /** A lista de modelos — o único pedaço que os toggles e o filtro remontam. */
-  private renderModels(): void {
-    const list = this.modelsEl;
-    const p = PROVIDERS.find((x) => x.id === this.provider);
-    if (!list || !p) return;
-    list.empty();
+  private drawModels(list: HTMLElement, providerId: string): void {
+    const redraw = () => this.repaint(`catalog:${providerId}`);
 
     // A lista é o catálogo buscado UNIDO ao que já está marcado — sem fetch,
     // o usuário ainda vê e desmarca o que configurou antes.
-    const shown = this.s.activeModels[p.id] ?? [];
-    const favs = this.s.favoriteModels?.[p.id] ?? [];
+    const shown = this.s.activeModels[providerId] ?? [];
+    const favs = this.s.favoriteModels?.[providerId] ?? [];
     const models = Array.from(
-      new Set([...(this.catalog[p.id] ?? []), ...shown, ...favs])
+      new Set([...(this.catalog[providerId] ?? []), ...shown, ...favs])
     ).sort();
 
     if (models.length === 0) {
       list.createEl("p", {
         cls: "axxa-models-empty",
-        text: this.fetching
-          ? "Fetching…"
-          : "No models yet — fetch the catalog, or type one in the field above.",
+        text:
+          this.fetchingFor === providerId
+            ? "Fetching…"
+            : "No models yet — fetch the catalog, or type one in the field above.",
       });
       return;
     }
@@ -632,7 +760,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
     // PAPEL no filtro, FAMÍLIA nas seções — as duas coisas o motor já sabe
     // (ver src/ui/modelCatalog.ts). Um catálogo de provider vem com dezenas de
     // ids embaralhados; sem isso a lista é indigerível.
-    const groups = buildModelCatalog(p.id, models);
+    const groups = buildModelCatalog(providerId, models);
     if (
       this.kind !== "all" &&
       this.kind !== "free" &&
@@ -654,14 +782,14 @@ export class AxxaSettingsTab extends PluginSettingTab {
         cls: "axxa-model-section-count",
         text: `${favs.length}/${FAVORITE_LIMIT}`,
       });
-      for (const m of [...favs].sort()) this.modelRow(sec, p.id, m);
+      for (const m of [...favs].sort()) this.modelRow(sec, providerId, m, redraw);
     }
 
     // Quantos modelos têm cota ou são de graça — o número decide se o filtro
     // "Free" aparece. Filtro que leva a uma lista vazia é um toque perdido.
     const gratis = models.filter((m) =>
-      freeTag(p.id, m, {
-        free: getModelCapabilities(p.id, m).free === true,
+      freeTag(providerId, m, {
+        free: getModelCapabilities(providerId, m).free === true,
         dataSharing: this.s.openaiDataSharing === true,
         tier: this.s.openaiTier ?? 1,
       })
@@ -680,11 +808,13 @@ export class AxxaSettingsTab extends PluginSettingTab {
         const active = it.id === this.kind;
         const btn = filter.createEl("button", {
           cls: "axxa-seg-item" + (active ? " is-active" : ""),
+          attr: {
+            type: "button",
+            "aria-pressed": String(active),
+            "aria-label": it.label,
+            title: it.label,
+          },
         });
-        btn.setAttribute("type", "button");
-        btn.setAttribute("aria-pressed", String(active));
-        btn.setAttribute("aria-label", it.label);
-        btn.setAttribute("title", it.label);
         const mark = btn.createSpan({ cls: "axxa-seg-ico" });
         setIcon(mark, it.icon);
         // Só o ATIVO mostra o rótulo: sete papéis com nome não cabem numa
@@ -692,7 +822,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
         if (active) btn.createSpan({ cls: "axxa-seg-label", text: it.label });
         btn.onclick = () => {
           this.kind = it.id;
-          this.renderModels();
+          redraw();
         };
       }
       this.placeThumb(filter);
@@ -702,7 +832,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
     // tem mini), então ele não é um grupo do catálogo: é uma lista chapada.
     if (this.kind === "free") {
       const wrap = list.createDiv({ cls: "axxa-model-fam" });
-      for (const m of gratis) this.modelRow(wrap, p.id, m);
+      for (const m of gratis) this.modelRow(wrap, providerId, m, redraw);
       if (gratis.length === 0) {
         list.createEl("p", {
           cls: "axxa-models-empty",
@@ -731,14 +861,13 @@ export class AxxaSettingsTab extends PluginSettingTab {
         // Família sem linhagem conhecida ("Other") vira o próprio papel: uma
         // seção "OTHER · Text embedding" não informa nada.
         const orfa = fam.id === "other";
-        const key = `${p.id}:${g.id}:${fam.id}`;
+        const key = `${providerId}:${g.id}:${fam.id}`;
         const closed = key !== this.openFam;
 
         const sec = list.createEl("button", {
           cls: closed ? "axxa-model-section is-closed" : "axxa-model-section",
+          attr: { type: "button", "aria-expanded": String(!closed) },
         });
-        sec.setAttribute("type", "button");
-        sec.setAttribute("aria-expanded", String(!closed));
         const mark = sec.createSpan({ cls: "axxa-model-section-ico" });
         setIcon(mark, orfa ? g.icon : fam.icon);
         sec.createSpan({
@@ -760,7 +889,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
         const wrap = list.createDiv({
           cls: closed ? "axxa-model-fam is-closed" : "axxa-model-fam",
         });
-        for (const m of fam.models) this.modelRow(wrap, p.id, m);
+        for (const m of fam.models) this.modelRow(wrap, providerId, m, redraw);
 
         panes.push({ key, sec, wrap });
         sec.onclick = () => {
@@ -772,7 +901,12 @@ export class AxxaSettingsTab extends PluginSettingTab {
   }
 
   /** Uma linha da lista de modelos: nome, tag free, id e os dois toggles. */
-  private modelRow(host: HTMLElement, providerId: string, m: string): void {
+  private modelRow(
+    host: HTMLElement,
+    providerId: string,
+    m: string,
+    redraw: () => void
+  ): void {
     const shown = this.s.activeModels[providerId] ?? [];
     const favs = this.s.favoriteModels?.[providerId] ?? [];
 
@@ -789,11 +923,11 @@ export class AxxaSettingsTab extends PluginSettingTab {
       tier: this.s.openaiTier ?? 1,
     });
     if (tag) {
-      const el = title.createSpan({
+      title.createSpan({
         cls: `axxa-tag is-free is-${tag.kind}`,
         text: tag.label,
+        attr: { title: tag.detail },
       });
-      el.setAttribute("title", tag.detail);
     }
     info.createDiv({ cls: "axxa-model-id", text: m });
 
@@ -803,26 +937,27 @@ export class AxxaSettingsTab extends PluginSettingTab {
     const showBtn = actions.createEl("button", {
       cls: isShown ? "axxa-model-toggle is-on" : "axxa-model-toggle",
       text: "Show",
+      attr: {
+        type: "button",
+        "aria-pressed": String(isShown),
+        title: "Appears in this provider's model list",
+      },
     });
-    showBtn.setAttribute("type", "button");
-    showBtn.setAttribute("aria-pressed", String(isShown));
-    showBtn.setAttribute("title", "Appears in this provider's model list");
     showBtn.onclick = async () => {
       this.toggleInList("activeModels", providerId, m);
       await this.save();
-      this.renderModels();
+      redraw();
     };
 
     const isFav = favs.includes(m);
     const favBtn = actions.createEl("button", {
       cls: isFav ? "axxa-model-toggle is-fav" : "axxa-model-toggle",
+      attr: {
+        type: "button",
+        "aria-pressed": String(isFav),
+        title: `Appears on the new-chat screen (max ${FAVORITE_LIMIT})`,
+      },
     });
-    favBtn.setAttribute("type", "button");
-    favBtn.setAttribute("aria-pressed", String(isFav));
-    favBtn.setAttribute(
-      "title",
-      `Appears on the new-chat screen (max ${FAVORITE_LIMIT})`
-    );
     setIcon(favBtn, isFav ? "star" : "star-off");
     favBtn.onclick = async () => {
       const list = this.s.favoriteModels?.[providerId] ?? [];
@@ -839,41 +974,8 @@ export class AxxaSettingsTab extends PluginSettingTab {
         this.addToList("activeModels", providerId, m);
       }
       await this.save();
-      this.renderModels();
+      redraw();
     };
-  }
-
-  /** Busca o catálogo do provider (o motor já tem: plugin.scanModels). */
-  private async fetchModels(providerId: string): Promise<void> {
-    if (this.fetching) return;
-    this.fetching = true;
-    this.syncFetchBtn();
-    this.renderModels();
-    try {
-      const models = await this.plugin.scanModels(providerId);
-      this.catalog[providerId] = models;
-      new Notice(
-        models.length > 0
-          ? `${models.length} models found.`
-          : "No models returned — check the key or the endpoint."
-      );
-    } catch (err) {
-      console.error("[axxa] scanModels falhou:", err);
-      new Notice(
-        `Fetch failed: ${err instanceof Error ? err.message : String(err)}`
-      );
-    } finally {
-      this.fetching = false;
-      this.syncFetchBtn();
-      this.renderModels();
-    }
-  }
-
-  /** O botão de fetch é a única coisa fora da lista que muda no fetch. */
-  private syncFetchBtn(): void {
-    this.fetchBtn
-      ?.setButtonText(this.fetching ? "Fetching…" : "Fetch models")
-      .setDisabled(this.fetching);
   }
 
   private addToList(
@@ -898,80 +1000,14 @@ export class AxxaSettingsTab extends PluginSettingTab {
       : [model, ...list];
   }
 
-  // ── Chat ──────────────────────────────────────────────────────────────────
-
-  private renderChat(el: HTMLElement): void {
-    const s = this.s;
-    new Setting(el)
-      .setName("Provider")
-      .setDesc("Which provider a new chat opens with.")
-      .addDropdown((d) => {
-        for (const p of PROVIDERS) d.addOption(p.id, p.name);
-        d.setValue(s.defaultProvider).onChange(async (v) => {
-          s.defaultProvider = v;
-          await this.save();
-        });
-      });
-    new Setting(el)
-      .setName("Mode")
-      .setDesc("Chat, Vault Q&A or Agent. Locks on the first message.")
-      .addDropdown((d) => {
-        for (const m of CHAT_MODES) d.addOption(m, m);
-        d.setValue(s.defaultMode).onChange(async (v) => {
-          s.defaultMode = v;
-          await this.save();
-        });
-      });
-    new Setting(el)
-      .setName("Effort")
-      .setDesc("How hard the model works: length, agent turns, temperature.")
-      .addDropdown((d) => {
-        for (const l of EFFORT_LEVELS) d.addOption(l, EFFORT_LABELS[l]);
-        d.setValue(s.defaultEffort).onChange(async (v) => {
-          s.defaultEffort = v;
-          await this.save();
-        });
-      });
-
-    this.renderLanguage(el);
-    this.renderAssistant(el);
-    this.renderVoice(el);
-  }
-
-  // ── A assistente de criação ────────────────────────────────────────────────
-  // Ela escreve skills e projetos por você. Mora aqui, e não junto dos
+  // ── A assistente de criação ───────────────────────────────────────────────
+  // Ela escreve skills e projetos por você. Mora no Chat, e não junto dos
   // providers, porque não é sobre com quem você conversa — é sobre quem te
   // ajuda a montar as coisas. E tem modelo PRÓPRIO de propósito: preencher um
   // formulário não justifica o modelo caro da conversa.
 
-  // ── Idioma ─────────────────────────────────────────────────────────────────
-  // Dois, e só dois. Ele manda em duas coisas que costumam andar separadas e
-  // aqui não podem: o texto da INTERFACE e o idioma em que o MODELO responde
-  // (os prompts de sistema mudam junto). Tela em português com o modelo
-  // respondendo em inglês dentro dela seria pior que tudo em inglês.
-
-  private renderLanguage(el: HTMLElement): void {
+  private paintAssistantModel(row: Setting): void {
     const s = this.s;
-    new Setting(el)
-      .setName("Language")
-      .setDesc(
-        "Interface, chat errors — and the language the model answers in. The " +
-          "creation assistant follows it too."
-      )
-      .addDropdown((d) => {
-        for (const l of LOCALES) d.addOption(l.id, l.label);
-        d.setValue(s.language || "en-us").onChange(async (v) => {
-          s.language = v;
-          await this.save();
-          this.renderBody();
-        });
-      });
-  }
-
-  private renderAssistant(el: HTMLElement): void {
-    const s = this.s;
-    new Setting(el).setName("Assistant").setHeading();
-
     const alvo = escolherAssistente({
       assistantProvider: s.assistantProvider,
       assistantModel: s.assistantModel,
@@ -981,272 +1017,115 @@ export class AxxaSettingsTab extends PluginSettingTab {
     });
     const livres = s.freeModels?.openrouter ?? [];
 
-    new Setting(el)
-      .setName("Model")
-      .setDesc(
-        alvo
-          ? `Writes skills and projects for you. Now: ${prettyModelName(
-              alvo.model
-            )}${ehFree(alvo.model, livres) ? " · free" : ""}`
-          : "Nothing free found yet — run SCAN on OpenRouter, or pick a model here."
-      )
-      .addDropdown((d) => {
-        // "Automático" primeiro, e é o padrão: id de modelo free muda de nome e
-        // some do catálogo, então deixar a gente procurar sozinha envelhece
-        // melhor que fixar um.
-        d.addOption("", "Automatic — first free OpenRouter model");
-        // O nome é o NOSSO (prettyModelName), como em toda parte do app — o
-        // id cru do catálogo só aparece onde ele É o dado (a chave, o debug).
-        const todos = [
-          ...new Set([...(s.activeModels?.openrouter ?? []), ...livres]),
-        ].sort();
-        for (const id of todos)
-          d.addOption(
-            id,
-            ehFree(id, livres)
-              ? `${prettyModelName(id)} · free`
-              : prettyModelName(id)
-          );
-        d.setValue(s.assistantModel ?? "").onChange(async (v) => {
-          s.assistantModel = v;
-          s.assistantProvider = v ? "openrouter" : "";
-          await this.save();
-          this.renderBody();
-        });
-      });
-
-    new Setting(el)
-      .setName("Let it see your note names")
-      .setDesc(
-        "So it can suggest which notes to attach to a project. Only the paths " +
-          "are sent — never what is inside them. Off by default."
-      )
-      .addToggle((t) =>
-        t.setValue(!!s.assistantSeesVault).onChange(async (v) => {
-          s.assistantSeesVault = v;
-          await this.save();
-        })
-      );
-  }
-
-  // ── Voz ────────────────────────────────────────────────────────────────────
-  // Duas coisas diferentes moram aqui, e a escrita tenta deixar isso claro:
-  // FALAR COM o chat (ditado) e OUVIR o chat (leitura). Cada uma na ordem em
-  // que a pessoa decide: ligo? por quem? com que voz?
-
-  private renderVoice(el: HTMLElement): void {
-    const s = this.s;
-
-    const brand = new Setting(el).setName("Voice").setHeading();
-    const mark = brand.nameEl.createSpan({ cls: "axxa-settings-brand" });
-    setIcon(mark, "mic");
-    brand.nameEl.prepend(mark);
-    brand.setDesc("Talk to the chat, and let it talk back.");
-
-    // ── ditado ─────────────────────────────────────────────────
-    new Setting(el)
-      .setName("Talk instead of typing")
-      .setDesc(
-        "Puts a microphone in the composer: you speak, the words land in the box, and you send when you are happy with them."
-      )
-      .addToggle((t) =>
-        t.setValue(s.voiceEnabled).onChange(async (v) => {
-          s.voiceEnabled = v;
-          await this.save();
-          this.renderBody();
-        })
-      );
-
-    if (s.voiceEnabled) {
-      if (!this.plugin.providerCredential("openai")) {
-        this.hint(el, "Dictation runs on OpenAI — add that key in Providers.");
+    row.setDesc(
+      alvo
+        ? `Writes skills and projects for you. Now: ${prettyModelName(
+            alvo.model
+          )}${ehFree(alvo.model, livres) ? " · free" : ""}`
+        : "Nothing free found yet — run SCAN on OpenRouter, or pick a model here."
+    );
+    row.addDropdown((d) => {
+      // "Automático" primeiro, e é o padrão: id de modelo free muda de nome e
+      // some do catálogo, então deixar a gente procurar sozinha envelhece
+      // melhor que fixar um.
+      d.addOption("", "Automatic — first free OpenRouter model");
+      // O nome é o NOSSO (prettyModelName), como em toda parte do app — o id
+      // cru do catálogo só aparece onde ele É o dado (a chave, o debug).
+      const todos = [
+        ...new Set([...(s.activeModels?.openrouter ?? []), ...livres]),
+      ].sort();
+      for (const id of todos) {
+        d.addOption(
+          id,
+          ehFree(id, livres) ? `${prettyModelName(id)} · free` : prettyModelName(id)
+        );
       }
-      new Setting(el)
-        .setName("Ears")
-        .setDesc(
-          "Mini is quick, cheap and gets normal speech right; the full one is better with names, accents and noise."
-        )
-        .addDropdown((d) => {
-          for (const m of STT_MODELS) d.addOption(m, prettyModelName(m));
-          d.setValue(s.voiceModel).onChange(async (v) => {
-            s.voiceModel = v;
-            await this.save();
-          });
-        });
-
-      new Setting(el)
-        .setName("What you speak")
-        .setDesc(
-          "Naming your language beats letting it guess — short takes are where guessing goes wrong."
-        )
-        .addDropdown((d) => {
-          for (const [code, label] of SPEECH_LANGS) d.addOption(code, label);
-          d.setValue(s.voiceLanguage).onChange(async (v) => {
-            s.voiceLanguage = v;
-            await this.save();
-          });
-        });
-    }
-
-    // ── leitura ────────────────────────────────────────────────
-    new Setting(el)
-      .setName("Read answers out loud")
-      .setDesc("Adds a Listen button under every answer.")
-      .addToggle((t) =>
-        t.setValue(s.ttsEnabled).onChange(async (v) => {
-          s.ttsEnabled = v;
-          await this.save();
-          this.renderBody();
-        })
-      );
-
-    if (!s.ttsEnabled) return;
-
-    new Setting(el)
-      .setName("Who reads")
-      .setDesc(
-        "OpenAI voices are ready to use. ElevenLabs sounds better and is the only one that can read in YOUR voice — clone it in their app and it shows up in the list below."
-      )
-      .addDropdown((d) => {
-        for (const p of TTS_PROVIDERS) {
-          const ok = ttsReady(this.plugin, p.id);
-          d.addOption(p.id, ok ? p.label : p.label + " (needs " + p.needs + ")");
-        }
-        d.setValue(s.ttsProvider).onChange(async (v) => {
-          s.ttsProvider = v;
-          await this.save();
-          this.renderBody();
-        });
+      d.setValue(s.assistantModel ?? "").onChange(async (v) => {
+        s.assistantModel = v;
+        s.assistantProvider = v ? "openrouter" : "";
+        await this.save();
+        this.repaint("assistant");
       });
-
-    if (s.ttsProvider === "eleven") this.renderEleven(el);
-    else this.renderOpenAiTts(el);
+    });
   }
 
-  /** Uma linha de recado — o que falta pra aquilo ali funcionar. */
-  private hint(el: HTMLElement, text: string): void {
-    el.createEl("p", { cls: "axxa-settings-hint", text });
-  }
+  // ── Voz ───────────────────────────────────────────────────────────────────
 
-  private renderOpenAiTts(el: HTMLElement): void {
+  private paintTtsProvider(row: Setting): void {
     const s = this.s;
-    if (!this.plugin.providerCredential("openai")) {
-      this.hint(el, "Add your OpenAI key in Providers to hear anything.");
-    }
-    new Setting(el)
-      .setName("Voice")
-      .setDesc("Eleven of them. Hit Play sample to hear the one you picked.")
-      .addDropdown((d) => {
-        for (const v of OPENAI_VOICES) d.addOption(v, v);
-        d.setValue(s.ttsVoice).onChange(async (v) => {
-          s.ttsVoice = v;
-          await this.save();
-        });
+    row.addDropdown((d) => {
+      for (const p of TTS_PROVIDERS) {
+        const ok = ttsReady(this.plugin, p.id);
+        d.addOption(p.id, ok ? p.label : p.label + " (needs " + p.needs + ")");
+      }
+      d.setValue(s.ttsProvider).onChange(async (v) => {
+        s.ttsProvider = v;
+        await this.save();
+        this.refreshVisibility();
       });
-
-    new Setting(el)
-      .setName("Quality")
-      .setDesc(
-        "gpt-4o-mini-tts reads with intention; tts-1 is the cheap classic; the HD one is the same voice, cleaner."
-      )
-      .addDropdown((d) => {
-        for (const m of OPENAI_TTS_MODELS) d.addOption(m, m);
-        d.setValue(s.ttsModel).onChange(async (v) => {
-          s.ttsModel = v;
-          await this.save();
-        });
-      });
-
-    this.testRow(el);
+    });
   }
 
-  private renderEleven(el: HTMLElement): void {
+  private paintElevenKey(row: Setting): void {
     const s = this.s;
-    new Setting(el)
-      .setName("ElevenLabs key")
-      .setDesc("From elevenlabs.io › Profile › API key. Stored in the OS keychain (not in data.json).")
-      .addText((t) => {
-        t.inputEl.type = "password";
-        t.setPlaceholder("key…")
-          .setValue(s.elevenApiKey)
-          .onChange(async (v) => {
-            s.elevenApiKey = v.trim();
-            await this.save();
-          });
-      });
-
-    new Setting(el)
-      .setName("Your voices")
-      .setDesc(
-        "Fetch what your account has — the stock voices and any you cloned, including your own."
-      )
-      .addButton((b) =>
-        b
-          .setButtonText(this.fetchingVoices ? "Fetching…" : "Fetch voices")
-          .setCta()
-          // Sem trava por key vazia: digitar a chave não re-renderiza esta
-          // linha (re-renderizar a cada tecla roubaria o foco do campo), então
-          // o botão ficaria desabilitado depois de a key existir. Sem key, a
-          // própria chamada avisa.
-          .setDisabled(this.fetchingVoices)
-          .onClick(() => void this.fetchVoices())
-      );
-
-    if (s.elevenVoices.length > 0) {
-      new Setting(el)
-        .setName("Voice")
-        .setDesc("Cloned ones are marked — that is the one that sounds like you.")
-        .addDropdown((d) => {
-          for (const v of s.elevenVoices) {
-            const own =
-              v.category === "cloned" || v.category === "professional";
-            d.addOption(v.id, own ? v.name + " · yours" : v.name);
-          }
-          d.setValue(s.elevenVoice || s.elevenVoices[0].id).onChange(
-            async (v) => {
-              s.elevenVoice = v;
-              await this.save();
-            }
-          );
-        });
-    } else if (s.elevenApiKey) {
-      this.hint(el, "No voices loaded yet — hit Fetch voices.");
-    }
-
-    new Setting(el)
-      .setName("Quality")
-      .setDesc("Multilingual sounds best; the faster ones answer sooner.")
-      .addDropdown((d) => {
-        for (const m of ELEVEN_MODELS) d.addOption(m.id, m.label);
-        d.setValue(s.elevenModel).onChange(async (v) => {
-          s.elevenModel = v;
+    row.addText((t) => {
+      t.inputEl.type = "password";
+      t.setPlaceholder("key…")
+        .setValue(s.elevenApiKey)
+        .onChange(async (v) => {
+          s.elevenApiKey = v.trim();
           await this.save();
+          // "Who reads" diz se falta a chave; "no voices yet" só aparece com
+          // chave. Os dois mudam com a digitação.
+          this.repaint("ttsWho");
+          this.refreshVisibility();
         });
-      });
+    });
+  }
 
-    this.testRow(el);
+  private paintElevenFetch(row: Setting): void {
+    row.addButton((b) =>
+      b
+        .setButtonText(this.fetchingVoices ? "Fetching…" : "Fetch voices")
+        .setCta()
+        // Sem trava por key vazia: sem key, a própria chamada avisa.
+        .setDisabled(this.fetchingVoices)
+        .onClick(() => void this.fetchVoices())
+    );
+  }
+
+  private paintElevenVoice(row: Setting): void {
+    const s = this.s;
+    if (s.elevenVoices.length === 0) return;
+    row.addDropdown((d) => {
+      for (const v of s.elevenVoices) {
+        const own = v.category === "cloned" || v.category === "professional";
+        d.addOption(v.id, own ? v.name + " · yours" : v.name);
+      }
+      d.setValue(s.elevenVoice || s.elevenVoices[0].id).onChange(async (v) => {
+        s.elevenVoice = v;
+        await this.save();
+      });
+    });
   }
 
   /** O botão que prova que a voz escolhida funciona. */
-  private testRow(el: HTMLElement): void {
-    new Setting(el)
-      .setName("Test")
-      .setDesc("Plays one short line with the settings above.")
-      .addButton((b) =>
-        b.setButtonText("Play sample").onClick(async () => {
-          b.setButtonText("Playing…").setDisabled(true);
-          // `speak` precisa começar DENTRO do clique: é lá que ele destrava o
-          // áudio (o navegador recusa tocar fora do gesto).
-          await speak(this.plugin, SAMPLE_LINE);
-          b.setButtonText("Play sample").setDisabled(false);
-        })
-      );
+  private paintTestVoice(row: Setting): void {
+    row.addButton((b) =>
+      b.setButtonText("Play sample").onClick(async () => {
+        b.setButtonText("Playing…").setDisabled(true);
+        // `speak` precisa começar DENTRO do clique: é lá que ele destrava o
+        // áudio (o navegador recusa tocar fora do gesto).
+        await speak(this.plugin, SAMPLE_LINE);
+        b.setButtonText("Play sample").setDisabled(false);
+      })
+    );
   }
 
   private async fetchVoices(): Promise<void> {
     if (this.fetchingVoices) return;
     this.fetchingVoices = true;
-    this.renderBody();
+    this.repaint("elevenFetch");
     try {
       const voices = await elevenVoices(this.s.elevenApiKey);
       this.s.elevenVoices = voices.map((v) => ({
@@ -1269,80 +1148,39 @@ export class AxxaSettingsTab extends PluginSettingTab {
       );
     } finally {
       this.fetchingVoices = false;
-      this.renderBody();
+      this.repaint("elevenFetch");
+      this.repaint("elevenVoice");
+      this.refreshVisibility();
     }
-  }
-
-  // ── Vault ─────────────────────────────────────────────────────────────────
-
-  private renderVault(el: HTMLElement): void {
-    const s = this.s;
-    new Setting(el)
-      .setName("Chats folder")
-      .setDesc(
-        "Each chat is a .md file under <folder>/<mode>/. A folder starting " +
-          "with a dot is hidden from the file explorer, search and graph — " +
-          "which is why the default is .axxa/chats."
-      )
-      .addText((t) =>
-        t.setValue(s.chatsPath).onChange(async (v) => {
-          s.chatsPath = v.trim() || `${AXXA_HIDDEN}/chats`;
-          await this.save();
-          void this.plugin.loadChatSummaries(true);
-        })
-      );
-    new Setting(el)
-      .setName("Skills folder")
-      .setDesc("Each skill is a .md note (frontmatter + prompt body).")
-      .addText((t) =>
-        t.setValue(s.skillsPath).onChange(async (v) => {
-          s.skillsPath = v.trim() || "axxa-ai/skills";
-          await this.save();
-          await this.plugin.reloadSkills();
-        })
-      );
   }
 
   // ── Vault Q&A ─────────────────────────────────────────────────────────────
 
-  private renderRag(el: HTMLElement): void {
+  /** Linha viva: a lista cresce com os modelos de embedding descobertos. */
+  private paintEmbeddingModel(row: Setting): void {
     const s = this.s;
-    new Setting(el)
-      .setName("Embedding model")
-      .setDesc(
-        "Needs the key of that model's provider. Without an index, Vault Q&A falls back to keyword search."
-      )
-      .addDropdown((d) => {
-        for (const spec of getAllEmbeddingModels()) {
-          d.addOption(spec.model, `${spec.provider} · ${spec.model}`);
-        }
-        d.setValue(s.ragEmbeddingModel).onChange(async (v) => {
-          const spec = getAllEmbeddingModels().find((m) => m.model === v);
-          s.ragEmbeddingModel = v;
-          if (spec) s.ragEmbeddingProvider = spec.provider;
-          await this.save();
-        });
+    row.addDropdown((d) => {
+      for (const spec of getAllEmbeddingModels()) {
+        d.addOption(spec.model, `${spec.provider} · ${spec.model}`);
+      }
+      d.setValue(s.ragEmbeddingModel).onChange(async (v) => {
+        const spec = getAllEmbeddingModels().find((m) => m.model === v);
+        s.ragEmbeddingModel = v;
+        if (spec) s.ragEmbeddingProvider = spec.provider;
+        await this.save();
       });
-    new Setting(el)
-      .setName("Auto re-index on note changes")
-      .setDesc(
-        "Re-embeds only changed notes (costs tokens). Only runs once an index exists."
-      )
-      .addToggle((t) =>
-        t.setValue(s.ragAutoReindex).onChange(async (v) => {
-          s.ragAutoReindex = v;
-          await this.save();
-        })
-      );
+    });
+  }
 
+  private paintIndex(row: Setting): void {
+    const s = this.s;
     const size = this.plugin.vectorIndex?.size ?? 0;
-    new Setting(el)
-      .setName("Index")
-      .setDesc(
-        size > 0
-          ? `Index loaded: ${size} chunks (folder: ${s.ragIndexPath}).`
-          : `No index yet (folder: ${s.ragIndexPath}).`
-      )
+    row.setDesc(
+      size > 0
+        ? `Index loaded: ${size} chunks (folder: ${s.ragIndexPath}).`
+        : `No index yet (folder: ${s.ragIndexPath}).`
+    );
+    row
       .addButton((b) =>
         b
           .setButtonText(this.plugin.indexing ? "Cancel indexing" : "Index vault")
@@ -1357,77 +1195,18 @@ export class AxxaSettingsTab extends PluginSettingTab {
             await deleteIndex(this.app.vault.adapter, s.ragIndexPath);
             this.plugin.vectorIndex = null;
             new Notice("Index deleted.");
-            this.renderBody();
+            this.repaint("index");
           })
       );
   }
 
-  // ── Agent ─────────────────────────────────────────────────────────────────
-
-  private renderAgent(el: HTMLElement): void {
-    const s = this.s;
-    new Setting(el)
-      .setName("Permission level")
-      .setDesc(
-        "ask = confirm every write · vault = only deletes ask · yolo = only irreversible actions ask."
-      )
-      .addDropdown((d) => {
-        for (const [id, label] of Object.entries(PERMISSION_LABELS)) {
-          d.addOption(id, label);
-        }
-        d.setValue(s.agentPermissionLevel).onChange(async (v) => {
-          s.agentPermissionLevel = v;
-          await this.save();
-        });
-      });
-    new Setting(el)
-      .setName("Show diff before applying edits")
-      .setDesc("Preview every change the agent wants to write.")
-      .addToggle((t) =>
-        t.setValue(s.agentDiffApproval).onChange(async (v) => {
-          s.agentDiffApproval = v;
-          await this.save();
-        })
-      );
-  }
-
-  // ── Mobile ────────────────────────────────────────────────────────────────
-
-  private renderMobile(el: HTMLElement): void {
-    const s = this.s;
-    new Setting(el)
-      .setName("Fullscreen")
-      .setDesc(
-        "Hides the drawer chrome and the global navbar while AXXA is the active tab. The menu button stays, so you are never stuck."
-      )
-      .addToggle((t) =>
-        t.setValue(s.mobileFullscreen === true).onChange(async (v) => {
-          s.mobileFullscreen = v;
-          await this.save();
-        })
-      );
-
-    new Setting(el)
-      .setName("Haptics")
-      .setDesc(
-        "A short buzz on every tap. Android only — iPhone doesn't let a plugin touch the Taptic Engine."
-      )
-      .addToggle((t) =>
-        t.setValue(s.hapticsEnabled !== false).onChange(async (v) => {
-          s.hapticsEnabled = v;
-          setHapticsEnabled(v);
-          await this.save();
-          // Sente na hora o que acabou de ligar.
-          if (v) tap();
-        })
-      );
-  }
-
-  // ── ações ─────────────────────────────────────────────────────────────────
-
   /** A indexação mora no plugin (dois chamadores: aqui e a linha da home). */
   private async runIndex(): Promise<void> {
-    await this.plugin.runVaultIndex();
-    this.renderBody();
+    const run = this.plugin.runVaultIndex();
+    // O plugin marca `indexing` antes do primeiro await: o botão já vira
+    // "Cancel indexing" enquanto roda (e um toque nele cancela).
+    this.repaint("index");
+    await run;
+    this.repaint("index");
   }
 }

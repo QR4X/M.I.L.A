@@ -4717,6 +4717,67 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
    app.css estiliza `button` com 0,1,1, então os seletores daqui prefixam a
    raiz pra passar na frente. */
 
+/* ── Abas sem páginas: quem mostra é o atributo do container ─────────────
+   A árvore (src/ui/settings/tree.ts) põe em cada grupo a classe da sua aba e
+   do seu provider; o SettingsTab troca `data-axxa-tab`/`data-axxa-prov` no
+   container. Esconder por CSS, e não pelo `visible` da API do 1.13, é o que
+   mantém toda linha na busca das settings. O `show()` do Obsidian só limpa um
+   `display: none` INLINE, então ele nunca desfaz esta regra. */
+.axxa-settings-root:not([data-axxa-tab="providers"]) .axxa-set-tab-providers,
+.axxa-settings-root:not([data-axxa-tab="chat"]) .axxa-set-tab-chat,
+.axxa-settings-root:not([data-axxa-tab="vault"]) .axxa-set-tab-vault,
+.axxa-settings-root:not([data-axxa-tab="rag"]) .axxa-set-tab-rag,
+.axxa-settings-root:not([data-axxa-tab="agent"]) .axxa-set-tab-agent,
+.axxa-settings-root:not([data-axxa-tab="mobile"]) .axxa-set-tab-mobile,
+.axxa-settings-root:not([data-axxa-prov="openai"]) .axxa-set-prov-openai,
+.axxa-settings-root:not([data-axxa-prov="anthropic"]) .axxa-set-prov-anthropic,
+.axxa-settings-root:not([data-axxa-prov="gemini"]) .axxa-set-prov-gemini,
+.axxa-settings-root:not([data-axxa-prov="openrouter"]) .axxa-set-prov-openrouter,
+.axxa-settings-root:not([data-axxa-prov="nim"]) .axxa-set-prov-nim,
+.axxa-settings-root:not([data-axxa-prov="ollama"]) .axxa-set-prov-ollama {
+  display: none;
+}
+
+/* Barra de abas e trilho de providers: LISOS, sem o cartão que o Obsidian dá
+   a todo grupo. Os dois desenhos de cartão precisam sair — o do 1.12 (padding
+   no contêiner, divisória em border-top) e o do 1.13 (padding em cada linha,
+   divisória num ::before). */
+.axxa-settings-root .setting-group.axxa-set-flat .setting-items {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+}
+
+.axxa-settings-root .setting-group.axxa-set-flat .setting-item {
+  padding: 0;
+  border: none;
+}
+
+.axxa-settings-root .setting-group.axxa-set-flat .setting-item::before {
+  content: none;
+}
+
+/* Linha desenhada à mão (barra, trilho, catálogo, recado): um bloco, não o
+   flex nome|controle do setting-item. Escondida, o Obsidian põe display none
+   INLINE, que ainda vence isto. */
+.axxa-settings-root .setting-item.axxa-set-block {
+  display: block;
+}
+
+/* Recado e catálogo COLAM na linha de cima: sem divisória e sem o respiro de
+   cima — são continuação dela, não um item novo. */
+.axxa-settings-root .setting-group .setting-item.axxa-set-hint,
+.axxa-settings-root .setting-group .setting-item.axxa-set-catalog {
+  padding-top: 0;
+  border-top: none;
+}
+
+.axxa-settings-root .setting-group .setting-item.axxa-set-hint::before,
+.axxa-settings-root .setting-group .setting-item.axxa-set-catalog::before {
+  content: none;
+}
+
 /* Segmented control das Settings — mesmo componente da tela inicial: trilho
    com thumb deslizante (`::before` posicionado por `--axxa-seg`). Diferença:
    o número de colunas é variável (`--axxa-seg-count`), porque são 5 ou 6 abas
@@ -4825,10 +4886,6 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
   margin-bottom: var(--size-4-3);
 }
 
-.axxa-settings-root .axxa-settings-subnav {
-  margin-bottom: var(--size-4-4);
-}
-
 /* Providers: o LOGO no lugar do nome (seis nomes não cabem em uma linha, e o
    logo identifica na hora). Linha mais alta, porque agora é um alvo de toque
    com ícone. */
@@ -4858,37 +4915,16 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
   color: var(--text-accent);
 }
 
-/* Cabeçalho da sub-aba: logo + nome do provider na largura toda. O nome
-   saiu do rótulo da linha porque na coluna do setting-item ele truncava
-   ("OpenR… API key"). */
-.axxa-settings-root .setting-item-heading .setting-item-name {
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-2);
-}
-
-.axxa-settings-root .axxa-settings-brand {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-accent);
-}
-
-.axxa-settings-root .axxa-settings-brand svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Recado curto entre linhas de setting: o que falta pra aquilo funcionar. */
+/* Recado curto entre linhas de setting: o que falta pra aquilo funcionar.
+   Mora dentro da própria linha do cartão, que já dá o recuo. */
 .axxa-settings-root .axxa-settings-hint {
-  margin: 0 0 var(--size-4-2);
-  padding: 0 var(--size-4-4);
+  margin: 0;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
 .axxa-settings-root .axxa-settings-blurb {
-  margin: 0 0 var(--size-4-4);
+  margin: 0;
   color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
@@ -4900,10 +4936,9 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
 }
 
 .axxa-settings-root .axxa-models-empty {
-  /* Alinhado com o texto dos setting-item (que o Obsidian indenta em
-     --size-4-4); sem isto a lista fica 16px à esquerda de tudo. */
+  /* O recuo é o da linha do cartão, como o texto dos outros setting-item. */
   margin: 0;
-  padding: 0 var(--size-4-4);
+  padding: 0;
   color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
@@ -4913,7 +4948,7 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
   align-items: baseline;
   justify-content: space-between;
   gap: var(--size-4-2);
-  padding: 0 var(--size-4-4) var(--size-4-1);
+  padding: 0 0 var(--size-4-1);
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
 }
@@ -5004,7 +5039,7 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
    ativo. Sete papéis com nome não cabem em 375px — e a régua do segmented
    aqui é a mesma de sempre: nunca quebrar em duas linhas. */
 .axxa-settings-root .axxa-models-filter {
-  margin: 0 var(--size-4-4) var(--size-4-3);
+  margin: 0 0 var(--size-4-3);
 }
 
 .axxa-settings-root .axxa-seg-ico {
@@ -5036,7 +5071,7 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
   align-items: center;
   gap: var(--size-4-2);
   width: 100%;
-  padding: var(--size-4-3) var(--size-4-4) var(--size-4-1);
+  padding: var(--size-4-3) 0 var(--size-4-1);
   border: none;
   border-radius: 0;
   background: none;
@@ -5122,9 +5157,9 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
   display: flex;
   align-items: center;
   gap: var(--size-4-2);
-  /* Como o .setting-item do Obsidian: conteúdo indentado, divisória
-     atravessando a largura toda. */
-  padding: var(--size-4-2) var(--size-4-4);
+  /* Como o .setting-item do Obsidian: o recuo vem da linha do cartão, e a
+     divisória fica dentro dele (o 1.13 também recua as divisórias). */
+  padding: var(--size-4-2) 0;
   border-top: 1px solid var(--background-modifier-border);
 }
 
