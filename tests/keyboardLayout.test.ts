@@ -52,11 +52,44 @@ function contas(): string[] {
 
 describe("a única conta de teclado", () => {
   it("a gaveta desconta a medida da própria altura", () => {
+    // 0.9.8: o par deixou de ser duas declarações de `height` na MESMA regra
+    // (que o lint do Obsidian lia como "duplicate height") e virou o vh na
+    // regra + o dvh num @supports. A garantia é a mesma e continua sendo
+    // verificada aqui: a gaveta desconta o teclado, e o vh vem ANTES como
+    // reserva pra quem não tem dvh — agora pela ORDEM dos dois blocos, que é
+    // o que decide entre regras de mesma especificidade.
     const b = bloco("body.is-mobile .workspace-drawer.axxa-keyboard-open {");
-    expect(b).toContain("calc(100dvh - var(--keyboard-height, 0px))");
-    // `100vh` vem ANTES como reserva pra quem não tem `dvh`. As duas linhas,
-    // nessa ordem, ou o navegador antigo fica sem altura nenhuma.
-    expect(b.indexOf("100vh")).toBeLessThan(b.indexOf("100dvh"));
+    expect(b).toContain("calc(100vh - var(--keyboard-height, 0px))");
+    expect(b).not.toContain("100dvh");
+
+    const iRegra = SEM_COMENTARIO.indexOf(
+      "body.is-mobile .workspace-drawer.axxa-keyboard-open {"
+    );
+    const iSupports = SEM_COMENTARIO.indexOf(
+      "@supports (height: 100dvh)",
+      iRegra
+    );
+    expect(iSupports, "o @supports com o dvh sumiu").toBeGreaterThan(iRegra);
+    const dentro = SEM_COMENTARIO.slice(iSupports, iSupports + 400);
+    expect(dentro).toContain(
+      "body.is-mobile .workspace-drawer.axxa-keyboard-open"
+    );
+    expect(dentro).toContain("calc(100dvh - var(--keyboard-height, 0px))");
+  });
+
+  it("a gaveta em TELA CHEIA desconta pelo mesmo par", () => {
+    // O outro sítio do mesmo padrão. Estava sem teste e passou despercebido
+    // até a 0.9.8 mexer nos dois de uma vez.
+    const b = bloco("body.is-mobile .workspace-drawer.axxa-fullscreen {");
+    expect(b).toContain("calc(100vh - var(--keyboard-height, 0px))");
+    const i = SEM_COMENTARIO.indexOf(
+      "body.is-mobile .workspace-drawer.axxa-fullscreen {"
+    );
+    const dentro = SEM_COMENTARIO.slice(
+      SEM_COMENTARIO.indexOf("@supports (height: 100dvh)", i),
+      SEM_COMENTARIO.indexOf("@supports (height: 100dvh)", i) + 400
+    );
+    expect(dentro).toContain("calc(100dvh - var(--keyboard-height, 0px))");
   });
 
   it("as camadas da folha entram na CAIXA do composer, sem conta própria", () => {

@@ -353,40 +353,6 @@ export class AxxaSettingsTab extends PluginSettingTab {
     this.renderProviderBody();
   }
 
-  /**
-   * Botão "colar" no fim da linha, pro campo que está vazio. Lê o clipboard só
-   * no clique — nunca sozinho — e não registra o conteúdo em lugar nenhum.
-   */
-  private addPasteButton(
-    row: Setting,
-    field: KeyField | "ollamaEndpoint" | "elevenApiKey"
-  ): void {
-    const btn = row.controlEl.createEl("button", { cls: "axxa-paste-btn" });
-    btn.setAttribute("type", "button");
-    btn.setAttribute("aria-label", "Paste from clipboard");
-    btn.setAttribute("title", "Paste from clipboard");
-    setIcon(btn, "clipboard-paste");
-    btn.onclick = async () => {
-      let text = "";
-      try {
-        text = (await navigator.clipboard.readText()).trim();
-      } catch {
-        new Notice("This device won't let the plugin read the clipboard — paste into the field by hand.");
-        return;
-      }
-      if (!text) {
-        new Notice("Clipboard is empty.");
-        return;
-      }
-      this.s[field] = text;
-      await this.save();
-      // Some o botão, aparece a chave, e o trilho acende.
-      this.renderProviderBody();
-      this.syncReady();
-      new Notice("Pasted.");
-    };
-  }
-
   /** Estado da conexão: o desta sessão, senão o último teste gravado. */
   private connOf(id: string): ConnState {
     const live = this.conn[id];
@@ -498,10 +464,6 @@ export class AxxaSettingsTab extends PluginSettingTab {
               this.syncReady();
             });
         });
-      // Colar: só no campo VAZIO. Chave de API não se digita no celular — vem
-      // colada do gerenciador de senhas, e o toque longo no campo de senha é
-      // justamente onde o teclado do Android costuma não oferecer "colar".
-      if (!s[key]) this.addPasteButton(row, key);
     } else {
       const row = new Setting(el)
         .setName("Endpoint")
@@ -516,7 +478,6 @@ export class AxxaSettingsTab extends PluginSettingTab {
               this.syncReady();
             })
         );
-      if (!s.ollamaEndpoint) this.addPasteButton(row, "ollamaEndpoint");
     }
 
     // ── conexão ───────────────────────────────────────────────────────────
@@ -1212,7 +1173,6 @@ export class AxxaSettingsTab extends PluginSettingTab {
             await this.save();
           });
       });
-    if (!s.elevenApiKey) this.addPasteButton(row, "elevenApiKey");
 
     new Setting(el)
       .setName("Your voices")

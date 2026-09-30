@@ -7,7 +7,7 @@
 // Acionável via slash-command no composer (/<nome>). Como é .md, qualquer um
 // edita no próprio Obsidian e compartilha (é uma nota). Esse é o efeito de rede.
 
-import { type App, parseYaml, normalizePath } from "obsidian";
+import { TFile, TFolder, type App, parseYaml, normalizePath } from "obsidian";
 import { texto } from "../core/texto";
 
 export interface Skill {
@@ -92,10 +92,23 @@ export async function loadSkills(
   app: App,
   folderPath: string
 ): Promise<Skill[]> {
+  // Lê a PASTA, não o vault. Isto chamava `getMarkdownFiles()` e filtrava pelo
+  // prefixo — ou seja, percorria todas as notas da pessoa pra ficar com as de
+  // uma pasta nossa. Em vault grande é caro, e é olhar mais do que precisamos.
   const prefix = skillsFolderPrefix(folderPath);
-  const files = app.vault
-    .getMarkdownFiles()
-    .filter((f) => f.path.startsWith(prefix));
+  const raiz = app.vault.getAbstractFileByPath(prefix.replace(/\/$/, ""));
+  if (!(raiz instanceof TFolder)) return [];
+  const files: TFile[] = [];
+  const desce = (pasta: TFolder): void => {
+    for (const filho of pasta.children) {
+      if (filho instanceof TFolder) desce(filho);
+      else if (filho instanceof TFile && filho.extension === "md") {
+        files.push(filho);
+      }
+    }
+  };
+  desce(raiz);
+  files.sort((a, b) => a.path.localeCompare(b.path));
   const skills: Skill[] = [];
   // v0.1.228: dois arquivos cujo basename só difere por caractere não-\w geram
   // o mesmo id (ex: "Plano!" e "Plano?"). Desambigua com sufixo numérico pra o

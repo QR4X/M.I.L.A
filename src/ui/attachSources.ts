@@ -5,7 +5,7 @@
 // Tudo que é decisão (o que é artefato, o que sobra de uma página web, o que
 // vira rótulo) mora aqui, fora do componente, pra dar pra testar sem UI.
 
-import type { App } from "obsidian";
+import { TFile, TFolder, type App } from "obsidian";
 import type { MessageAttachment, NoteAttachment } from "../providers/base";
 
 /** Onde o plugin salva o que gera (imagens, áudio, vídeo + sidecar .md). */
@@ -57,14 +57,35 @@ export function rankArtifacts(
     .slice(0, limite);
 }
 
-/** Todos os arquivos do vault no formato do ranking. */
+/**
+ * Os artefatos que o plugin gerou — lendo SÓ a pasta dele.
+ *
+ * Isto chamava `vault.getFiles()`, ou seja, enumerava o vault inteiro pra
+ * depois o `rankArtifacts` jogar fora tudo que não estivesse em
+ * `GENERATION_DIR`. Enumerar milhares de notas pra listar o que nós mesmos
+ * criamos numa pasta é caro e é ver mais do que precisamos: a pasta é nossa,
+ * então lê-se a pasta.
+ */
 export function vaultArtifacts(app: App): ArtifactLike[] {
-  return app.vault.getFiles().map((f) => ({
-    path: f.path,
-    basename: f.basename,
-    extension: f.extension,
-    mtime: f.stat?.mtime ?? 0,
-  }));
+  const pasta = app.vault.getAbstractFileByPath(GENERATION_DIR);
+  if (!(pasta instanceof TFolder)) return [];
+  const saida: ArtifactLike[] = [];
+  // A pasta tem subpastas (uma por tipo), então desce — mas só dentro dela.
+  const desce = (f: TFolder): void => {
+    for (const filho of f.children) {
+      if (filho instanceof TFolder) desce(filho);
+      else if (filho instanceof TFile) {
+        saida.push({
+          path: filho.path,
+          basename: filho.basename,
+          extension: filho.extension,
+          mtime: filho.stat?.mtime ?? 0,
+        });
+      }
+    }
+  };
+  desce(pasta);
+  return saida;
 }
 
 /**

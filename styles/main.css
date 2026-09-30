@@ -56,10 +56,21 @@
      `.modal-container` — mesma especificidade, sem `:has`.
 
    O que o lint marca e NÃO é problema:
-   · "duplicate height" (2×) — é `100vh` seguido de `100dvh`. O par existe pra
-     quem não conhece `dvh` ficar com o `vh`;
-   · "text-decoration" (3×) — `text-underline-offset` e afins. Onde não houver
-     suporte, o link continua sublinhado, só sem o ajuste fino. */
+   · "text-decoration" (3×) — `text-underline-offset`, `-thickness` e `-color`
+     no sublinhado dos links do markdown. A tabela de suporte do lint está
+     velha: as três são do Chrome 87, de 2020, e valem em tudo que roda o
+     Obsidian. Trocar por `border-bottom` mudaria o desenho embaixo das
+     descendentes (g, y, p) — degradar um detalhe desenhado por causa de uma
+     tabela vencida é o negócio errado. E onde de fato faltasse, o link fica
+     sublinhado sem o ajuste fino: degrada sozinho.
+
+   RESOLVIDO na 0.9.8 — "duplicate height" (era 2×):
+   o par `100vh` + `100dvh` na mesma regra virou o vh na regra e o dvh num
+   `@supports (height: 100dvh)`. Diz a mesma coisa sem repetir a propriedade, e
+   a ordem (que é o que decide entre regras de mesma especificidade) continua
+   sendo verificada em tests/keyboardLayout.test.ts. MEDIDO no preview com o
+   app.css real: viewport de 961px dá 961px sem teclado e 661px com 300px de
+   teclado, nos dois seletores — igual ao que a declaração dupla dava. */
 
 /* ── host + fullscreen + teclado ───────────────────────────────────────────
    BLOCO VERBATIM da casca 0.2.37 (`git show 0.2.37:styles/main.css`, linhas
@@ -260,7 +271,16 @@ body.is-mobile .workspace-drawer.axxa-fullscreen {
      composer sobem juntos e as últimas mensagens não ficam escondidas. O Vault
      Q&A escapava do bug por ser `fixed` e já consumir a var. */
   height: calc(100vh - var(--keyboard-height, 0px)) !important;
-  height: calc(100dvh - var(--keyboard-height, 0px)) !important;
+}
+/* O mesmo em dvh, que acompanha a barra dinâmica do WebView. Vinha como uma
+   SEGUNDA declaração de `height` logo acima — a forma clássica de fallback,
+   que o lint do Obsidian lia como "duplicate height". Em @supports diz a
+   mesma coisa sem repetir a propriedade: onde dvh existe esta regra vence
+   (mesma especificidade, vem depois); onde não existe, fica o vh. */
+@supports (height: 100dvh) {
+  body.is-mobile .workspace-drawer.axxa-fullscreen {
+    height: calc(100dvh - var(--keyboard-height, 0px)) !important;
+  }
 }
 /* Propaga a viewport pela cadeia de containers até a view da AXXA. */
 body.is-mobile
@@ -395,7 +415,12 @@ body.is-mobile
    duas regras dão o mesmo valor. */
 body.is-mobile .workspace-drawer.axxa-keyboard-open {
   height: calc(100vh - var(--keyboard-height, 0px)) !important;
-  height: calc(100dvh - var(--keyboard-height, 0px)) !important;
+}
+/* dvh à parte, pela mesma razão do drawer em tela cheia (ver acima). */
+@supports (height: 100dvh) {
+  body.is-mobile .workspace-drawer.axxa-keyboard-open {
+    height: calc(100dvh - var(--keyboard-height, 0px)) !important;
+  }
 }
 
 /* 3. MODAL com o teclado aberto — regra da 0.2.37 (linhas 5999–6014) que se
@@ -4922,39 +4947,6 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
 .axxa-root .axxa-seg-dot.is-fail {
   border-color: var(--color-red);
   background-color: var(--color-red);
-}
-
-/* Colar: aparece só quando o campo está vazio, encostado nele.
-   O tamanho vem do FLEX-BASIS, não do width: no celular o app.css manda
-   `.is-phone .modal .setting-item-control button { width: 100% }` com
-   especificidade (0,4,1) — inalcançável sem escalar seletor. Como ninguém lá
-   declara `flex`, a base de 32px ganha do width sem briga nenhuma. */
-.axxa-settings-root button.axxa-paste-btn {
-  flex: 0 0 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s);
-  background: none;
-  box-shadow: none;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.axxa-settings-root button.axxa-paste-btn:hover,
-.axxa-settings-root button.axxa-paste-btn:hover:not(:disabled) {
-  background-color: var(--background-modifier-hover);
-  box-shadow: none;
-  color: var(--text-normal);
-}
-
-.axxa-settings-root button.axxa-paste-btn svg {
-  width: 16px;
-  height: 16px;
 }
 
 /* Filtro por PAPEL: segmented só de ícones, com o rótulo aparecendo no item
