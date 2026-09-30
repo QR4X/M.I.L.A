@@ -21,8 +21,11 @@ node_modules/
 npm-debug.log
 yarn-error.log
 
-# Build output — TRACKED no git (necessário pra distribuição do plugin)
-# Não ignorar: output/main.js, output/manifest.json, output/styles.css
+# Build output. NÃO versionado: o que o Obsidian instala vem da GitHub
+# Release, que o workflow builda do zero a cada tag — o README manda baixar
+# de lá, e a revisão automática rebuilda a fonte pra conferir byte a byte.
+# Versionado, ele só fazia cada achado do lint de CSS ser contado duas vezes.
+output/
 
 # Config local (vault path do dev, etc.)
 .axxa.local.json

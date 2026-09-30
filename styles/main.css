@@ -15,7 +15,35 @@
    Uma classe nossa sozinha (`.axxa-mode`) vale 0,1,0 e PERDE dessas regras —
    foi o que encheu de fundo cinza todo botão da casca. Por isso TODO seletor
    aqui vem prefixado com `.axxa-root` (0,2,x) e existe o bloco de reset
-   abaixo. Regra: nada de seletor sem o prefixo, nada de !important. */
+   abaixo. Regra: nada de seletor sem o prefixo, nada de !important.
+
+   A EXCEÇÃO, e por que o lint do Obsidian reclama dela:
+   o bloco logo abaixo (teclado + tela cheia no mobile) usa !important e
+   `:has`. A revisão automática marca os dois como Warning — não reprovam, e
+   ficam de propósito:
+
+   · !important (30×, todos aqui dentro): este bloco estiliza elementos DO
+     OBSIDIAN (.workspace-drawer, .workspace-leaf-content), disputando com
+     regras do app.css sobre os mesmos elementos. Subir especificidade, que é
+     o que o lint sugere, dependeria da forma exata de cada regra do app.css —
+     e algumas delas também usam !important, contra o que só !important vence.
+     O bloco veio verbatim de uma versão que roda certa no APARELHO; conferir
+     30 regras exigiria repetir aquele teste com teclado aberto, tela cheia e
+     gaveta, em cada estado. Não é exercício de mesa;
+
+   · `:has` (6× aqui, 5× no resto do arquivo): pinta um elemento do Obsidian
+     ACIMA da nossa raiz com base em algo dentro da nossa árvore. Não há
+     alternativa em CSS — o pai não é nosso pra receber uma classe, e pôr uma
+     ali pelo JS seria mexer no DOM do app. Os de fora deste bloco já vêm
+     dentro de `@supports selector(:has(*))`.
+
+   O que o lint marca e NÃO é problema:
+   · "duplicate height" (2×) — é `100vh` seguido de `100dvh`. O par existe pra
+     quem não conhece `dvh` ficar com o `vh`;
+   · "multicolumn" (1×) — o `column-gap` está num `display: grid`, não em
+     layout de colunas. A regra casou pelo nome da propriedade;
+   · "text-decoration" (3×) — `text-underline-offset` e afins. Onde não houver
+     suporte, o link continua sublinhado, só sem o ajuste fino. */
 
 /* ── host + fullscreen + teclado ───────────────────────────────────────────
    BLOCO VERBATIM da casca 0.2.37 (`git show 0.2.37:styles/main.css`, linhas
@@ -1704,7 +1732,7 @@ body.theme-dark {
 
 /* O vão de 2px entre as duas partes — a mesma cor do cartão, como entre as
    colunas vizinhas. */
-.axxa-root .axxa-chart-bar.is-out:has(+ .axxa-chart-bar.is-in) {
+.axxa-root .axxa-chart-bar.is-out.has-in {
   margin-bottom: 2px;
 }
 

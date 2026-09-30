@@ -634,7 +634,15 @@ function GraficoNoTempo({
                 />
                 {c.saida > 0 && (
                   <span
-                    className="axxa-chart-bar is-out"
+                    // `has-in` no lugar de um `:has(+ .is-in)` no CSS: quem
+                    // sabe se existe barra de entrada é este render, e saber
+                    // aqui custa uma comparação em vez de uma invalidação de
+                    // seletor no navegador.
+                    className={
+                      c.entrada > 0
+                        ? "axxa-chart-bar is-out has-in"
+                        : "axxa-chart-bar is-out"
+                    }
                     style={{ flexGrow: c.saida }}
                   />
                 )}

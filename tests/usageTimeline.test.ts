@@ -252,9 +252,14 @@ describe("o desenho do gráfico", () => {
 
   it("o vão entre as partes e entre as colunas é a cor do cartão, não um risco", () => {
     expect(bloco(".axxa-root .axxa-chart-plot {")).toContain("gap: 2px");
-    expect(
-      bloco(".axxa-root .axxa-chart-bar.is-out:has(+ .axxa-chart-bar.is-in) {")
-    ).toContain("margin-bottom: 2px");
+    // O vão só existe quando HÁ barra de entrada embaixo. Era um
+    // `:has(+ .is-in)`; virou a classe `has-in`, decidida no render — quem
+    // sabe se a outra barra existe é ele, e saber ali não custa invalidação
+    // de seletor no navegador.
+    expect(bloco(".axxa-root .axxa-chart-bar.is-out.has-in {")).toContain(
+      "margin-bottom: 2px"
+    );
+    expect(VIEW).toContain('"axxa-chart-bar is-out has-in"');
     expect(bloco(".axxa-root .axxa-chart-bar {")).not.toContain("border:");
   });
 

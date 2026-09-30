@@ -3,33 +3,39 @@
 // eslint-plugin-obsidianmd). Existe aqui pra a gente ver o relatório ANTES de
 // submeter, em vez de descobrir na reprovação: `npm run lint`.
 //
-// Duas regras do conjunto reprovam a submissão (Error); as outras são aviso.
-// O que fica aberto de propósito, e por quê:
+// Duas categorias reprovam a submissão (Error); o resto é aviso. A 0.9.4
+// derrubou os avisos de TypeScript de ~290 pra 10, tipando a resposta das APIs
+// (`JSON.parse` devolve `any`, e `any` desliga a checagem de tudo que encosta
+// nele). O que fica é deliberado:
 //
 //   no-restricted-globals (5×, `fetch` nos providers)
 //     requestUrl não faz streaming, e streaming é o produto. Todo provider
 //     tem o caminho não-streaming por requestUrl como fallback (mobile).
 //
-//   no-unsafe-* (~260×, providers)
-//     é o `any` que sai de parsear JSON de API de terceiro. Tipar as seis
-//     respostas é trabalho de verdade, não de véspera.
-//
-//   ui/sentence-case (20×)
-//     falso positivo de nome próprio: a regra quer "HTTP://localhost",
-//     "Elevenlabs", "iphone". Nosso texto já está em sentence case.
-//
 //   prefer-create-el (4×)
 //     createEl/createDiv do Obsidian ANEXAM ao nó; esses quatro elementos
 //     nascem soltos de propósito (ver os comentários em menu.ts e Markdown.tsx).
 //
-//   settings-tab/prefer-setting-definitions (1×)
-//     API declarativa de settings do 1.13. Melhoria real, tarefa própria.
+//   no-deprecated (2×, `setWarning`)
+//     setDestructive é API 1.13 e o manifest declara minAppVersion 1.11.4.
+//     Trocar vira Error — foi o que reprovou a 0.9.2.
 //
-//   react-hooks/exhaustive-deps (6×, ChatView · ProjectSheet · SkillSheet)
-//     efeitos que rodam de propósito só quando o ID muda. Os três do ChatView
-//     estão desligados com a razão na linha; os do ProjectSheet e do SkillSheet
-//     ficam como aviso pra serem olhados um por um — mexer em dependência de
-//     efeito é o tipo de mudança que quebra em silêncio.
+//   settings-tab/prefer-setting-definitions (1×)
+//     API declarativa de settings do 1.13. Adotar com o mínimo em 1.11.4
+//     arrisca o mesmo Error acima; é tarefa própria, junto com subir o mínimo.
+//
+//   ui/sentence-case (20×)
+//     falso positivo de nome próprio: a regra quer "HTTP://localhost",
+//     "Elevenlabs", "iphone". Nosso texto já está em sentence case, e o bot
+//     da revisão nem roda esta regra.
+//
+//   react-hooks/exhaustive-deps (0 agora)
+//     os 6 efeitos que rodam só quando o resultado do assistente CHEGA têm a
+//     razão escrita na linha. Listar `extras`/`set` faria a sugestão ser
+//     re-aplicada por cima do que a pessoa está digitando.
+//
+// O CSS tem linter PRÓPRIO na revisão (este aqui não olha .css). O que fica
+// aberto lá, e por quê, está no cabeçalho de styles/main.css.
 
 import { defineConfig } from "eslint/config";
 import obsidianmd from "eslint-plugin-obsidianmd";
