@@ -70,13 +70,11 @@
      desmontagem com a folha aberta, troca de aba — dois observadores pra um
      aviso).
 
-   · "text-decoration" (2×): `text-decoration-thickness` e `-color` no
-     sublinhado dos links. O caniuse marca o recurso "text-decoration" INTEIRO
-     como parcial em todo Chrome até o 157 — por causa só do
-     `text-decoration-skip`, que nem usamos —, e o linter aplica isso a cada
-     propriedade do recurso. Nenhum minAppVersion resolve. Eram 3; a cor do
-     hover passou a ir por variável (mesmo desenho, sha1 do screenshot
-     idêntico). Os 2 que ficam só saem mudando o desenho do sublinhado.
+   RESOLVIDO na 0.9.11 — "text-decoration" (era 3×): o sublinhado dos links
+   do markdown deixou de declarar espessura e cor próprias (o caniuse marca o
+   recurso "text-decoration" inteiro como parcial em todo Chrome, e o linter
+   avisa cada `text-decoration-thickness` e `-color`). Foi a única saída sem
+   aviso, e mudou o desenho de propósito — ver a nota na regra do `a`.
 
    RESOLVIDO na 0.9.8 — "duplicate height": o par `100vh` + `100dvh` virou o
    vh na regra e o dvh num `@supports (height: 100dvh)`. A ordem continua
@@ -2751,31 +2749,24 @@ body.theme-dark {
 
 /* Link em acento, sublinhado com folga — dá pra ver que é link sem gritar. */
 .axxa-root .axxa-markdown a {
-  /* A cor do sublinhado mora numa variável, e o hover troca a VARIÁVEL em vez
-     de redeclarar `text-decoration-color`. Mesma linha, mesma cor, mesmo
-     hover — conferido por screenshot com sha1 idêntico, em repouso e no hover
-     (0.9.10). O motivo é o lint do Obsidian: ele avisa cada declaração de
-     `text-decoration-color` e de `-thickness`, porque o caniuse marca o
-     recurso "text-decoration" inteiro como parcial em todo Chrome até o 157 —
-     por causa só do `text-decoration-skip`, que nem usamos. Com a variável são
-     2 avisos em vez de 3; os 2 que ficam só saem mudando o desenho. */
-  --axxa-link-underline: color-mix(
-    in srgb,
-    var(--text-accent) 45%,
-    transparent
-  );
+  /* Sublinhado SEM espessura nem cor próprias (0.9.11). Antes era 1px, na cor
+     do acento a 45%, clareando pra 100% no hover — e o lint do Obsidian avisa
+     cada `text-decoration-thickness` e `-color`, porque o caniuse marca o
+     recurso "text-decoration" inteiro como parcial em todo Chrome (por causa
+     só do `text-decoration-skip`). Agora a linha tem a espessura da própria
+     fonte e a cor do texto (`currentColor`), e o hover é o dos links do
+     Obsidian: o link inteiro vai pra `--link-color-hover`, que os temas
+     personalizam. Zero avisos, desenho um pouco mais forte. */
   /* URL sem espaço é o caso clássico de linha que estoura a largura. */
   word-break: break-word;
   overflow-wrap: anywhere;
   color: var(--text-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
-  text-decoration-thickness: 1px;
-  text-decoration-color: var(--axxa-link-underline);
 }
 
 .axxa-root .axxa-markdown a:hover {
-  --axxa-link-underline: var(--text-accent);
+  color: var(--link-color-hover);
 }
 
 .axxa-root .axxa-markdown > * {
