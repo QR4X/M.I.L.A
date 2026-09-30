@@ -1105,6 +1105,12 @@ export default class AxxaPlugin extends Plugin {
     "geminiApiKey",
     "openrouterApiKey",
     "nimApiKey",
+    // A da ElevenLabs faltava aqui até a 0.9.13: ia em texto puro pro
+    // data.json, que mora dentro do vault — e o vault sincroniza (Sync,
+    // iCloud, git). Entrando na lista, o loadSecrets a migra pro keychain no
+    // próximo carregamento, pelo mesmo caminho das outras. O teste
+    // tests/secretFields.test.ts impede uma chave nova de ficar de fora.
+    "elevenApiKey",
   ] as const;
 
   /** ID do segredo no SecretStorage (lowercase + dashes). Ex: axxa-openai-key. */

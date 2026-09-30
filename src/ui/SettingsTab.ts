@@ -1164,7 +1164,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
     const s = this.s;
     new Setting(el)
       .setName("ElevenLabs key")
-      .setDesc("From elevenlabs.io › Profile › API key. Stays on this device.")
+      .setDesc("From elevenlabs.io › Profile › API key. Stored in the OS keychain (not in data.json).")
       .addText((t) => {
         t.inputEl.type = "password";
         t.setPlaceholder("key…")
