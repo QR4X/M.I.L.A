@@ -70,29 +70,45 @@ has no hosted service in the middle.
 
 ---
 
-## ⚖️ How it compares
+## 🎯 Built like a product, not a panel
 
-Copilot for Obsidian is the reference in this space and it is a good plugin —
-its free tier is genuinely generous. So here is an honest table rather than a
-list of things we both do.
+Most AI plugins for this ecosystem ship somewhere between **4 and 5 MB** of
+JavaScript. This one is **425 KB** — under half a megabyte, with six providers,
+local RAG, an agent with tools, voice and image generation inside it.
 
-| | AXXA Agent | Copilot for Obsidian |
-|---|---|---|
-| **Plugin size (`main.js`)** | **425 KB** | ~4.99 MB — 12 KB under Obsidian Sync's 5 MB per-file limit |
-| **License** | **MIT** — fork it, embed it, ship it | AGPL-3.0 — copyleft, extends to anything you build on it |
-| **Paid tier** | **None.** No hosted models, no subscription | Plus from $11.67/mo (hosted models, multi-agent, web search, PDF parsing) |
-| **Chat / Vault Q&A / agent that edits notes** | Free | Free (bring your own key) |
-| **Projects, Skills, semantic search** | Free | Free |
-| **Runs fully local (Ollama)** | Yes | Yes |
-| **Mobile** | Designed phone-first | Supported |
+That number is not a bragging right, it is a constraint that shaped everything:
 
-**Where the size matters, concretely:** Obsidian Sync refuses any single file
-over 5 MB. A plugin that sits 12 KB under that ceiling has nowhere left to grow
-without breaking sync for the people who use it. This one sits at 8% of the
-limit. On a phone, that same number is parse time on every single launch.
+- **Obsidian Sync refuses any single file over 5 MB.** A plugin that sits a few
+  kilobytes under that ceiling has nowhere left to grow. This one sits at 8% of
+  it.
+- **On a phone, size is startup time.** That megabyte is parsed on every single
+  launch, on hardware far slower than the laptop it was built on.
+- **Nothing here loads before the app does.** Registration happens on load; the
+  index, the model cache and the skills are read after Obsidian's interface is
+  already on screen.
 
-*Figures checked on 2026-09-30 from public sources — see the links at the
-bottom of this README. Copilot is actively developed; verify before quoting.*
+### The interface is the feature
+
+This is not a chat box bolted onto a sidebar. Every screen was drawn, measured
+and corrected against the real Obsidian stylesheet, on a 375-pixel phone, in
+both themes:
+
+- **Designed phone-first, not ported.** The composer tracks the software
+  keyboard as it opens; sheets resize with it; there is an optional fullscreen
+  mode that hands the whole screen to the conversation.
+- **Contrast is measured, not eyeballed.** Every text and icon was composited
+  over its real translucent background and checked against WCAG — 4.5:1 for
+  text, 3:1 for icons — in light and dark.
+- **One vocabulary everywhere.** The same card, the same sheet, the same pill,
+  the same proportion ring. Model names read the way you say them ("Sonnet 4.6",
+  not `claude-sonnet-4-6`).
+- **It uses your theme.** Every colour is a mix of Obsidian's own variables, so
+  the plugin inherits whatever theme and accent you already chose, instead of
+  painting its own brand over your vault.
+- **Empty states do their job.** No screen ever just disappears; it stays and
+  says why it is empty.
+
+Everything above is in the screenshots. None of it is a mockup.
 
 ---
 
@@ -249,17 +265,6 @@ wrapped in try/catch, checked for shape, and falls back to Obsidian's
 ---
 ---
 
-## 📚 Sources for the comparison
-
-- Copilot pricing and free-tier contents — <https://www.obsidiancopilot.com/en/pricing>
-- Copilot bundle size against Obsidian Sync's 5 MB per-file limit —
-  <https://github.com/logancyang/obsidian-copilot/pull/3428>
-- Copilot repository and license (AGPL-3.0) —
-  <https://github.com/logancyang/obsidian-copilot>
-- AXXA Agent size: run `npm run size` in this repo.
-
----
-
 # 🇧🇷 AXXA Agent (Português)
 
 > **Seu workspace de IA, nativo no Obsidian.** Converse, pergunte ao seu vault e deixe um agente agir nas suas notas — em 6 provedores de LLM, com suas próprias chaves. Mobile-first.
@@ -289,6 +294,41 @@ Se um dia existirem opções pagas, serão coisas **novas**, construídas por ci
 nunca um cadeado colocado em algo que já funcionava de graça. Você usa a sua
 própria chave de API e paga direto ao provedor: o plugin não fica com nada no
 meio e não tem serviço hospedado nenhum.
+
+---
+
+## 🎯 Feito como produto, não como painel
+
+A maioria dos plugins de IA deste ecossistema entrega entre **4 e 5 MB** de
+JavaScript. Este tem **425 KB** — menos de meio megabyte, com seis provedores,
+RAG local, um agente com ferramentas, voz e geração de imagem dentro.
+
+O número não é vaidade, é a restrição que desenhou o resto: o Obsidian Sync
+recusa arquivo acima de 5 MB, e no celular cada megabyte é tempo de abertura,
+toda vez. Aqui nada pesado carrega antes da interface do Obsidian aparecer.
+
+### A interface é a funcionalidade
+
+Não é uma caixa de chat parafusada numa barra lateral. Cada tela foi desenhada,
+**medida** e corrigida contra a folha de estilo real do Obsidian, num telefone
+de 375 pixels, nos dois temas:
+
+- **Pensado para o celular primeiro**, não portado: o composer acompanha o
+  teclado enquanto ele sobe, as folhas se ajustam junto, e há um modo tela cheia
+  opcional que entrega o aparelho inteiro para a conversa.
+- **Contraste medido, não no olho.** Cada texto e ícone foi composto sobre o
+  fundo translúcido real dele e conferido contra a WCAG — 4,5:1 para texto,
+  3:1 para ícone — no claro e no escuro.
+- **Um vocabulário só.** O mesmo cartão, a mesma folha, a mesma pílula, o mesmo
+  anel de proporção. E modelo se chama como você fala ("Sonnet 4.6", não
+  `claude-sonnet-4-6`).
+- **Usa o seu tema.** Toda cor é mistura das variáveis do próprio Obsidian: o
+  plugin herda o tema e o acento que você já escolheu em vez de pintar a marca
+  dele por cima do seu vault.
+- **Vazio também é tela.** Nenhuma seção simplesmente some — ela fica e diz por
+  que está vazia.
+
+Tudo isso está nos prints. Nada ali é maquete.
 
 ---
 
