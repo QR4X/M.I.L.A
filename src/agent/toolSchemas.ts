@@ -174,15 +174,3 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
 export function getToolDefinition(name: string): ToolDefinition | undefined {
   return TOOL_DEFINITIONS.find((t) => t.name === name);
 }
-
-/** Converte ToolDefinition pro formato OpenAI function calling. */
-export function toOpenAIFunction(tool: ToolDefinition) {
-  return {
-    type: "function" as const,
-    function: {
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.parameters,
-    },
-  };
-}

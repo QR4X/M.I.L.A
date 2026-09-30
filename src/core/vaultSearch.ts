@@ -121,11 +121,3 @@ export async function searchVault(
 
   return matches.sort((a, b) => b.score - a.score).slice(0, limit);
 }
-
-/** Constrói o bloco de contexto pra injetar no system prompt. */
-export function buildVaultContext(matches: VaultMatch[]): string {
-  if (matches.length === 0) return "";
-  return matches
-    .map((m) => `### ${m.title}\n\n${m.excerpt}`)
-    .join("\n\n---\n\n");
-}

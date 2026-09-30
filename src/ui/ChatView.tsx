@@ -93,7 +93,6 @@ import {
   wikilinkQuery,
   type NoteLike,
 } from "./notePicker";
-import type { MessageAttachment } from "../providers/base";
 import { StarterScreen } from "./StarterScreen";
 import { ThinkingLine } from "./Thinking";
 import type { ComposerInject } from "./App";

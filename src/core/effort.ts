@@ -23,15 +23,6 @@ export const EFFORT_LABELS: Record<EffortLevel, string> = {
   max: "Max",
 };
 
-/** Emojis pra usar em seletores compactos (StarterScreen segmented pill). */
-export const EFFORT_EMOJIS: Record<EffortLevel, string> = {
-  low: "🐢",    // tartaruga — devagar e econômico
-  med: "⚖️",   // balança — equilibrado
-  high: "⚡",   // raio — rápido
-  xhigh: "🔥",  // fogo — intenso
-  max: "🚀",   // foguete — uncapped
-};
-
 export const EFFORT_DESCRIPTIONS: Record<EffortLevel, string> = {
   low: "Fast and economical (≤512 tok · 5 turns)",
   med: "Balanced (≤2k tok · 12 turns)",

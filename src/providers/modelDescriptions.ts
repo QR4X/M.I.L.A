@@ -8,10 +8,10 @@
 //   - Tooltip "?" pra explicar o que cada modelo faz
 
 import type { ModelCapabilities } from "./modelCapabilities";
-import { getModelCapabilities, isGenerationModel } from "./modelCapabilities";
-import { getPricing, type ModelPricing } from "../usage/pricing";
+import { getModelCapabilities } from "./modelCapabilities";
+import { type ModelPricing } from "../usage/pricing";
 import { isEmbeddingModelId } from "../rag/types";
-import { getEnrichedInfo, type EnrichedModelInfo } from "./modelInfoStore";
+import { type EnrichedModelInfo } from "./modelInfoStore";
 
 /** Categoria semântica que vira <optgroup> no select. */
 export type ModelCategory =
@@ -206,50 +206,6 @@ export function getModelCard(
   return { category: "chat-text", description: "Text chat." };
 }
 
-/** Labels semânticos por categoria (EN). */
-export const CATEGORY_LABELS: Record<ModelCategory, string> = {
-  "chat-vision": "Chat multimodal",
-  "chat-text": "Text chat",
-  "reasoning": "Deep reasoning",
-  "agent": "Agent / tools",
-  "image-gen": "Image generation",
-  "audio-gen": "Audio generation",
-  "video-gen": "Video generation",
-  "embedding": "Embeddings",
-  "other": "Other",
-};
-
-/** Ordem canônica das categorias no UI (mais usados em cima). */
-export const CATEGORY_ORDER: ModelCategory[] = [
-  "chat-vision",
-  "chat-text",
-  "reasoning",
-  "agent",
-  "image-gen",
-  "audio-gen",
-  "video-gen",
-  "embedding",
-  "other",
-];
-
-/**
- * Agrupa uma lista de model IDs em buckets por categoria.
- * Pra usar como <optgroup> num <select>.
- */
-export function groupModelsByCategory(
-  provider: string,
-  models: string[]
-): Map<ModelCategory, string[]> {
-  const groups = new Map<ModelCategory, string[]>();
-  for (const m of models) {
-    const card = getModelCard(provider, m);
-    const list = groups.get(card.category) ?? [];
-    list.push(m);
-    groups.set(card.category, list);
-  }
-  return groups;
-}
-
 /** Helper de UI: combina ModelCard + ModelPricing + ModelCapabilities num bundle.
  *  `enriched` = specs vindas do Fetch info (OpenRouter), cache-sobre-bundled. */
 export interface ModelFullInfo {
@@ -257,18 +213,6 @@ export interface ModelFullInfo {
   caps: ModelCapabilities;
   pricing: ModelPricing;
   enriched?: EnrichedModelInfo;
-}
-
-export function getModelFullInfo(
-  provider: string,
-  model: string
-): ModelFullInfo {
-  const caps = getModelCapabilities(provider, model);
-  const card = getModelCard(provider, model, caps);
-  const pricing = getPricing(provider, model);
-  const enriched = getEnrichedInfo(provider, model);
-  void isGenerationModel; // silenciar unused warning na re-export
-  return { card, caps, pricing, enriched };
 }
 
 /**
@@ -291,59 +235,4 @@ export function prettyModelName(id: string): string {
       return w.charAt(0).toUpperCase() + w.slice(1);
     })
     .join(" ");
-}
-
-// EN curado pros modelos mais comuns (baseline offline, match por prefixo, mais
-// específico primeiro). O resto pega EN via Fetch info (OpenRouter) ou cai no
-// pt como fallback até buscar. Mantém o "phrase to phrase" nos flagships.
-const DESCRIPTION_EN: { prefix: string; text: string }[] = [
-  { prefix: "gpt-5-nano", text: "Cheapest of the GPT-5 family. Multimodal + tools." },
-  { prefix: "gpt-5-mini", text: "Economical GPT-5 with near-base quality." },
-  { prefix: "gpt-5", text: "OpenAI's multimodal flagship. Tool calling, vision, code." },
-  { prefix: "gpt-4o-mini", text: "Cheap multimodal. Excellent cost/perf for agents." },
-  { prefix: "gpt-4o", text: "GPT-4 omni: fluid chat, vision and tool calling. Agent default." },
-  { prefix: "o4-mini", text: "Compact o4 reasoning. Thinks before answering, great at STEM." },
-  { prefix: "o3", text: "Strong reasoning. Excellent at agentic coding." },
-  { prefix: "o1", text: "OpenAI's first reasoning model. Pricey but powerful at pure reasoning." },
-  { prefix: "claude-opus-4-8", text: "Claude Opus 4.8 — top tier. Excellent at agentic coding + long reasoning." },
-  { prefix: "claude-opus-4", text: "Opus 4 — deep reasoning. Expensive." },
-  { prefix: "claude-sonnet-4-6", text: "Sonnet 4.6 — balance of cost and quality. Excellent at tools." },
-  { prefix: "claude-sonnet-4", text: "Sonnet 4 — fast, multimodal, strong tool calling." },
-  { prefix: "claude-haiku-4-5", text: "Haiku 4.5 — cheap and fast. Good for short tasks." },
-  { prefix: "gemini-3-pro", text: "Gemini 3 Pro — top tier, natively multimodal including video." },
-  { prefix: "gemini-2.5-flash-image", text: "Nano Banana — Google's fast image gen. Up to 20 refs, conversational editing." },
-  { prefix: "gemini-2.5-pro", text: "Gemini 2.5 Pro — long thinking + full multimodal." },
-  { prefix: "gemini-2.5-flash", text: "Flash — balance of speed and quality. Gemini default." },
-];
-
-function curatedEn(model: string): string | undefined {
-  const lower = (model || "").toLowerCase();
-  for (const e of DESCRIPTION_EN) {
-    if (lower.startsWith(e.prefix.toLowerCase())) return e.text;
-  }
-  return undefined;
-}
-
-/**
- * Descrição localizada do modelo, phrase-to-phrase:
- *   en  → enriched (Fetch info) → EN curado → fallback no pt curado.
- *   pt  → pt curado (baseline).
- *   outras langs → prefere EN (neutro) → fallback no pt curado.
- */
-export function localizedDescription(
-  info: ModelFullInfo,
-  model: string,
-  lang: string
-): string {
-  const lower = (lang || "").toLowerCase();
-  // pt mantém o baseline curado em português.
-  if (lower.startsWith("pt")) {
-    return info.card.description;
-  }
-  // v0.1.228: en e demais idiomas preferem o EN (neutro) antes de cair no pt.
-  return (
-    info.enriched?.descriptionEn ||
-    curatedEn(model) ||
-    info.card.description
-  );
 }

@@ -127,10 +127,3 @@ export async function hybridSearch(opts: HybridOptions): Promise<HybridHit[]> {
 
   return hits.sort((a, b) => b.score - a.score).slice(0, topK);
 }
-
-/** Formata os hits como bloco de contexto markdown (pro system prompt / tool). */
-export function formatHybridContext(hits: HybridHit[]): string {
-  return hits
-    .map((h) => `### ${h.path} (${h.via})\n${h.text}`)
-    .join("\n\n---\n\n");
-}

@@ -28,10 +28,10 @@
 | `src/core/chatEngine.ts` | um turno de chat / Vault Q&A (busca → stream → erros) |
 | `src/core/agentTurn.ts` | o loop do agente (stream → tool calls → confirmação → retry) |
 | `src/core/session.ts` | **`ChatSession`** — o controller que a UI consome (abaixo) |
-| `src/core/effort.ts` · `contextWindows.ts` · `helpers.ts` · `vaultSearch.ts` · `attachmentNotes.ts` · `providersMeta.ts` | effort (5 níveis), janelas de contexto, erros amigáveis, keyword search, anexos, lista de providers |
+| `src/core/effort.ts` · `contextWindows.ts` · `helpers.ts` · `vaultSearch.ts` · `providersMeta.ts` | effort (5 níveis), janelas de contexto, erros amigáveis, keyword search, lista de providers |
 | `src/store/chat.ts` | store zustand: mensagens, streaming, lock de sessão, tokens |
 | `src/skills/skills.ts` · `src/projects.ts` | skills como notas `.md`; projetos (chats + notas-fonte) |
-| `src/usage/**` · `src/generation/save.ts` · `src/providers/transcribe.ts` | custo/billing, salvar mídia gerada, transcrição — **sem UI hoje**, prontos para religar |
+| `src/usage/**` · `src/providers/transcribe.ts` | custo por conversa e o relatório em nota, transcrição de voz |
 | `src/main.ts` | plugin: settings (enxutas), SecretStorage das chaves, cache de summaries de chat, índice RAG no load, auto-reindex, watcher de skills |
 | `src/i18n/en-us.ts` | strings (o motor usa `ai`, `agent`, `vault`, `systemPrompt`, `chat`, `conversations`; o resto é legado da UI antiga — pode ser podado) |
 
@@ -126,11 +126,6 @@ item ativo, sheets.
   isso a reserva da navbar sai com o cinza da GAVETA e vira uma barra visível)
   e **zera essa reserva com o teclado aberto** (a gaveta já subiu, a navbar
   ficou atrás do teclado — reservar de novo é faixa morta).
-- `layoutReport.ts` — **Inspector**: o comando "Copy mobile layout report"
-  copia os números do layout NO APARELHO (viewport, visualViewport,
-  `--keyboard-height`, `env(safe-area-*)`, classes e geometria da gaveta, quem
-  pinta cada superfície). Teclado e tela cheia dependem de coisas que só o
-  aparelho sabe — sem o relatório, cada ajuste vira uma release de palpite.
 - `Icon.tsx` — ícone Lucide via `setIcon` nativo.
 - `brandLogos.ts` — logos dos seis providers como ícones do Obsidian
   (`addIcon` no onload → `setIcon("logo-openai")`). AUTO-GERADO de

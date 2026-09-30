@@ -207,16 +207,6 @@ export async function embedBatch(
   );
 }
 
-/** Embeda 1 texto (helper). */
-export async function embedText(
-  text: string,
-  apiKey: string,
-  model?: string
-): Promise<number[]> {
-  const [vec] = await embedBatch([text], apiKey, model);
-  return vec;
-}
-
 // ============================================================
 // OpenRouter (Nemotron VL) — multimodal: texto + imagem
 // ============================================================

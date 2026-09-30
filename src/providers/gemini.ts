@@ -20,7 +20,6 @@ import {
   ProviderError,
   ProviderRequest,
   ProviderResponse,
-  ProviderToolCall,
   TokenHandler,
   UsageHandler,
   MediaGenerationRequest,

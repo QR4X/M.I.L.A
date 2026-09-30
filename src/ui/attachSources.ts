@@ -161,14 +161,6 @@ export function attachmentThumb(
   return { kind: "emoji", char: "📄" };
 }
 
-/** Ícone do chip de anexo — o mesmo vocabulário da folha de ações. */
-export function attachmentIcon(a: MessageAttachment): string {
-  if (a.type === "image") return "image";
-  if (a.type === "pdf") return "file-text";
-  if (a.type === "audio") return "mic";
-  return "file-text";
-}
-
 /** Rótulo curto: o nome do arquivo, não o caminho inteiro. */
 export function attachmentLabel(a: MessageAttachment): string {
   if (a.type === "note") {

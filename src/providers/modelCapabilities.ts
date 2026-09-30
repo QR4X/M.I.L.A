@@ -372,23 +372,6 @@ export function supportsPdf(
   }
 }
 
-/**
- * Modelo suporta o toggle "Thinking" (extended thinking / reasoning)? Usado pra
- * mostrar o toggle só onde faz sentido. Heurística por prefixo (o catálogo não
- * carrega flag dedicada): o-series + gpt-5, Claude 3.7+/4.x/Fable, Gemini 2.5+,
- * DeepSeek R1, Qwen3. Em ids tipo "vendor/model" (OpenRouter) testa o último seg.
- */
-export function supportsThinking(model: string): boolean {
-  let id = (model || "").toLowerCase();
-  if (id.includes("/")) id = id.slice(id.lastIndexOf("/") + 1);
-  if (/^(o1|o3|o4|gpt-5)/.test(id)) return true;
-  if (/^claude-(3-7|opus-4|sonnet-4|haiku-4|fable)/.test(id)) return true;
-  if (/^gemini-(2\.5|3)/.test(id)) return true;
-  if (id.includes("deepseek-r1") || id.includes("deepseek-reasoner")) return true;
-  if (/^qwen3/.test(id)) return true;
-  return false;
-}
-
 export type CapabilityBadgeId =
   | "vision"
   | "tools"
@@ -397,27 +380,6 @@ export type CapabilityBadgeId =
   | "img-gen"
   | "audio-gen"
   | "video-gen";
-
-/**
- * Helper utilitário pra UI: lista os flags ativos como strings curtas.
- * Ordem fixa: generation flags primeiro (mais distintivas), depois input
- * capabilities, depois stream/free.
- */
-export function capabilityBadges(caps: ModelCapabilities): Array<{
-  id: CapabilityBadgeId;
-  label: string;
-  icon: string;
-}> {
-  const badges: Array<{ id: CapabilityBadgeId; label: string; icon: string }> = [];
-  if (caps.imageGen) badges.push({ id: "img-gen", label: "img-gen", icon: "image-plus" });
-  if (caps.audioGen) badges.push({ id: "audio-gen", label: "audio-gen", icon: "volume-2" });
-  if (caps.videoGen) badges.push({ id: "video-gen", label: "video-gen", icon: "video" });
-  if (caps.vision) badges.push({ id: "vision", label: "vision", icon: "image" });
-  if (caps.tools) badges.push({ id: "tools", label: "tools", icon: "wrench" });
-  if (caps.streaming) badges.push({ id: "stream", label: "stream", icon: "zap" });
-  if (caps.free) badges.push({ id: "free", label: "free", icon: "gift" });
-  return badges;
-}
 
 /** Helper conveniência: o modelo é qualquer tipo de generation? */
 export function isGenerationModel(caps: ModelCapabilities): boolean {

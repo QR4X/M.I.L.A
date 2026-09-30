@@ -19,8 +19,6 @@ export const providers: Record<string, Provider> = {
   ollama: ollamaProvider,
 };
 
-export const providerIds = Object.keys(providers) as Array<keyof typeof providers>;
-
 /**
  * Retorna o provider pelo id. Se o id for desconhecido (ex: settings corrompida),
  * cai pro OpenAI como default seguro.

@@ -7,13 +7,8 @@
 import { useChatStore } from "../store/chat";
 import type { getProvider } from "../providers";
 import { providerNeedsKey, describeProviderError } from "./helpers";
-import {
-  resolveEffortConfig,
-  effortToVaultLookup,
-  effortToMaxTokensSmart,
-} from "./effort";
+import { resolveEffortConfig, effortToMaxTokensSmart } from "./effort";
 import { getContextWindow } from "./contextWindows";
-import { hybridSearch } from "../rag/hybrid";
 import {
   blocoDeNotasAnexadas,
   buildChatSystemPrompt,
@@ -72,7 +67,6 @@ export async function streamReply(
     activeProviderId,
     activeProvider,
     activeModel,
-    activeMode,
     apiKeyFor,
     effort,
     useVault,

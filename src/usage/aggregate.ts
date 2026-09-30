@@ -5,8 +5,7 @@
 // calcula custo via getPricing+calculateCost, e devolve breakdown
 // por provider / modelo / modo / dia + chats ordenados por custo.
 
-import type { App } from "obsidian";
-import { listAllChats, type ChatSummary } from "../core/chatPersistence";
+import { type ChatSummary } from "../core/chatPersistence";
 import { calculateCost, getPricing, type ModelPricing } from "./pricing";
 
 /** Bucket de agregação — totais e flag de "algum modelo sem preço". */
@@ -133,19 +132,6 @@ function filterByPeriod(rows: ChatUsageRow[], periodDays?: number): ChatUsageRow
 }
 
 /**
- * Lê todos os chats do vault, computa breakdown, devolve UsageAggregate.
- * Opcional: `periodDays` filtra os últimos N dias (0=tudo).
- */
-export async function aggregateUsage(
-  app: App,
-  chatsPath: string,
-  periodDays = 0
-): Promise<UsageAggregate> {
-  const summaries = await listAllChats(app, chatsPath, 100_000);
-  return aggregateFromSummaries(summaries, periodDays);
-}
-
-/**
  * Agrega summaries JÁ CARREGADOS — zero IO (v0.1.103). Permite reaproveitar
  * uma única passada de listAllChats em quem precisa de recentes + stats
  * (ex.: dashboard da StarterScreen), em vez de reler o disco.
@@ -219,25 +205,4 @@ export function sortBucketEntries(
   buckets: Record<string, UsageBucket>
 ): Array<[string, UsageBucket]> {
   return Object.entries(buckets).sort(([, a], [, b]) => b.cost - a.cost);
-}
-
-/** Helper UI: top N entries de byDay com fillado pra dias sem chat. */
-export function lastNDays(
-  byDay: Record<string, UsageBucket>,
-  n: number
-): Array<{ day: string; bucket: UsageBucket }> {
-  const out: Array<{ day: string; bucket: UsageBucket }> = [];
-  // Eixo de dias inteiramente em UTC pra casar exatamente com a indexação
-  // UTC de dayFromIso — local + setDate podia pular/duplicar dia perto da
-  // meia-noite, dependendo do fuso (v0.1.228).
-  const dayMs = 86_400_000;
-  const nowMs = Date.now();
-  for (let i = n - 1; i >= 0; i--) {
-    const key = new Date(nowMs - i * dayMs).toISOString().slice(0, 10);
-    out.push({
-      day: key,
-      bucket: byDay[key] ?? emptyBucket(),
-    });
-  }
-  return out;
 }

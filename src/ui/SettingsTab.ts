@@ -28,10 +28,9 @@ import { escolherAssistente, ehFree } from "../assistant/model";
 import { LOCALES } from "../i18n";
 import { CHAT_MODES } from "../core/session";
 import { getAllEmbeddingModels } from "../rag/types";
-import { indexVault } from "../rag/indexer";
-import { deleteIndex, RAG_SHARD_SIZE } from "../rag/vectorIndex";
+import { deleteIndex } from "../rag/vectorIndex";
 import { getModelCapabilities } from "../providers/modelCapabilities";
-import { freeTag, compactTokens } from "../usage/freeTag";
+import { freeTag } from "../usage/freeTag";
 import {
   FREE_TOKENS_AS_OF,
   openaiFreeTierForModel,

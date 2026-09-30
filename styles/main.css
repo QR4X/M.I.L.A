@@ -709,7 +709,6 @@ body.theme-dark {
 
    O `border-radius` de cada um fica onde está: ele é ignorado enquanto a
    máscara funciona, e vira a forma de reserva onde ela não aplicar. */
-.axxa-root .axxa-squircle,
 .axxa-root button.axxa-round-btn,
 .axxa-root .axxa-send,
 .axxa-root .axxa-icon-btn,
@@ -827,19 +826,6 @@ body.theme-dark {
    falta de espaço é o scroll, não a régua dos itens. */
 .axxa-root .axxa-home > * {
   flex: 0 0 auto;
-}
-
-/* Serifa e corpo grande: é o nome do lugar onde se está, não um cabeçalho de
-   seção. A mesma fonte da leitura — o app já tem uma serifa, e inventar outra
-   aqui seria uma terceira voz. */
-.axxa-root .axxa-home-title {
-  margin: var(--axxa-3) 0 0;
-  font-family: var(--axxa-read-font);
-  font-size: 2.1em;
-  font-weight: var(--font-normal);
-  letter-spacing: -0.01em;
-  line-height: 1.1;
-  color: var(--text-normal);
 }
 
 /* ── o campo de busca do app (SearchField) ─────────────────────────────
@@ -4322,18 +4308,6 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-layer .axxa-sheet {
   background-color: var(--background-modifier-border);
 }
 
-.axxa-root .axxa-drawer-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--axxa-2);
-  padding: 0 var(--axxa-1);
-}
-
-.axxa-root .axxa-search {
-  width: 100%;
-  font-size: var(--font-ui-smaller);
-}
-
 /* A ESTRUTURA da lista — o que vale onde quer que ela esteja: na home de um
    módulo, no histórico, dentro da folha de busca.
    Ela nasceu na gaveta, e por isso a aparência (cartão, linha chapada, brasão,
@@ -4522,16 +4496,6 @@ body.is-mobile .axxa-root .axxa-history-more {
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
-}
-
-.axxa-confirm-modal .axxa-diff-add {
-  border-left: 2px solid var(--color-green);
-  background-color: color-mix(in srgb, var(--color-green) 12%, transparent);
-}
-
-.axxa-confirm-modal .axxa-diff-del {
-  border-left: 2px solid var(--color-red);
-  background-color: color-mix(in srgb, var(--color-red) 12%, transparent);
 }
 
 /* Conteúdo FORMATADO: nota vira markdown de verdade, arquivo de código vira
@@ -5681,16 +5645,6 @@ body.is-mobile .axxa-root .axxa-history-more {
    diferença: aqui o brasão pode ter cor própria (a do projeto), porque é o
    usuário quem escolhe, e não o provider. */
 
-/* A frase que abre a tela. Uma linha, tom de apoio: ela existe pra quem
-   chegou aqui pela primeira vez e não pode custar uma tela de rolagem pra
-   quem já sabe. */
-.axxa-root .axxa-lead {
-  margin: 0;
-  max-width: 46ch;
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-}
-
 /* ── o CARTÃO de projeto ─────────────────────────────────────────────────
    Era uma linha: brasão, nome, "N notes · M chats" e um chevron. Dizia quanto
    o projeto tinha, mas não DO QUE ele era nem se ainda estava vivo — pra
@@ -5896,17 +5850,6 @@ body.is-mobile .axxa-root .axxa-history-more {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* O modo do skill ao lado do nome: contorno, não preenchimento — ele informa,
-   não chama. */
-.axxa-root .axxa-thing-tag {
-  margin-left: var(--axxa-2);
-  padding: 1px 7px;
-  border-radius: 999px;
-  border: 1px solid var(--axxa-line);
-  color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
 }
 
 .axxa-root .axxa-thing-note {
@@ -6587,31 +6530,6 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
 .axxa-root .axxa-home-empty.is-tall {
   padding-top: var(--axxa-5);
   padding-bottom: var(--axxa-5);
-}
-
-/* ── a galeria de skills ───────────────────────────────────────────────
-   Desenho da referência (a galeria de artefatos do app da Claude): busca e
-   filtro na fileira de cima, e o acervo em cartões de duas colunas, cada um
-   mostrando um PEDAÇO do conteúdo em vez de um ícone.
-
-   A miniatura não é ilustração: a única pergunta que se faz olhando uma lista
-   de prompts guardados é "qual deles escreve o quê", e nenhum ícone responde
-   isso. O texto responde. */
-
-.axxa-root .axxa-toolrow {
-  display: flex;
-  align-items: center;
-  gap: var(--axxa-2);
-}
-
-/* A busca toma a largura; o filtro fica do tamanho do nome dele. */
-.axxa-root .axxa-toolrow .axxa-search-field {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.axxa-root .axxa-toolrow .axxa-home-filter {
-  flex: 0 0 auto;
 }
 
 .axxa-root .axxa-tiles {

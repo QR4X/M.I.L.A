@@ -72,10 +72,6 @@ export function stopSpeaking(): void {
   currentUrl = null;
 }
 
-export function isSpeaking(): boolean {
-  return current !== null;
-}
-
 /** Gera o áudio pelo caminho configurado. */
 async function synthesize(
   plugin: AxxaPlugin,

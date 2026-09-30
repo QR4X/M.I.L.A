@@ -44,6 +44,49 @@ const WANTED = [
   { file: "stability-color.svg", id: "logo-stability" },
   { file: "nanobanana-color.svg", id: "logo-nanobanana" },
 ];
+/**
+ * Troca gradiente por cor chapada — onde isso não muda o que se vê.
+ *
+ * Estes logos são desenhados a 14–20px. Nesse tamanho, um degradê entre dois
+ * tons vizinhos da mesma marca (o logo da Meta tem TREZE, todos entre azuis
+ * quase iguais) é indistinguível de uma cor sólida: paga-se em bytes por uma
+ * diferença que a tela não mostra.
+ *
+ * Só achata quando TODAS as paradas são opacas. Gradiente que termina em
+ * `stop-opacity="0"` não é uma cor — é uma CAMADA de tinta por cima de outro
+ * desenho (é assim que o Gemini ganha as quatro cores dele). Achatar essa
+ * viraria um bloco sólido em cima do logo e destruiria a marca.
+ */
+function achataGradientes(svg) {
+  const chapadas = new Map();
+  for (const g of svg.matchAll(
+    /<linearGradient[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/linearGradient>/g
+  )) {
+    const [, id, corpo] = g;
+    const stops = [...corpo.matchAll(/<stop[^>]*>/g)].map((s) => s[0]);
+    if (stops.length === 0) continue;
+    const transparente = stops.some((s) => /stop-opacity="0(\.0+)?"/.test(s));
+    if (transparente) continue;
+    const cor = stops[0].match(/stop-color="([^"]+)"/)?.[1];
+    if (cor) chapadas.set(id, cor);
+  }
+  if (chapadas.size === 0) return svg;
+
+  let out = svg;
+  for (const [id, cor] of chapadas) {
+    out = out.replaceAll(`url(#${id})`, cor);
+    // O gradiente some do <defs> junto com o último uso dele.
+    out = out.replace(
+      new RegExp(
+        `<linearGradient[^>]*\\bid="${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*>[\\s\\S]*?</linearGradient>`
+      ),
+      ""
+    );
+  }
+  // <defs> que ficou vazio não precisa existir.
+  return out.replace(/<defs>\s*<\/defs>/g, "");
+}
+
 const disponiveis = new Set(readdirSync(SRC).map((f) => f.toLowerCase()));
 const files = WANTED.filter((w) => {
   const tem = disponiveis.has(w.file.toLowerCase());
@@ -71,8 +114,13 @@ for (const { file: f, id } of files) {
     .replace(/^[\s\S]*?<svg[^>]*>/i, "")
     .replace(/<\/svg>\s*$/i, "")
     .replace(/<title>[\s\S]*?<\/title>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/\s+/g, " ")
     .trim();
+
+  inner = achataGradientes(inner);
+  // `nonzero` é o padrão do SVG: escrever é só peso.
+  inner = inner.replace(/\s+fill-rule="nonzero"/g, "");
 
   // Escapa pro template string TS.
   inner = inner

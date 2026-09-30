@@ -17,8 +17,6 @@
 // O padrão não é uma trava: é o estado inicial de quem nunca tocou no
 // interruptor. Tocou uma vez, a escolha é da pessoa e acompanha a conversa.
 
-import type { ChatMode } from "./session";
-
 /** O interruptor nasce assim em cada modo. */
 export function vaultDefault(mode: string): boolean {
   return mode === "vault-qa" || mode === "agent";

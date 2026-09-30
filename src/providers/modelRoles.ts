@@ -43,17 +43,6 @@ export const ROLE_LABELS: Record<RoleId, string> = {
   other: "Other",
 };
 
-/** Subtítulo curto de cada seção — explica pra que serve o ★ daquele papel. */
-export const ROLE_DESC: Record<RoleId, string> = {
-  chat: "Everyday chat, vision and agent.",
-  reasoning: "Deep step-by-step problem solving.",
-  image: "Text-to-image generation.",
-  video: "Text-to-video generation.",
-  tts: "Read-aloud and Voice mode.",
-  embedding: "Semantic index for Vault Q&A (RAG).",
-  other: "Anything else.",
-};
-
 /** Ícone Lucide do "brasão" de cada papel. */
 export const ROLE_ICONS: Record<RoleId, string> = {
   chat: "messages-square",
@@ -86,37 +75,4 @@ export function categoryToRole(cat: ModelCategory): RoleId {
     default:
       return "other";
   }
-}
-
-// Tokens de tamanho/tier conhecidos — viram o rótulo curto da variante.
-const VARIANT_TOKENS = [
-  "nano",
-  "micro",
-  "mini",
-  "small",
-  "lite",
-  "large",
-  "xl",
-  "pro",
-  "max",
-  "ultra",
-  "hd",
-  "turbo",
-  "flash",
-  "thinking",
-  "instruct",
-  "schnell",
-  "dev",
-];
-
-/** Rótulo curto da variante dentro da família (nano/mini/HD/2.5…). Heurística
- *  só pra DISPLAY no resumo da família colapsada — não é identidade. */
-export function getModelVariant(model: string): string {
-  const id = (model || "").toLowerCase();
-  for (const tk of VARIANT_TOKENS) {
-    if (new RegExp(`(^|[^a-z])${tk}([^a-z]|$)`).test(id)) return tk;
-  }
-  // versão numérica (4.8, 2.5, 3.1, r1, o3…)
-  const ver = id.match(/(\d+(?:\.\d+)?)/);
-  return ver ? ver[1] : "std";
 }

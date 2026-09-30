@@ -24,7 +24,6 @@ import {
   ProviderError,
   ProviderRequest,
   ProviderResponse,
-  ProviderToolCall,
   TokenHandler,
   UsageHandler,
   ReasoningHandler,

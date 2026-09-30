@@ -29,39 +29,8 @@ export const QUANT_PROFILES: Record<string, QuantProfile> = {
   minimal: { id: "minimal", precision: "int8", targetDim: 256, emoji: "🔬" },
 };
 
-export const QUANT_PROFILE_IDS = [
-  "precision",
-  "balanced",
-  "light",
-  "minimal",
-] as const;
-
-/** Labels curtos (estilo EFFORT_LABELS — em código, não i18n). */
-export const QUANT_PROFILE_LABELS: Record<string, string> = {
-  precision: "Precision",
-  balanced: "Balanced",
-  light: "Light",
-  minimal: "Minimal",
-};
-
-/** "Melhor uso" mostrado no campo (estilo EFFORT_DESCRIPTIONS). */
-export const QUANT_PROFILE_USES: Record<string, string> = {
-  precision: "Max quality. Small vaults (<2k notes) or desktop.",
-  balanced: "Recommended. Great quality, fits on mobile.",
-  light: "Large vaults (10k+) on mobile. Fast and light.",
-  minimal: "Huge vaults (50k+). Coarse search, max savings.",
-};
-
 export function getQuantProfile(id: string): QuantProfile {
   return QUANT_PROFILES[id] ?? QUANT_PROFILES.balanced;
-}
-
-/** Recomenda um perfil pelo tamanho do vault (nº de notas markdown). */
-export function recommendProfile(noteCount: number): string {
-  if (noteCount < 2000) return "precision";
-  if (noteCount < 10000) return "balanced";
-  if (noteCount < 50000) return "light";
-  return "minimal";
 }
 
 // ============================================================
@@ -146,14 +115,4 @@ export function base64ToTypedArray(
   // derrubar a busca inteira. v0.1.227
   const usable = bytes.byteLength - (bytes.byteLength % 4);
   return new Float32Array(bytes.buffer, 0, usable / 4);
-}
-
-/** Estimativa de RAM (bytes) pra N chunks numa dim/precisão. UI pré-indexação. */
-export function estimateIndexBytes(
-  chunkCount: number,
-  dim: number,
-  precision: QuantPrecision
-): number {
-  const bytesPerComponent = precision === "int8" ? 1 : 4;
-  return chunkCount * dim * bytesPerComponent;
 }
