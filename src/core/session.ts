@@ -84,6 +84,9 @@ export class ChatSession {
   /** Projeto que vai receber o chat criado no próximo 1º envio. */
   private pendingProjectId: string | null = null;
   private saveTimer: number | null = null;
+  /** Já avisei que a gravação da conversa está falhando? (ver
+   *  `avisarFalhaDeGravacao`) */
+  private avisoDeGravacaoDado = false;
   private pendingSave: (() => void) | null = null;
   private skipNextSave = false;
   private readonly listeners = new Set<() => void>();
@@ -482,8 +485,9 @@ export class ChatSession {
       });
       // Respondeu com você em outro lugar: fica marcada até você abrir.
       this.plugin.markChatUnread(chat.id);
+      this.avisoDeGravacaoDado = false;
     } catch (err) {
-      console.error("[axxa] gravarFundo falhou:", err);
+      this.avisarFalhaDeGravacao(err);
     }
   }
 
@@ -730,6 +734,30 @@ export class ChatSession {
     pending?.();
   }
 
+  /**
+   * A gravação da conversa falhou — e quem está conversando precisa saber.
+   *
+   * As mensagens ficam na tela mesmo quando o arquivo não foi escrito, então
+   * sem isto a pessoa continua digitando por cima de uma conversa que não
+   * existe em disco e só descobre ao reabrir o Obsidian. Um `console.error`
+   * não é aviso: ninguém conversa com o devtools aberto.
+   *
+   * Uma vez por sequência de falhas (disco cheio avisa uma vez, não a cada
+   * mensagem); volta a avisar depois que uma gravação dá certo.
+   */
+  private avisarFalhaDeGravacao(err: unknown): void {
+    console.error("[axxa] não consegui gravar a conversa:", err);
+    if (this.avisoDeGravacaoDado) return;
+    this.avisoDeGravacaoDado = true;
+    const en = this.plugin.settings.language === "en-us";
+    new Notice(
+      en
+        ? "AXXA could not save this chat to your vault — what you see here is not on disk yet. Check the vault's disk space and permissions."
+        : "A AXXA não conseguiu gravar esta conversa no vault — o que está na tela ainda não está em disco. Confira o espaço e as permissões do vault.",
+      12000
+    );
+  }
+
   private async saveNow(): Promise<void> {
     const st = useChatStore.getState();
     if (!st.currentChatId) return;
@@ -794,8 +822,9 @@ export class ChatSession {
         starred: chat.starred === true,
         preview: previewFromText(ultima?.content ?? ""),
       });
+      this.avisoDeGravacaoDado = false;
     } catch (err) {
-      console.error("[axxa] saveChat falhou:", err);
+      this.avisarFalhaDeGravacao(err);
     }
   }
 }

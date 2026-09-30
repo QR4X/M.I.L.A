@@ -8,8 +8,22 @@ import zlib from "zlib";
 import path from "path";
 
 const OUT = "output";
-// Tetos em KB gzip — disciplina de tamanho. Ajustar conforme o plano avança.
-const BUDGET = { "main.js": 260, "styles.css": 45 };
+
+/**
+ * Tetos, em KB, POR MEDIDA — e as duas medidas aparecem porque as duas
+ * importam por motivos diferentes: o gzip é o que viaja na rede quando alguém
+ * instala; o cru é o que o WebView do celular tem que parsear toda vez que o
+ * Obsidian abre.
+ *
+ * Eram só os de gzip, e o relatório imprimia "(teto 260KB)" logo depois do
+ * número CRU — numa revisão isso foi lido como "424 contra 260, estourado",
+ * quando o real era 135 de gzip contra 260. Um rótulo ambíguo custou uma
+ * acusação errada; agora cada teto sai grudado na medida dele.
+ */
+const BUDGET = {
+  "main.js": { raw: 512, gz: 260 },
+  "styles.css": { raw: 128, gz: 45 },
+};
 
 const kb = (n) => (n / 1024).toFixed(1);
 const gz = (buf) => zlib.gzipSync(buf).length;
@@ -34,11 +48,15 @@ export function report() {
     if (!fs.existsSync(p)) continue;
     const buf = fs.readFileSync(p);
     const g = gz(buf);
-    const teto = BUDGET[f];
-    const flag = teto && g / 1024 > teto ? "  ⚠ ACIMA DO TETO" : "";
-    if (flag) over = true;
+    const teto = BUDGET[f] ?? {};
+    const acimaRaw = teto.raw && buf.length / 1024 > teto.raw;
+    const acimaGz = teto.gz && g / 1024 > teto.gz;
+    if (acimaRaw || acimaGz) over = true;
+    const marca = (acima) => (acima ? " ⚠" : "");
     console.log(
-      `  ${f.padEnd(11)} ${kb(buf.length).padStart(7)} KB raw  ${kb(g).padStart(6)} KB gz  (teto ${teto}KB)${flag}`
+      `  ${f.padEnd(11)} ` +
+        `${kb(buf.length).padStart(7)} KB raw /${String(teto.raw ?? "—").padStart(4)}${marca(acimaRaw)}  ` +
+        `${kb(g).padStart(6)} KB gz /${String(teto.gz ?? "—").padStart(4)}${marca(acimaGz)}`
     );
   }
   const tsLoc = locOf("src", [".ts", ".tsx"]);

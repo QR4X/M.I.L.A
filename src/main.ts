@@ -1056,6 +1056,9 @@ export default class AxxaPlugin extends Plugin {
    * gravá-los por cima transforma uma leitura falha numa perda permanente.
    */
   private settingsUnsafe = false;
+  /** Já avisei que a gravação das settings está falhando? Zera quando volta a
+   *  gravar — senão o aviso vira parede numa falha que persiste. */
+  private avisoDeSaveDado = false;
 
   /** Caminho do arquivo de settings do plugin. */
   private dataPath(nome = "data.json"): string {
@@ -1314,6 +1317,20 @@ export default class AxxaPlugin extends Plugin {
     return copy;
   }
 
+  /**
+   * Grava as settings — e, se a gravação falhar, DIZ.
+   *
+   * A maior parte das chamadas é `void this.saveSettings()`: quem mexeu num
+   * interruptor não espera o disco. Sete desses pontos não tinham `catch`
+   * nenhum, então disco cheio, pasta sincronizada travada ou permissão negada
+   * davam no mesmo: a configuração não gravava, a tela não mudava, e na
+   * abertura seguinte a mudança tinha sumido. Perda silenciosa de dado — a
+   * mesma doença que a lixeira do agente resolveu, num lugar mais barato.
+   *
+   * O tratamento fica AQUI, e não espalhado em sete `.catch`, porque a decisão
+   * é uma só: avisar. Um catch por chamador seria a mesma frase escrita sete
+   * vezes, e a oitava esqueceria.
+   */
   async saveSettings() {
     // Leitura falhou: o que está na memória é o padrão de fábrica, não o que a
     // pessoa configurou. Gravar aqui é apagar de verdade.
@@ -1321,16 +1338,36 @@ export default class AxxaPlugin extends Plugin {
       console.error("[axxa] saveSettings bloqueado: as settings não foram lidas.");
       return;
     }
-    const ss = this.app.secretStorage;
-    if (ss) {
-      // Chaves vão pro SecretStorage; data.json é salvo sem elas.
-      for (const f of AxxaPlugin.SECRET_FIELDS) {
-        ss.setSecret(this.secretId(f), this.settings[f] ?? "");
+    try {
+      const ss = this.app.secretStorage;
+      if (ss) {
+        // Chaves vão pro SecretStorage; data.json é salvo sem elas.
+        for (const f of AxxaPlugin.SECRET_FIELDS) {
+          await ss.setSecret(this.secretId(f), this.settings[f] ?? "");
+        }
+        await this.saveData(this.persistableSettings());
+      } else {
+        // Fallback (runtime sem SecretStorage): salva tudo no data.json.
+        await this.saveData(this.settings);
       }
-      await this.saveData(this.persistableSettings());
-    } else {
-      // Fallback (runtime sem SecretStorage): salva tudo no data.json.
-      await this.saveData(this.settings);
+      this.avisoDeSaveDado = false;
+    } catch (err) {
+      console.error("[axxa] não consegui gravar as settings:", err);
+      // UMA vez por sequência de falhas: se o disco está cheio, cada
+      // interruptor tocado dispararia um aviso e a tela viraria uma parede de
+      // avisos sobre o mesmo problema. Volta a avisar depois de uma gravação
+      // que deu certo — aí é um problema novo.
+      if (!this.avisoDeSaveDado) {
+        this.avisoDeSaveDado = true;
+        const en = this.settings.language === "en-us";
+        new Notice(
+          en
+            ? "AXXA could not save your settings — the change is active now but will be lost when you reopen Obsidian. Check the vault's disk space and permissions."
+            : "A AXXA não conseguiu gravar as configurações — a mudança vale agora, mas se perde ao reabrir o Obsidian. Confira o espaço em disco e as permissões do vault.",
+          12000
+        );
+      }
+      return;
     }
     // Avisa quem tá escutando (ex.: AxxaApp pra re-renderizar com novo idioma)
     this.settingsListeners.forEach((cb) => {
