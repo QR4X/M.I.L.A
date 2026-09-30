@@ -12,7 +12,7 @@ depois disso os updates chegam sozinhos via GitHub Release (já automatizado em
 - [x] `versions.json` mapeando versão → minAppVersion.
 - [x] Uma **GitHub Release** cujo tag == `manifest.json.version`, com
       `main.js` + `manifest.json` + `styles.css` anexados (a Action faz).
-- [x] `LICENSE` (MIT).
+- [x] `LICENSE` (GPL-3.0-or-later).
 - [x] `README.md` claro (PT + EN).
 
 ## 2. A entrada do `community-plugins.json`

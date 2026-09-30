@@ -1,7 +1,10 @@
 # Third-party notices
 
-AXXA Agent is MIT licensed (see [LICENSE](LICENSE)). It bundles the material
-below, which carries its own terms.
+AXXA Agent is licensed under the GNU General Public License v3.0 or later (see
+[LICENSE](LICENSE)). It bundles the material below, which carries its own terms.
+
+The bundled MIT-licensed material stays under MIT — GPL-3.0 is compatible with
+it, and this notice is what carries its copyright line into the distribution.
 
 ## Provider and model-maker logos
 

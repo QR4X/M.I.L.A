@@ -3,7 +3,7 @@
 > **Your AI workspace, native to Obsidian.** Chat, ask your vault, and let an agent act on your notes — across 6 LLM providers, with your own API keys. Mobile-first.
 
 [![Version](https://img.shields.io/badge/version-0.7.57-6c5ce7)](manifest.json)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.11.4%2B-7c3aed)](https://obsidian.md)
 [![Mobile](https://img.shields.io/badge/mobile-supported-success)](#)
 
@@ -251,8 +251,15 @@ If AXXA Agent helps your workflow, consider [supporting development](https://axx
 
 ## 📄 License
 
-MIT — see [LICENSE](LICENSE). Bundled third-party material (the provider logos,
-from [lobe-icons](https://github.com/lobehub/lobe-icons)) is credited in
+**GPL-3.0-or-later** — see [LICENSE](LICENSE).
+
+You can use this plugin for anything, including at work, and you can fork and
+modify it. What the licence asks is that if you distribute a modified version,
+you ship its source under the same terms. It protects the work from being taken
+private; it asks nothing of you for simply using it.
+
+Bundled third-party material (the provider logos, from
+[lobe-icons](https://github.com/lobehub/lobe-icons), MIT) is credited in
 [NOTICE.md](NOTICE.md).
 
 **Node APIs:** the NVIDIA NIM provider asks Electron for `https` to stream on
@@ -260,7 +267,7 @@ desktop ([`nim.ts`](src/providers/nim.ts)). It is gated behind `Platform.isMobil
 wrapped in try/catch, checked for shape, and falls back to Obsidian's
 `requestUrl` — on mobile that branch is never reached.
 
-[MIT](LICENSE) © 2026 Axxa Lab.
+[GPL-3.0-or-later](LICENSE) © 2026 Axxa Lab.
 
 ---
 ---
@@ -370,7 +377,18 @@ Ao usar um provedor terceiro, seus dados ficam sujeitos aos termos e à polític
 
 ## 📄 Licença
 
-[MIT](LICENSE) © 2026 Axxa Lab.
+**GPL-3.0-or-later** — veja o [LICENSE](LICENSE).
+
+Você pode usar este plugin pra qualquer coisa, inclusive no trabalho, e pode
+forkar e modificar. O que a licença pede é que, se você **distribuir** uma
+versão modificada, publique o código dela nos mesmos termos. Ela protege o
+trabalho de ser fechado por terceiros; de quem só usa, não pede nada.
+
+Material de terceiros embutido (os logos dos provedores, do
+[lobe-icons](https://github.com/lobehub/lobe-icons), MIT) está creditado no
+[NOTICE.md](NOTICE.md).
+
+[GPL-3.0-or-later](LICENSE) © 2026 Axxa Lab.
 
 ---
 

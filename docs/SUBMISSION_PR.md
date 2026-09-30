@@ -69,7 +69,7 @@ Fork do `obsidianmd/obsidian-releases`, e **adicione no FIM do array** em
 ## 3. Pré-submit (rodar antes de abrir o PR)
 
 - [x] Release com tag == `manifest.json.version` + 3 assets (a Action faz).
-- [x] `manifest.json`, `versions.json`, `LICENSE` (MIT), `README` (PT+EN).
+- [x] `manifest.json`, `versions.json`, `LICENSE` (GPL-3.0-or-later), `README` (PT+EN).
 - [x] Sem telemetria; sem `innerHTML`; CSS em `styles.css`.
 - [x] API privada revisada e justificada (acima).
 - [x] **Screenshots reais** em `assets/screenshots/` e embutidos no README (7 telas, 390px)
