@@ -661,6 +661,61 @@ export default class AxxaPlugin extends Plugin {
     }
   }
 
+  /**
+   * O que o plugin lê do disco depois que a interface já está de pé.
+   *
+   * Separado do `onload` de propósito: ali dentro, cada `await` é atraso na
+   * abertura do Obsidian inteiro — e isto aqui abre cache de modelos, varre a
+   * pasta de skills e parseia o índice RAG.
+   */
+  private async carregarEmSegundoPlano(): Promise<void> {
+    // Cache de specs dos modelos (Fetch info / OpenRouter) — hidrata o store.
+    await this.loadModelInfoCache();
+
+    // Embeddings descobertos (fetch anterior) → registro global do RAG.
+    this.refreshDiscoveredEmbeddings();
+
+    // "Hot" dos modelos a partir do uso local — fire-and-forget (não bloqueia).
+    void this.refreshLocalUsageHot();
+
+    // Skills (.md na pasta de skills) → slash-commands no composer.
+    await this.reloadSkills();
+
+    // Carrega índice RAG do disco se já existe. Falhas são silenciosas —
+    // só significa que o user ainda não rodou "Indexar vault".
+    // No MOBILE, gateia por tamanho: um índice grande estoura o heap do WebView
+    // e derruba o Obsidian no parse (OOM). Acima do teto, pula → keyword. v0.1.198
+    try {
+      const mobileGuard = Platform.isMobile
+        ? {
+            maxBytes: 16 * 1024 * 1024,
+            onSkip: (mb: number) => {
+              // Só avisa UMA vez por dispositivo — senão o Notice volta a cada
+              // onload enquanto o índice continuar grande. v0.1.228
+              if (this.settings.ragMobileSkipNoticeShown) return;
+              const en = this.settings.language === "en-us";
+              new Notice(
+                en
+                  ? `RAG index too large for mobile (${mb.toFixed(0)} MB) — semantic search is off here to avoid a crash. Use desktop or shrink the index.`
+                  : `Índice RAG grande demais pro mobile (${mb.toFixed(0)} MB) — busca semântica desligada aqui pra evitar crash. Use no desktop ou reduza o índice.`
+              );
+              this.settings.ragMobileSkipNoticeShown = true;
+              void this.saveSettings().catch((err) =>
+                console.error("[axxa] não consegui persistir o flag do Notice RAG mobile:", err)
+              );
+            },
+          }
+        : undefined;
+      this.vectorIndex = await loadIndex(
+        this.app.vault.adapter,
+        this.settings.ragIndexPath,
+        mobileGuard
+      );
+    } catch (err) {
+      console.error("[axxa] falha ao carregar índice RAG:", err);
+    }
+  }
+
   /** Inscreve um callback chamado a cada saveSettings. Retorna unsubscribe. */
   onSettingsChange(cb: () => void): () => void {
     this.settingsListeners.add(cb);
@@ -784,51 +839,11 @@ export default class AxxaPlugin extends Plugin {
     // app já encontra tudo no caminho novo.
     await this.migrarParaPastaOculta();
 
-    // Cache de specs dos modelos (Fetch info / OpenRouter) — hidrata o store.
-    await this.loadModelInfoCache();
-
-    // Embeddings descobertos (fetch anterior) → registro global do RAG.
-    this.refreshDiscoveredEmbeddings();
-
-    // "Hot" dos modelos a partir do uso local — fire-and-forget (não bloqueia).
-    void this.refreshLocalUsageHot();
-
-    // Skills (.md na pasta de skills) → slash-commands no composer.
-    await this.reloadSkills();
-
-    // Carrega índice RAG do disco se já existe. Falhas são silenciosas —
-    // só significa que o user ainda não rodou "Indexar vault".
-    // No MOBILE, gateia por tamanho: um índice grande estoura o heap do WebView
-    // e derruba o Obsidian no parse (OOM). Acima do teto, pula → keyword. v0.1.198
-    try {
-      const mobileGuard = Platform.isMobile
-        ? {
-            maxBytes: 16 * 1024 * 1024,
-            onSkip: (mb: number) => {
-              // Só avisa UMA vez por dispositivo — senão o Notice volta a cada
-              // onload enquanto o índice continuar grande. v0.1.228
-              if (this.settings.ragMobileSkipNoticeShown) return;
-              const en = this.settings.language === "en-us";
-              new Notice(
-                en
-                  ? `RAG index too large for mobile (${mb.toFixed(0)} MB) — semantic search is off here to avoid a crash. Use desktop or shrink the index.`
-                  : `Índice RAG grande demais pro mobile (${mb.toFixed(0)} MB) — busca semântica desligada aqui pra evitar crash. Use no desktop ou reduza o índice.`
-              );
-              this.settings.ragMobileSkipNoticeShown = true;
-              void this.saveSettings().catch((err) =>
-                console.error("[axxa] não consegui persistir o flag do Notice RAG mobile:", err)
-              );
-            },
-          }
-        : undefined;
-      this.vectorIndex = await loadIndex(
-        this.app.vault.adapter,
-        this.settings.ragIndexPath,
-        mobileGuard
-      );
-    } catch (err) {
-      console.error("[axxa] falha ao carregar índice RAG:", err);
-    }
+    // ── REGISTRO: o que o Obsidian precisa saber agora ──────────────────
+    // Nada aqui toca o disco. O que lê arquivo foi pro onLayoutReady, lá
+    // embaixo: `onload` roda ANTES do Obsidian montar a interface, então tudo
+    // que espera aqui é tempo que todo mundo passa olhando tela vazia — e o
+    // índice RAG sozinho pode ser dezesseis megabytes de JSON pra parsear.
 
     // Registra a view na sidebar direita.
     // É como registrar um componente custom no design system — depois pode ser instanciado.
@@ -863,6 +878,16 @@ export default class AxxaPlugin extends Plugin {
 
     // Skills editadas no vault recarregam sozinhas (SKL-03)
     this.setupSkillsWatcher();
+
+    // ── CARGA: o que pode chegar depois ─────────────────────────────────
+    // `onLayoutReady` dispara quando a interface do Obsidian já está de pé.
+    // A UI não perde nada por esperar: ela assina `onSettingsChange`, e
+    // `reloadSkills` notifica ao terminar; o índice é lido na hora da busca,
+    // e até chegar a busca cai em keyword, que é o comportamento de quem
+    // ainda não indexou.
+    this.app.workspace.onLayoutReady(() => {
+      void this.carregarEmSegundoPlano();
+    });
 
     // NÃO auto-abrimos o painel no startup — o Obsidian abre "normal". O AI
     // Agent abre sob demanda pela ribbon (ícone do robô) ou pelo comando

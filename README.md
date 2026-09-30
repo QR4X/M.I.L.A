@@ -186,6 +186,15 @@ If AXXA Agent helps your workflow, consider [supporting development](https://axx
 
 ## 📄 License
 
+MIT — see [LICENSE](LICENSE). Bundled third-party material (the provider logos,
+from [lobe-icons](https://github.com/lobehub/lobe-icons)) is credited in
+[NOTICE.md](NOTICE.md).
+
+**Node APIs:** the NVIDIA NIM provider asks Electron for `https` to stream on
+desktop ([`nim.ts`](src/providers/nim.ts)). It is gated behind `Platform.isMobile`,
+wrapped in try/catch, checked for shape, and falls back to Obsidian's
+`requestUrl` — on mobile that branch is never reached.
+
 [MIT](LICENSE) © 2026 Axxa Lab.
 
 ---

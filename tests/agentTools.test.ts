@@ -125,6 +125,49 @@ describe("path sandboxing (segurança — anti traversal)", () => {
   });
 });
 
+describe("pasta oculta é proibida PRO AGENTE", () => {
+  // O caminho que chega no sandbox foi escolhido por um modelo que acabou de
+  // ler notas — e nota é dado de fora. O storage do plugin (.axxa) escreve por
+  // outro caminho, direto no adapter, e não passa por aqui.
+  const proibidos = [
+    ".obsidian/plugins/x/main.js", // vira código rodando no próximo restart
+    ".obsidian/app.json",
+    ".axxa/chats/algum.md", // nosso storage: injeção não reescreve histórico
+    ".git/config",
+    ".trash/nota.md",
+    "notes/.obsidian/x.json", // oculta no MEIO do caminho conta igual
+    "a/.git/config",
+  ];
+  for (const p of proibidos) {
+    it(`recusa "${p}"`, () => {
+      expect(() => normalizePath(p)).toThrow(/hidden folders/i);
+    });
+  }
+
+  it("nota comum com ponto no NOME continua passando", () => {
+    // A trava é de PASTA oculta, não de ponto em qualquer lugar.
+    expect(normalizePath("notas/v1.2.md")).toBe("notas/v1.2.md");
+    expect(normalizePath("Dr. Silva/consulta.md")).toBe("Dr. Silva/consulta.md");
+  });
+
+  it("nenhuma tool escapa: todas passam pelo sandbox", async () => {
+    const { app, files } = makeApp();
+    const alvo = ".obsidian/plugins/evil/main.js";
+    await expect(toolVaultCreate(app, { path: alvo, content: "x" })).rejects.toThrow(
+      /hidden folders/i
+    );
+    await expect(toolVaultRead(app, { path: alvo })).rejects.toThrow(/hidden folders/i);
+    await expect(
+      toolVaultEdit(app, { path: alvo, oldStr: "a", newStr: "b" })
+    ).rejects.toThrow(/hidden folders/i);
+    await expect(toolVaultDelete(app, { path: alvo })).rejects.toThrow(/hidden folders/i);
+    await expect(
+      toolVaultMove(app, { from: "a.md", to: alvo })
+    ).rejects.toThrow(/hidden folders/i);
+    expect(files.size).toBe(0);
+  });
+});
+
 describe("normalizePath (direto)", () => {
   it("normaliza barras e tira leading slash", () => {
     expect(normalizePath("/notes//a.md")).toBe("notes/a.md");

@@ -43,8 +43,32 @@ export function isTransientError(message: string): boolean {
   );
 }
 
-/** Normaliza separadores e remove leading slash. Lança se tem `..` ou `:`.
- *  Exportada pra teste do boundary de segurança (anti path-traversal). */
+/**
+ * Normaliza separadores e recusa o que o agente não pode tocar.
+ *
+ * Esta função é a fronteira de quem decidiu o caminho. Do lado de cá está a
+ * IA: o caminho que chega aqui foi escolhido por um modelo que acabou de LER
+ * notas — e nota é dado de fora, que pode conter instrução plantada. Do lado
+ * de lá está o plugin escrevendo o próprio storage (chatPersistence, índice
+ * RAG), que passa direto pelo adapter e não vê esta função. São dois
+ * caminhos diferentes de propósito.
+ *
+ * Por isso PASTA QUE COMEÇA COM PONTO é recusada aqui, e só aqui:
+ *
+ *   · `.obsidian/` é o pior caso e não era barrado. O sandbox só olhava
+ *     `..`, `.` e `:`, então `.obsidian/plugins/x/main.js` passava limpo. Pior:
+ *     `vault_create` exige que o alvo NÃO exista, e como o Obsidian não indexa
+ *     a pasta de configuração, `getAbstractFileByPath` devolve null ali — a
+ *     guarda era satisfeita em vez de acionada. Nos níveis `vault` e `yolo`
+ *     essa tool auto-aprova, sem modal. Fim da linha: instrução plantada numa
+ *     nota vira arquivo de plugin, e arquivo de plugin vira código rodando no
+ *     próximo restart;
+ *   · `.axxa/` é NOSSO storage — o agente também não escreve nele. Deixar
+ *     seria abrir pra injeção reescrever o histórico de conversa ou corromper
+ *     o índice. Quem escreve lá é o plugin, por outro caminho;
+ *   · `.git/`, `.trash/` e o que mais comece com ponto entram junto pela
+ *     mesma razão: nada disso é nota de quem usa.
+ */
 export function normalizePath(path: string): string {
   if (!path || typeof path !== "string") {
     throw new Error("Empty or invalid path.");
@@ -62,6 +86,15 @@ export function normalizePath(path: string): string {
   }
   if (normalized.includes(":")) {
     throw new Error("Paths containing ':' are not allowed (no drive letters).");
+  }
+  // Qualquer SEGMENTO oculto, não só o primeiro: `notes/.obsidian/x` e
+  // `a/.git/config` são a mesma tentativa, uma pasta mais fundo.
+  const oculto = segs.find((s) => s.startsWith("."));
+  if (oculto) {
+    throw new Error(
+      `Hidden folders are off limits to the agent: "${oculto}". ` +
+        `They hold app config and plugin data, not your notes.`
+    );
   }
   if (normalized.split("/").length > VAULT_ROOT_MAX_DEPTH) {
     throw new Error(`Paths deeper than ${VAULT_ROOT_MAX_DEPTH} levels are blocked.`);
