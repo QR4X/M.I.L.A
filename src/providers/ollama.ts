@@ -103,7 +103,7 @@ export class OllamaProvider implements Provider {
         body: JSON.stringify(body),
         throw: false,
       });
-    } catch (err) {
+    } catch {
       throw new ProviderError(
         `Connection to Ollama at ${endpoint} failed. Make sure the server is running.`,
         "network"
@@ -179,7 +179,9 @@ export class OllamaProvider implements Provider {
     onToken: TokenHandler,
     onUsage?: UsageHandler,
     signal?: AbortSignal,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- o catch
+    // não olha o erro: qualquer falha aqui significa a mesma coisa (endpoint
+    // inválido), e a mensagem crua do parser não ajudaria quem configurou.
     _onReasoning?: ReasoningHandler
   ): Promise<ProviderResponse> {
     const endpoint = this.getEndpoint(apiKey);

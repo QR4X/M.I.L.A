@@ -25,6 +25,12 @@ on:
 
 permissions:
   contents: write
+  # Atestação de proveniência dos artefatos (recomendação da revisão do
+  # Obsidian): assina main.js e styles.css provando que saíram DESTE
+  # repositório, neste commit, por este workflow. Quem instala pode verificar
+  # com `gh attestation verify main.js --repo axxalab/axxa-agent`.
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -72,6 +78,15 @@ jobs:
             exit 1
           fi
           echo "OK: $tag == $ver"
+
+      # Assina os artefatos ANTES de publicar: a atestação tem que se referir
+      # exatamente aos bytes que vão pra Release.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            output/main.js
+            output/styles.css
 
       # Os assets saem em output/ (basename vira main.js/manifest.json/styles.css).
       # Em dispatch manual, `gh release create` cria a tag no commit buildado.

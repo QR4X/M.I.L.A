@@ -487,7 +487,7 @@ export function useVoice(opts: VoiceOptions): Voice {
       // O rAF agora só DESENHA a onda. Quem decide o corte é o tique.
       let last = 0;
       const sample = () => {
-        rafRef.current = requestAnimationFrame(sample);
+        rafRef.current = window.requestAnimationFrame(sample);
         const now = performance.now();
         if (now - last < 90) return;
         last = now;

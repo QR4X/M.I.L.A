@@ -145,7 +145,7 @@ export function generateUsageMarkdown(
 
   if (agg.total.hasUnknownCost) {
     lines.push("");
-    lines.push(`> \* Partial estimate — at least one model has no public price,`);
+    lines.push(`> * Partial estimate — at least one model has no public price,`);
     lines.push(`> so the total above is a floor, not the full amount.`);
   }
 

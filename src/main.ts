@@ -387,7 +387,11 @@ export default class AxxaPlugin extends Plugin {
 
   /** Índice persistido (JSON no diretório do plugin, fora do vault content). */
   private chatIndexPath(): string {
-    const dir = this.manifest.dir ?? ".obsidian/plugins/axxa-agent";
+    // A pasta de configuração NÃO é necessariamente `.obsidian` — quem usa
+    // pode renomear. `vault.configDir` devolve a de verdade.
+    const dir =
+      this.manifest.dir ??
+      `${this.app.vault.configDir}/plugins/${this.manifest.id}`;
     return `${dir}/chatIndex.json`;
   }
   /** Versão do schema do índice persistido. Caches de versão desconhecida são
@@ -789,7 +793,11 @@ export default class AxxaPlugin extends Plugin {
 
   /** Caminho do cache de specs dos modelos (JSON no diretório do plugin). */
   private modelInfoCachePath(): string {
-    const dir = this.manifest.dir ?? ".obsidian/plugins/axxa-agent";
+    // A pasta de configuração NÃO é necessariamente `.obsidian` — quem usa
+    // pode renomear. `vault.configDir` devolve a de verdade.
+    const dir =
+      this.manifest.dir ??
+      `${this.app.vault.configDir}/plugins/${this.manifest.id}`;
     return `${dir}/modelInfoCache.json`;
   }
 
@@ -854,7 +862,7 @@ export default class AxxaPlugin extends Plugin {
 
     // Ícone na ribbon (sidebar esquerda do Obsidian).
     this.addRibbonIcon("bot", "AXXA Agent", () => {
-      this.activateView();
+      void this.activateView();
     });
 
     // Comando para abrir via Command Palette (Ctrl/Cmd + P).
@@ -1062,7 +1070,11 @@ export default class AxxaPlugin extends Plugin {
 
   /** Caminho do arquivo de settings do plugin. */
   private dataPath(nome = "data.json"): string {
-    const dir = this.manifest.dir ?? ".obsidian/plugins/axxa-agent";
+    // A pasta de configuração NÃO é necessariamente `.obsidian` — quem usa
+    // pode renomear. `vault.configDir` devolve a de verdade.
+    const dir =
+      this.manifest.dir ??
+      `${this.app.vault.configDir}/plugins/${this.manifest.id}`;
     return `${dir}/${nome}`;
   }
 
@@ -1186,11 +1198,10 @@ export default class AxxaPlugin extends Plugin {
       // também nada a avisar.
       if (!podeIr) continue;
       try {
-        const levados = await this.moverPasta(mv.legado, mv.novo);
+        await this.moverPasta(mv.legado, mv.novo);
         if (mv.legado === "axxa-ai/chats") this.settings.chatsPath = mv.novo;
         else this.settings.ragIndexPath = mv.novo;
         mudou = true;
-        console.log(`[axxa] ${levados} arquivo(s) movidos pra ${mv.novo}`);
       } catch (err) {
         // Falhou? A origem continua lá, intacta, e o caminho não muda: o app
         // segue lendo de onde sempre leu.

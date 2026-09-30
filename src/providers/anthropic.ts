@@ -322,7 +322,7 @@ export class AnthropicProvider implements Provider {
         body: JSON.stringify(buildBody(req, false)),
         throw: false,
       });
-    } catch (err) {
+    } catch {
       throw new ProviderError("Connection failed. Check your internet.", "network");
     }
 

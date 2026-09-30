@@ -265,7 +265,9 @@ export function ChatView({
       // UMA fonte de verdade: o CSS lê esta var no max-height, então JS e CSS
       // não podem mais discordar sobre o teto.
       el.style.setProperty("--axxa-composer-max", `${max}px`);
-      el.style.height = "0px";
+      // Zera pra medir o conteúdo e só então fixa a altura: sem o zero, o
+      // scrollHeight devolve a altura ATUAL e o campo nunca encolhe.
+      el.setCssStyles({ height: "0px" });
       el.style.height = `${Math.min(el.scrollHeight, max)}px`;
     };
     // Medir custa um layout do documento INTEIRO. Por tecla, numa conversa de
@@ -554,7 +556,7 @@ export function ChatView({
       el.removeEventListener("pointerdown", mouseDown);
       window.removeEventListener("pointerup", mouseUp);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a intenção é rodar SÓ quando a conversa troca; incluir o resto das deps reabriria a rolagem a cada token que chega.
   }, []);
 
   useEffect(reavaliar, [messages, streamingId]);
@@ -581,7 +583,7 @@ export function ChatView({
     const obs = new ResizeObserver(publicar);
     obs.observe(el);
     return () => obs.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- depende só do id da conversa de propósito: reagir às mensagens re-rodaria isto no meio do streaming.
   }, []);
 
   // O observer só entrega no ciclo de pintura — com a janela oculta ele não
@@ -612,7 +614,7 @@ export function ChatView({
           : { scroll: resumeScroll as number, desde: Date.now() };
       // Tenta agora e continua tentando a cada mutação, conforme o markdown
       // vai ganhando altura (ver `aplicarRetomada`).
-      requestAnimationFrame(() => aplicarRetomada());
+      window.requestAnimationFrame(() => aplicarRetomada());
       return;
     }
     // Sem pedido explícito, mas é a MESMA conversa de antes: a timeline está
@@ -625,12 +627,12 @@ export function ChatView({
       seguindoRef.current = false;
       setSeguindo(false);
       retomarRef.current = { scroll: viewScrollTop, desde: Date.now() };
-      requestAnimationFrame(() => aplicarRetomada());
+      window.requestAnimationFrame(() => aplicarRetomada());
       return;
     }
     retomarRef.current = null;
     voltarPraBaixo();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- roda no fim do turno, não a cada mudança das deps que o lint quer listar.
   }, [currentChatId]);
 
   // Terminou de responder enquanto a pessoa estava lendo lá em cima: a

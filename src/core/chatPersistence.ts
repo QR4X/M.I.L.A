@@ -535,7 +535,9 @@ export async function deleteChat(
   const path = chatFilePath(chatsPath, mode, chatId);
   const file = app.vault.getAbstractFileByPath(path);
   if (file) {
-    await app.vault.trash(file, true);
+    // `trashFile` respeita a preferência "Deleted files" de quem usa (lixeira
+    // do Obsidian, do sistema, ou apagar de vez); `vault.trash` decide sozinho.
+    await app.fileManager.trashFile(file);
     return;
   }
   if (!(await app.vault.adapter.exists(path))) return;

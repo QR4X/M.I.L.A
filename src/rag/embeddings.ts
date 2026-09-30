@@ -35,18 +35,18 @@ const EMBED_REQUEST_TIMEOUT_MS = 60_000;
  * ('network') pra cair no mesmo tratamento de erro de rede dos callers. v0.1.228
  */
 function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
-  let timer: ReturnType<typeof setTimeout>;
+  let timer: number;
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => {
+    timer = window.setTimeout(() => {
       reject(
         new ProviderError(
-          `Timeout (${EMBED_REQUEST_TIMEOUT_MS / 1000}s) ao chamar embeddings ${label}.`,
+          `Timed out after ${EMBED_REQUEST_TIMEOUT_MS / 1000}s calling ${label} embeddings.`,
           "network"
         )
       );
     }, EMBED_REQUEST_TIMEOUT_MS);
   });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timer));
 }
 
 // ============================================================
@@ -236,7 +236,7 @@ function buildOpenRouterInput(item: EmbedInput): unknown {
 
 /** Pausa em ms — usado pra backoff entre retries de rate limit. */
 function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+  return new Promise((r) => window.setTimeout(r, ms));
 }
 
 /**

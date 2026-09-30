@@ -160,10 +160,12 @@ export function SkillsView({
         if (antigo.path !== alvo) {
           await plugin.app.fileManager.renameFile(antigo, alvo);
         }
-        await plugin.app.vault.modify(
-          plugin.app.vault.getAbstractFileByPath(alvo) as TFile,
-          conteudo
-        );
+        const arquivo = plugin.app.vault.getAbstractFileByPath(alvo);
+        // `instanceof` em vez de cast: se o caminho virou pasta (ou sumiu),
+        // o cast entregaria um objeto errado pro modify em silêncio.
+        if (arquivo instanceof TFile) {
+          await plugin.app.vault.modify(arquivo, conteudo);
+        }
       } else {
         await plugin.app.vault.create(alvo, conteudo);
       }
@@ -188,7 +190,7 @@ export function SkillsView({
     }).openAndWait();
     if (!ok) return;
     const f = plugin.app.vault.getAbstractFileByPath(s.path);
-    if (f) await plugin.app.vault.trash(f, true);
+    if (f) await plugin.app.fileManager.trashFile(f);
     await plugin.reloadSkills();
     force();
   };

@@ -142,7 +142,7 @@ export class ConfirmModal extends Modal {
         b.setButtonText(this.opts.confirmLabel ?? "Confirm").onClick(() =>
           this.finish(true)
         );
-        if (this.opts.danger) b.setWarning();
+        if (this.opts.danger) b.setDestructive();
         else b.setCta();
       });
   }

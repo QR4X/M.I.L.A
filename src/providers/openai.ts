@@ -189,7 +189,7 @@ export class OpenAIProvider implements Provider {
       if (res.status < 500 || attempt >= MAX_ATTEMPTS) break;
       // 500/502/503 → retry com backoff exponencial
       console.warn(`[axxa] OpenAI image gen ${res.status}, retry ${attempt}/${MAX_ATTEMPTS}`);
-      await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+      await new Promise((r) => window.setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
     }
     if (!res) {
       throw new ProviderError("OpenAI images: no response.", "unknown");
@@ -289,7 +289,7 @@ export class OpenAIProvider implements Provider {
         body: JSON.stringify(body),
         throw: false,
       });
-    } catch (err) {
+    } catch {
       throw new ProviderError("TTS connection failed.", "network");
     }
     if (res.status === 401) {

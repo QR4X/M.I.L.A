@@ -404,7 +404,7 @@ export function Sheet({
     startY.current = null;
     const el = panelRef.current;
     if (el) {
-      el.style.transform = "";
+      el.setCssStyles({ transform: "" });
       el.classList.remove("is-dragging");
     }
     if (dy < -48) {
@@ -476,7 +476,7 @@ export function Sheet({
         (borda === "top" && d > 0) || (borda === "bottom" && d < 0);
       if (!puxando) {
         dy = 0;
-        panel.style.transform = "";
+        panel.setCssStyles({ transform: "" });
         return false;
       }
       dy = d;
@@ -493,7 +493,7 @@ export function Sheet({
       y0 = null;
       borda = null;
       dy = 0;
-      panel.style.transform = "";
+      panel.setCssStyles({ transform: "" });
       panel.classList.remove("is-dragging");
       // Uma direção, um significado — o mesmo do puxador, e o mesmo em toda
       // folha: PRA CIMA cresce, PRA BAIXO diminui e, já pequena, fecha.

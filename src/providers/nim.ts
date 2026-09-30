@@ -76,6 +76,10 @@ interface NodeHttpsLike {
 /** `require("https")` do Electron, ou null (mobile / runtime sem Node). */
 function getNodeHttps(): NodeHttpsLike | null {
   try {
+    // eslint-disable-next-line no-restricted-globals -- não é busca de janela:
+    // `require` do Electron só existe no escopo global do processo, e é ele
+    // que dá o `https` do Node pro streaming no desktop. No mobile este ramo
+    // nem é alcançado (ver o guarda Platform.isMobile em quem chama).
     const req = (globalThis as { require?: (m: string) => unknown }).require;
     if (!req) return null;
     // v0.1.228: `globalThis.require` pode existir e NÃO ser o require do Node

@@ -1392,7 +1392,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
       .addButton((b) =>
         b
           .setButtonText("Delete index")
-          .setWarning()
+          .setDestructive()
           .setDisabled(size === 0 && !this.plugin.vectorIndex)
           .onClick(async () => {
             await deleteIndex(this.app.vault.adapter, s.ragIndexPath);
