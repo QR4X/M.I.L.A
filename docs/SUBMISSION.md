@@ -41,8 +41,17 @@ Abra um PR; o bot roda checagens automáticas e depois um humano revisa.
       isso `minAppVersion 1.11.4`.
 - [x] **CSS em `styles.css`**, não inline no JS (o build sincroniza
       `styles/main.css` → `output/styles.css`).
-- [x] **Fullscreen REMOVIDO** (v0.1.127) — não mexemos mais no chrome/layout do
-      Obsidian (era um risco de review). Confirmar que nada manipula o DOM do app.
+- [ ] **Fullscreen mobile: EXISTE, é opt-in, e mexe no chrome — declarar isso.**
+      Esta linha já dizia "removido (v0.1.127)"; voltou depois e o texto ficou.
+      Ir pro PR com ela seria afirmar à revisão algo falso — e isso custa mais
+      caro que o próprio recurso. O que o plugin faz, de fato:
+      · alterna as classes `axxa-fullscreen` / `axxa-keyboard-open` na gaveta e
+        no `body` (AxxaView), e o CSS esconde `.workspace-drawer-header` e
+        `.workspace-drawer-tab-options` enquanto o modo está ligado;
+      · NÃO toca em API interna nem em variável do Obsidian — só classes;
+      · desligado por padrão, e `onClose` desfaz (`clearFullscreen`), assim como
+        `teardownKeyboardObserver` remove as classes do teclado.
+      Declarar assim no PR é defensável. Afirmar que não existe, não.
 - [x] **API privada:** auditado (v0.1.196). Único uso semi-privado é
       `app.setting.open()`/`openTabById()` — agora com optional-chaining +
       try/catch + comentário justificando; sem `innerHTML`; sem manipular o
@@ -51,6 +60,11 @@ Abra um PR; o bot roda checagens automáticas e depois um humano revisa.
       `<input capture>` nativo no mobile (v0.1.196); voz usa Web Speech API com
       feature-detection + degradação. Todas opt-in. Documentado no PR.
 - [ ] **`fundingUrl`** (opcional) no manifest se quiser link de apoio.
+- [ ] **Instalar o build num Obsidian de verdade** — desktop e celular — e usar.
+      Tudo que foi verificado até aqui rodou no harness do preview, que imita o
+      Obsidian mas não é ele. E o `id` mudou pra `axxa-agent` na 0.8.0: a pasta
+      `.obsidian/plugins/axxa-os-ai-agent` precisa ser renomeada, senão o app
+      aparece como plugin novo e sem as suas chaves.
 - [x] **Network disclosure:** texto pronto em `SUBMISSION_PR.md` (sem telemetria;
       só os providers que o user escolhe, com a chave dele).
 
