@@ -49,15 +49,14 @@ export function Markdown({
       // No documento do PRÓPRIO destino: numa janela destacada, um nó criado
       // na janela principal entra como estrangeiro.
       //
-      // O lint do Obsidian pede `el.ownerDocument.win.createDiv()` aqui. NÃO
-      // usamos, e a razão foi apurada (0.9.9): `createDiv` não está declarado
-      // em `Window` na tipagem oficial — só como função global solta — e o
-      // app.js do próprio Obsidian não chama `.win.createDiv(` uma única vez.
-      // É sugestão da regra, não API firmada. O que está em jogo aqui é o
-      // markdown de TODA resposta do chat: se a função não existir na janela,
-      // nada renderiza. `createElement` faz o que precisamos (nó solto, no
-      // documento certo) e é DOM padrão. Fica, com o aviso.
-      const tmp = el.ownerDocument.createElement("div");
+      // `el.win.createDiv()`: o `win` do nó é a janela DELE, e o `createDiv`
+      // dessa janela cria um div SEM pai, no documento dela. Os helpers vêm do
+      // enhance.js do Obsidian, que define `window.createDiv` e é reavaliado
+      // DENTRO de cada janela nova (a de popout inclusive) — por isso a busca
+      // no app.js não os achava: moram noutro arquivo. (A 0.9.9 errou nisso.)
+      // O cast é porque a tipagem declara `createDiv` como função global, e
+      // `Window` não traz o membro; `typeof window` traz.
+      const tmp = (el.win as typeof window).createDiv();
       await MarkdownRenderer.render(app, md, tmp, "", comp);
       if (ref.current !== el || shownRef.current !== md) return;
       el.replaceChildren(...Array.from(tmp.childNodes));

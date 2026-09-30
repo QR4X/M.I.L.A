@@ -9,8 +9,29 @@ import {
   Notice,
   Setting,
   TFile,
+  requireApiVersion,
+  type ButtonComponent,
 } from "obsidian";
 import type AxxaPlugin from "../main";
+
+/**
+ * O botão de uma ação destrutiva, com a MESMA cara que o Obsidian daria.
+ *
+ * `setWarning()` foi depreciado no 1.13 e, no caminho, mudou de sentido: no
+ * 1.12 ele punha só a classe `mod-warning`; no 1.13 virou
+ * `setDestructive().setCta()` e deixou de pôr `mod-warning`. E
+ * `setDestructive()` não existe abaixo do 1.13 — chamá-lo num 1.12 é TypeError,
+ * e o manifest declara minAppVersion 1.11.4.
+ *
+ * Então nenhuma das duas APIs é chamada: reproduzimos o que CADA versão faz,
+ * pelas classes que ela mesma usa. O visual é idêntico ao do setWarning em
+ * qualquer versão, e sem o aviso de API depreciada nem o de API nova demais.
+ */
+export function marcarPerigoso(b: ButtonComponent): ButtonComponent {
+  if (requireApiVersion("1.13.0")) b.buttonEl.addClass("mod-destructive", "mod-cta");
+  else b.buttonEl.addClass("mod-warning");
+  return b;
+}
 
 export interface PromptOptions {
   title: string;
@@ -145,10 +166,7 @@ export class ConfirmModal extends Modal {
         b.setButtonText(this.opts.confirmLabel ?? "Confirm").onClick(() =>
           this.finish(true)
         );
-        // setWarning e não setDestructive: o segundo só existe a partir do
-        // 1.13 e o manifest declara minAppVersion 1.11.4. Trocar exigiria
-        // subir o mínimo e deixar de fora quem ainda não atualizou o app.
-        if (this.opts.danger) b.setWarning();
+        if (this.opts.danger) marcarPerigoso(b);
         else b.setCta();
       });
   }

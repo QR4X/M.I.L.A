@@ -48,6 +48,7 @@ import {
 import { ELEVEN_MODELS, elevenVoices } from "../providers/elevenlabs";
 import { hapticsOn, setHapticsEnabled, tap } from "./haptics";
 import { PERMISSION_LABELS } from "../agent/permissions";
+import { marcarPerigoso } from "./modals";
 
 type KeyField =
   | "openaiApiKey"
@@ -1349,11 +1350,8 @@ export class AxxaSettingsTab extends PluginSettingTab {
           .onClick(() => void this.runIndex())
       )
       .addButton((b) =>
-        b
-          .setButtonText("Delete index")
-          // setWarning e não setDestructive: ver a nota em ui/modals.ts —
-          // setDestructive é API 1.13 e o mínimo declarado é 1.11.4.
-          .setWarning()
+        // marcarPerigoso e não setWarning: ver a nota em ui/modals.ts.
+        marcarPerigoso(b.setButtonText("Delete index"))
           .setDisabled(size === 0 && !this.plugin.vectorIndex)
           .onClick(async () => {
             await deleteIndex(this.app.vault.adapter, s.ragIndexPath);

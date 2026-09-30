@@ -671,6 +671,49 @@ export default class AxxaPlugin extends Plugin {
   }
 
   /**
+   * `axxa-has-navbar` no body enquanto a navbar global do celular estiver NO
+   * DOM. Substitui um `body:has(.mobile-navbar)` no CSS — a regra que dá ao
+   * composer a folga acima dessa barra — e tem o mesmo valor de verdade que
+   * ele tinha: presença no DOM, não visibilidade.
+   *
+   * O Obsidian tira a navbar de três jeitos, e só um passa por aqui:
+   *   - teclado aberto / toolbar de edição: ele a DESANEXA (`detach()`) e
+   *     depois a põe de volta no `.app-container`. Esse é o que o observador
+   *     vê — e o `:has` antigo também só via esse;
+   *   - tela cheia automática ao rolar (celular): ele NÃO desanexa, põe
+   *     `is-hidden-nav` no body e a esconde por CSS. Quem trata esse caso é o
+   *     `:not(.is-hidden-nav)` do seletor, não esta classe;
+   *   - tablet: ela fica no DOM com `display: none` pelo app.css.
+   * Ela é filha direta do `.app-container`, então observar só a lista de
+   * filhos dele basta; o MutationObserver roda antes da próxima pintura.
+   *
+   * Chamado no onload, e não no onLayoutReady: o Obsidian cria a navbar e o
+   * `.app-container` ANTES de carregar qualquer plugin, então a classe já
+   * existe quando a nossa view for restaurada — como o `:has` existia. No
+   * onLayoutReady ela chegaria alguns ticks depois da primeira pintura.
+   *
+   * No nível do plugin, e não da view: o body é um só, e com duas views
+   * abertas o onClose de uma tiraria a classe da outra.
+   */
+  private observarNavbar(): void {
+    if (!Platform.isMobile) return;
+    const doc = activeDocument;
+    const sync = () =>
+      doc.body.toggleClass(
+        "axxa-has-navbar",
+        doc.body.querySelector(".mobile-navbar") !== null
+      );
+    const obs = new MutationObserver(sync);
+    const host = doc.body.querySelector(".app-container");
+    if (host) obs.observe(host, { childList: true });
+    sync();
+    this.register(() => {
+      obs.disconnect();
+      doc.body.removeClass("axxa-has-navbar");
+    });
+  }
+
+  /**
    * O que o plugin lê do disco depois que a interface já está de pé.
    *
    * Separado do `onload` de propósito: ali dentro, cada `await` é atraso na
@@ -893,6 +936,10 @@ export default class AxxaPlugin extends Plugin {
 
     // Skills editadas no vault recarregam sozinhas (SKL-03)
     this.setupSkillsWatcher();
+
+    // A navbar do celular já existe a esta altura (o Obsidian a cria antes dos
+    // plugins), e a classe que ela liga tem de estar lá antes da view pintar.
+    this.observarNavbar();
 
     // ── CARGA: o que pode chegar depois ─────────────────────────────────
     // `onLayoutReady` dispara quando a interface do Obsidian já está de pé.

@@ -17,110 +17,128 @@
    aqui vem prefixado com `.axxa-root` (0,2,x) e existe o bloco de reset
    abaixo. Regra: nada de seletor sem o prefixo, nada de !important.
 
-   A EXCEÇÃO, e por que o lint do Obsidian reclama dela:
-   o bloco logo abaixo (teclado + tela cheia no mobile) usa !important e
-   `:has`. A revisão automática marca os dois como Warning — não reprovam, e
-   ficam de propósito:
+   A EXCEÇÃO: 5 `!important`, e por que ficam (0.9.10).
+   O bloco logo abaixo (teclado + tela cheia no mobile) tinha 27. A revisão
+   do Obsidian conta cada um como issue, e a nota pública é função dessa
+   contagem. 22 saíram e 5 ficaram, e as duas coisas foram PROVADAS:
 
-   · !important (28×, todos aqui dentro): este bloco estiliza elementos DO
-     OBSIDIAN (.workspace-drawer, .workspace-leaf-content), disputando com
-     regras do app.css sobre os mesmos elementos — e o app.css tem 43 regras
-     com !important, contra o que só !important vence.
+   · Os 22 que saíram perderam o !important e ganharam `:not(#axxa-
+     especificidade)` no seletor — +1 de peso de ID, igual pra todos, o que
+     preserva quem vence entre as nossas próprias regras (a relação entre elas
+     é de ordem e especificidade, e somar o mesmo a todas não a muda). Um
+     seletor com peso de ID vence qualquer regra normal do app.css, cujos
+     únicos seletores de ID são os botões `#editorUndoBar…` do editor. As
+     evidências:
+       — nenhum `!important` do app.css (67 no 1.12.7, 69 no 1.13.7) cai nas
+         mesmas propriedades e elementos, exceto o `display:none` do
+         `.view-header`, com o MESMO valor;
+       — o app.js não escreve estilo inline nessas propriedades desses
+         elementos (o `.hide()` só é chamado no CONTÊINER da gaveta, nunca no
+         cabeçalho — a nota antiga daqui dizia o contrário, e estava errada);
+       — teste A/B no preview com o app.css real: uma réplica da gaveta
+         mobile, em 64 combinações de estado (celular/desktop, tela cheia,
+         teclado, navbar presente ou não, navbar escondida, com ou sem
+         `.workspace-tab-container`), mais 64 de tablet com e sem a gaveta
+         fixada, 14 propriedades em 14 elementos — ZERO diferenças entre o CSS
+         antigo e o novo, no fonte e no minificado. O controle com um valor
+         alterado de propósito deu 16, então o teste enxerga. E sem o reforço
+         de ID também dá zero: contra o core, esses !important não faziam
+         nada; o reforço é margem contra temas. Ressalva: o teste roda num
+         Chromium com `:has`. Onde `:has` não existe (WebView anterior ao
+         Chrome 105 / iOS 15.4), a folga do composer acima da navbar, que
+         antes vinha num `@supports selector(:has)` e era pulada, agora vale —
+         esses aparelhos passam a ter a mesma folga dos outros.
 
-     MEDIDO (0.9.6), não achado: no preview, que carrega o app.css REAL, cada
-     declaração teve o !important removido pelo CSSOM e o valor computado foi
-     comparado antes/depois. Resultado: 27 "sem diferença", 1 que MUDA e 3 que
-     o teste não alcança. Por que isso NÃO autoriza remover:
+   · Os 5 que ficam são as dimensões da GAVETA:
+       — a largura, porque o Obsidian 1.13 escreve `style.width` INLINE nela
+         (`setPinnedSize`, no tablet com a gaveta fixada), e contra inline só
+         !important vence;
+       — as quatro alturas (tela cheia e teclado, com e sem dvh). Por essas
+         nada foi achado — nem inline, nem !important do app.css —, mas o
+         teclado do mobile é publicado por código nativo que não está no
+         bundle de desktop, e é a área que mais custou neste projeto. Ficam
+         até alguém conferir no aparelho, com o inspetor, que nada escreve
+         `height` inline na `.workspace-drawer` com o teclado aberto.
 
-       — as 3 que não alcança são os `display: none`. Eles disputam com o
-         `.hide()` do Obsidian, que escreve display INLINE (está no app.js).
-         Inline vence qualquer especificidade; só !important passa;
-       — a 1 que muda (padding-bottom do :has(.mobile-navbar)) vai de 96px pra
-         0px sozinha. Ou seja: estas regras dependem UMA DA OUTRA pela ordem —
-         tirar de uma faz o !important da outra ganhar. Testar uma por vez não
-         diz o que acontece tirando todas;
-       — e o "sem diferença" das outras 27 vale para o DOM SINTÉTICO do teste,
-         que é uma simplificação. O Obsidian real tem a árvore mais funda e
-         mais classes, então lá podem casar regras do app.css que aqui não
-         casaram. Ausência de conflito no teste não prova ausência no aparelho.
+   · `:has` (2×). Os outros 9 viraram classe (6 na 0.9.6, 3 na 0.9.10): o
+     `.modal-container` é o `containerEl` do Modal; a folha da view é marcada
+     pelo AxxaView (`.axxa-leaf`); a navbar é observada pelo main.ts
+     (`.axxa-has-navbar`). Os 2 que ficam não têm classe possível: o
+     `.workspace-tab-container` da aba corrente (uma classe estática ficaria
+     no contêiner com outra aba na frente, e o caso do tablet fixado não foi
+     verificado) e a faixa atrás da folha aberta (várias folhas montadas,
+     desmontagem com a folha aberta, troca de aba — dois observadores pra um
+     aviso).
 
-     São Warnings: não reprovam a revisão. O preço de errar é a tela dele no
-     celular. Fica;
+   · "text-decoration" (2×): `text-decoration-thickness` e `-color` no
+     sublinhado dos links. O caniuse marca o recurso "text-decoration" INTEIRO
+     como parcial em todo Chrome até o 157 — por causa só do
+     `text-decoration-skip`, que nem usamos —, e o linter aplica isso a cada
+     propriedade do recurso. Nenhum minAppVersion resolve. Eram 3; a cor do
+     hover passou a ir por variável (mesmo desenho, sha1 do screenshot
+     idêntico). Os 2 que ficam só saem mudando o desenho do sublinhado.
 
-   · `:has` (5×, todos fora deste bloco): pinta um elemento do Obsidian
-     ACIMA da nossa raiz com base em algo dentro da nossa árvore. Não há
-     alternativa em CSS — o pai não é nosso pra receber uma classe, e pôr uma
-     ali pelo JS seria mexer no DOM do app. Já vêm dentro de
-     `@supports selector(:has(*))`. Os 6 dos modais saíram na 0.9.6: os
-     modais passaram a marcar o próprio `containerEl`, que É o
-     `.modal-container` — mesma especificidade, sem `:has`.
-
-   O que o lint marca e NÃO é problema:
-   · "text-decoration" (3×) — `text-underline-offset`, `-thickness` e `-color`
-     no sublinhado dos links do markdown. A tabela de suporte do lint está
-     velha: as três são do Chrome 87, de 2020, e valem em tudo que roda o
-     Obsidian. Trocar por `border-bottom` mudaria o desenho embaixo das
-     descendentes (g, y, p) — degradar um detalhe desenhado por causa de uma
-     tabela vencida é o negócio errado. E onde de fato faltasse, o link fica
-     sublinhado sem o ajuste fino: degrada sozinho.
-
-   RESOLVIDO na 0.9.8 — "duplicate height" (era 2×):
-   o par `100vh` + `100dvh` na mesma regra virou o vh na regra e o dvh num
-   `@supports (height: 100dvh)`. Diz a mesma coisa sem repetir a propriedade, e
-   a ordem (que é o que decide entre regras de mesma especificidade) continua
-   sendo verificada em tests/keyboardLayout.test.ts. MEDIDO no preview com o
-   app.css real: viewport de 961px dá 961px sem teclado e 661px com 300px de
-   teclado, nos dois seletores — igual ao que a declaração dupla dava. */
+   RESOLVIDO na 0.9.8 — "duplicate height": o par `100vh` + `100dvh` virou o
+   vh na regra e o dvh num `@supports (height: 100dvh)`. A ordem continua
+   verificada em tests/keyboardLayout.test.ts. */
 
 /* ── host + fullscreen + teclado ───────────────────────────────────────────
-   BLOCO VERBATIM da casca 0.2.37 (`git show 0.2.37:styles/main.css`, linhas
-   5–242), que é a versão que roda certa no aparelho. Única adaptação: o nome
-   da nossa barra de topo (`.axxa-header` → `.axxa-topbar`). Não reescrever: se
-   algo aqui parecer errado, conferir antes contra aquela versão.
+   Veio da casca 0.2.37 (`git show 0.2.37:styles/main.css`, linhas 5–242),
+   que é a versão que roda certa no aparelho, e ela continua sendo a
+   referência de COMPORTAMENTO: se algo aqui parecer errado, conferir antes
+   contra aquela versão. O TEXTO já não é o mesmo, e cada mudança foi provada
+   equivalente (ver o cabeçalho do arquivo):
+     - `.axxa-header` → `.axxa-topbar` (o nome da nossa barra de topo);
+     - 0.9.8: o par vh/dvh virou vh + `@supports (height: 100dvh)`;
+     - 0.9.10: 22 `!important` viraram `:not(#axxa-especificidade)`, e dois
+       `:has` viraram as classes `.axxa-has-navbar` e `.axxa-leaf`.
+   Não reescrever sem repetir a prova: o teste A/B contra o app.css real e
+   tests/keyboardLayout.test.ts.
 
    NOTA (0.5.40): o `--axxa-status-bar-clearance` citado lá dentro não é mais
    publicado por ninguém — o main.ts media a navbar e escrevia a variável, mas
    no mobile a adaptação logo abaixo zera esse padding-bottom e no desktop ela
    nunca era escrita. Ou seja: o valor real sempre foi o fallback `0px`, e a
-   medição inteira era trabalho jogado fora. O `var(…, 0px)` fica como está
-   pra não mexer no bloco transplantado. */
+   medição inteira era trabalho jogado fora. O `var(…, 0px)` fica como está:
+   tirá-lo muda o valor computado em nada, mas é uma mudança a mais pra provar. */
 
 
-.workspace-leaf-content[data-type="axxa-agent"] .view-content {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-  padding-top: 0 !important;
+.workspace-leaf-content[data-type="axxa-agent"]:not(#axxa-especificidade) .view-content {
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
   padding-bottom: calc(
         var(--safe-area-inset-bottom, 0px) +
         /* (P1-37) era --copilot-status-bar-clearance — var de OUTRO plugin;
            o main.ts publica --axxa-status-bar-clearance e ninguém consumia. */
         var(--axxa-status-bar-clearance, 0px) +
         var(--size-4-1)
-    ) !important;
+    );
 }
-body.is-mobile
+body.is-mobile:not(#axxa-especificidade)
 .workspace-tab-container
 .workspace-leaf-content[data-type="axxa-agent"]
 .view-content {
-  padding-bottom: var(--size-4-1) !important;
+  padding-bottom: var(--size-4-1);
 }
 /* Navbar mobile: reserva o padding do composer ACIMA da navbar nativa.
    :not(.axxa-fullscreen) = regra do modo normal; fullscreen (futuro) opta
-   por sair dela. NÃO remover como órfã — :not() de classe ausente CASA. */
-@supports selector(body:has(*)) {
-  body.is-mobile:not(.axxa-fullscreen):has(.mobile-navbar):not(.is-hidden-nav)
-    .workspace-tab-container
-    .workspace-leaf-content[data-type="axxa-agent"]
-    .view-content {
-    padding-bottom: calc(
-            var(--navbar-height, 50px) +
-            max(
-                var(--safe-area-inset-bottom, 0px),
-                var(--size-4-3)
-            ) +
-            var(--size-4-1)
-        ) !important;
-  }
+   por sair dela. NÃO remover como órfã — :not() de classe ausente CASA.
+   `.axxa-has-navbar` (0.9.10) era `:has(.mobile-navbar)` dentro de um
+   @supports: quem põe a classe é o observarNavbar() do main.ts, e a
+   especificidade é a mesma — `:has(.x)` pesa exatamente como `.x`. */
+body.is-mobile:not(.axxa-fullscreen).axxa-has-navbar:not(.is-hidden-nav):not(#axxa-especificidade)
+  .workspace-tab-container
+  .workspace-leaf-content[data-type="axxa-agent"]
+  .view-content {
+  padding-bottom: calc(
+          var(--navbar-height, 50px) +
+          max(
+              var(--safe-area-inset-bottom, 0px),
+              var(--size-4-3)
+          ) +
+          var(--size-4-1)
+      );
 }
 /* ============================================================
    [DS:fullscreen] Fullscreen mobile — opt-in pelo menu do header.
@@ -147,20 +165,20 @@ body.is-mobile
    `body.axxa-fullscreen .workspace-drawer-header` esconderia também o chrome do
    drawer ESQUERDO (arquivos/busca) se aberto com a AXXA ativa. A classe no
    drawer é auto-escopante, igual ao axxa-keyboard-open. */
-body.is-mobile .workspace-drawer.axxa-fullscreen .workspace-drawer-header,
-body.is-mobile .workspace-drawer.axxa-fullscreen .workspace-drawer-tab-options {
-  display: none !important;
+body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-fullscreen .workspace-drawer-header,
+body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-fullscreen .workspace-drawer-tab-options {
+  display: none;
 }
 /* Header NATIVO da ItemView (.view-header) — separado do chrome do drawer. No
    mobile ele pode renderizar acima do nosso conteúdo e empurrar a top bar pra
    baixo (era o gap que sobrava depois de limpar drawer-header + tab-options).
    Escondido no fullscreen: temos header próprio. Escopado ao data-type da AXXA
    pra nunca tocar outra view. */
-body.is-mobile
+body.is-mobile:not(#axxa-especificidade)
   .workspace-drawer.axxa-fullscreen
   .workspace-leaf-content[data-type="axxa-agent"]
   .view-header {
-  display: none !important;
+  display: none;
 }
 /* ── EDGE-TO-EDGE (v0.1.250) ──────────────────────────────────────────────
    A superfície do app vai de BORDA A BORDA; quem respeita o safe-area é o
@@ -169,8 +187,8 @@ body.is-mobile
    era pintada com o CANVAS (secondary no dark) enquanto a header é primary —
    e a base ganhava outra faixa vinda do padding-bottom da view-content. Eram
    exatamente as duas barras que sobravam na tela cheia. */
-body.is-mobile .workspace-drawer.axxa-fullscreen .axxa-root {
-  padding-top: 0 !important;
+body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-fullscreen .axxa-root {
+  padding-top: 0;
 }
 /* A header ocupa o topo do container e mantém o padding NORMAL.
    v0.1.252 — corrigido com print do device: o container do drawer JÁ começa
@@ -179,19 +197,19 @@ body.is-mobile .workspace-drawer.axxa-fullscreen .axxa-root {
    superfície preta subia certo, mas empurrava avatar/título/botões pra baixo,
    deixando ~40px mortos acima do conteúdo. O inset por dentro da header só
    faria sentido se o container desenhasse SOB o relógio — não é o caso. */
-body.is-mobile .workspace-drawer.axxa-fullscreen .axxa-topbar {
-  padding-top: 12px !important;
+body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-fullscreen .axxa-topbar {
+  padding-top: 12px;
 }
-body.is-mobile
+body.is-mobile:not(#axxa-especificidade)
   .workspace-drawer.axxa-fullscreen
   .workspace-leaf-content[data-type="axxa-agent"]
   .view-content {
-  padding-top: 0 !important;
-  margin-top: 0 !important;
+  padding-top: 0;
+  margin-top: 0;
   /* A reserva da navbar/safe-area some: no fullscreen não há navbar, e o
      inset de baixo é responsabilidade do composer (regra mais abaixo). Sem
      isto sobra a faixa preta na base, acima da barra de gestos. */
-  padding-bottom: 0 !important;
+  padding-bottom: 0;
 }
 /* Continuidade de superfície: toda a cadeia do drawer passa a pintar o MESMO
    canvas do app. Sem isto, qualquer píxel não coberto pelo .axxa-root (cantos,
@@ -262,7 +280,6 @@ body.is-mobile.axxa-fullscreen .mobile-navbar {
      possa ter setado no drawer. */
 body.is-mobile .workspace-drawer.axxa-fullscreen {
   width: 100vw !important;
-  max-width: 100vw !important;
   /* Menos a altura do teclado (v0.1.254): o composer de chat/agent é `absolute`
      dentro da .axxa-root, então só sobe se a CAIXA encolher — e o Obsidian
      mobile não encolhe a viewport, ele publica `--keyboard-height` no <html> e
@@ -271,6 +288,9 @@ body.is-mobile .workspace-drawer.axxa-fullscreen {
      composer sobem juntos e as últimas mensagens não ficam escondidas. O Vault
      Q&A escapava do bug por ser `fixed` e já consumir a var. */
   height: calc(100vh - var(--keyboard-height, 0px)) !important;
+}
+body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-fullscreen {
+  max-width: 100vw;
 }
 /* O mesmo em dvh, que acompanha a barra dinâmica do WebView. Vinha como uma
    SEGUNDA declaração de `height` logo acima — a forma clássica de fallback,
@@ -283,17 +303,17 @@ body.is-mobile .workspace-drawer.axxa-fullscreen {
   }
 }
 /* Propaga a viewport pela cadeia de containers até a view da AXXA. */
-body.is-mobile
+body.is-mobile:not(#axxa-especificidade)
   .workspace-drawer.axxa-fullscreen
   .workspace-drawer-active-tab-container,
-body.is-mobile
+body.is-mobile:not(#axxa-especificidade)
   .workspace-drawer.axxa-fullscreen
   .workspace-drawer-active-tab-content {
-  width: 100vw !important;
-  max-width: 100vw !important;
-  height: 100% !important;
-  padding: 0 !important;
-  margin: 0 !important;
+  width: 100vw;
+  max-width: 100vw;
+  height: 100%;
+  padding: 0;
+  margin: 0;
 }
 
 .workspace-leaf-content[data-type="axxa-agent"] {
@@ -354,22 +374,35 @@ body.is-mobile
   display: none;
 }
 
+/* A nossa folha, na aba CORRENTE da gaveta. `.axxa-leaf` é posta pelo
+   AxxaView na `.workspace-leaf` que a embrulha (0.9.10); antes era
+   `A:has(nossa) .workspace-leaf:has(nossa)` — o primeiro `:has` era redundante
+   (se a folha contém a view e está dentro de A, A contém a view) e o segundo
+   é a própria classe. Continua dinâmico: quando outra aba vira a corrente, a
+   nossa folha SAI do DOM, e o descendente deixa de casar. */
+.workspace-drawer-active-tab-container .workspace-leaf.axxa-leaf {
+  height: 100%;
+  width: 100%;
+}
+/* O `.workspace-tab-container` da aba corrente fica com o `:has`, e de
+   propósito. A análise diz que ele não existe dentro da gaveta mobile (a
+   folha entra direto no active-tab-content), mas não cobriu o TABLET com a
+   gaveta fixada, que no 1.13 tem outro caminho de DOM. E aqui uma classe
+   estática não serve: ela ficaria no contêiner com OUTRA aba na frente. */
 @supports selector(:has(*)) {
   .workspace-drawer-active-tab-container:has(.workspace-leaf-content[data-type="axxa-agent"])
-    .workspace-tab-container,
-  .workspace-drawer-active-tab-container:has(.workspace-leaf-content[data-type="axxa-agent"])
-    .workspace-leaf:has(.workspace-leaf-content[data-type="axxa-agent"]) {
+    .workspace-tab-container {
     height: 100%;
     width: 100%;
   }
 }
-body.is-mobile
+body.is-mobile:not(#axxa-especificidade)
 .workspace-drawer.axxa-keyboard-open
 .workspace-drawer-header,
-body.is-mobile
+body.is-mobile:not(#axxa-especificidade)
 .workspace-drawer.axxa-keyboard-open
 .workspace-drawer-tab-options {
-  display: none !important;
+  display: none;
 }
 
 /* ── adaptação desta casca (fora do bloco verbatim) ────────────────────────
@@ -381,14 +414,14 @@ body.is-mobile
    transplantada (mesma especificidade, vence por vir depois) e o segundo cobre
    a árvore sem `.workspace-tab-container`. A reserva da navbar continua
    intocada — tem especificidade maior e ali o respiro é desejado. */
-body.is-mobile
+body.is-mobile:not(#axxa-especificidade)
   .workspace-tab-container
   .workspace-leaf-content[data-type="axxa-agent"]
   .view-content,
-body.is-mobile
+body.is-mobile:not(#axxa-especificidade)
   .workspace-leaf-content[data-type="axxa-agent"]
   .view-content {
-  padding-bottom: 0 !important;
+  padding-bottom: 0;
 }
 
 /* A regra acima (`bottom: 18px` no fullscreen) é da 0.2.37 e vale pra um
@@ -434,8 +467,10 @@ body.is-mobile .workspace-drawer.axxa-keyboard-open {
    que existia aqui embaixo e que, sem `:has`, alinhava TODO modal do Obsidian
    e não só os nossos. */
 body.is-mobile.axxa-keyboard-open .modal-container.axxa-modal-container {
-  align-items: flex-start !important;
   padding-top: 16px;
+}
+body.is-mobile.axxa-keyboard-open:not(#axxa-especificidade) .modal-container.axxa-modal-container {
+  align-items: flex-start;
 }
 
 body.is-mobile.axxa-keyboard-open
@@ -459,6 +494,17 @@ body.is-mobile.axxa-keyboard-open
    Ficam no BODY porque regras fora da .axxa-root (a cadeia da gaveta no
    fullscreen) também precisam delas. */
 body {
+  /* RAIOS. No body, e não na .axxa-root, pelo mesmo motivo dos tokens de cor
+     abaixo: os modais (confirmação do agente, prompt) vivem FORA da
+     .axxa-root, na árvore do Obsidian. Com os raios na raiz, o
+     `var(--axxa-r-lg)` deles ficava inválido e o canto de cima saía QUADRADO,
+     contra o que o próprio CSS do modal descreve. Dentro da raiz nada muda: o
+     valor chega por herança, igual. (O preview só pôde mostrar isso depois de
+     carregar o enhance.js real — antes, nem o modal rodava de verdade.) */
+  --axxa-r-sm: 8px;
+  --axxa-r: 14px;
+  --axxa-r-lg: 20px;
+  --axxa-r-pill: 999px;
   --axxa-canvas: var(--background-primary);
   /* O degrau acima do canvas deixou de ser OUTRA cor do tema e passou a ser
      uma CONTA a partir do canvas. O motivo é concreto: no escuro de celular o
@@ -523,10 +569,8 @@ body.theme-dark {
   --axxa-4: 16px;
   --axxa-5: 24px;
 
-  --axxa-r-sm: 8px;
-  --axxa-r: 14px;
-  --axxa-r-lg: 20px;
-  --axxa-r-pill: 999px;
+  /* Os raios (--axxa-r-sm/-r/-r-lg/-r-pill) moraram aqui até a 0.9.10 — ver a
+     nota no `body`, logo acima. */
   /* A forma SQUIRCLE (ver docs/SQUIRCLE.md). Quatro cúbicas, sem um trecho
      reto: a curvatura começa no meio de cada lado e nunca para. Declarada UMA
      vez — cada elemento que a usa aponta pra mesma URL, e o navegador decodifica
@@ -2707,6 +2751,19 @@ body.theme-dark {
 
 /* Link em acento, sublinhado com folga — dá pra ver que é link sem gritar. */
 .axxa-root .axxa-markdown a {
+  /* A cor do sublinhado mora numa variável, e o hover troca a VARIÁVEL em vez
+     de redeclarar `text-decoration-color`. Mesma linha, mesma cor, mesmo
+     hover — conferido por screenshot com sha1 idêntico, em repouso e no hover
+     (0.9.10). O motivo é o lint do Obsidian: ele avisa cada declaração de
+     `text-decoration-color` e de `-thickness`, porque o caniuse marca o
+     recurso "text-decoration" inteiro como parcial em todo Chrome até o 157 —
+     por causa só do `text-decoration-skip`, que nem usamos. Com a variável são
+     2 avisos em vez de 3; os 2 que ficam só saem mudando o desenho. */
+  --axxa-link-underline: color-mix(
+    in srgb,
+    var(--text-accent) 45%,
+    transparent
+  );
   /* URL sem espaço é o caso clássico de linha que estoura a largura. */
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -2714,15 +2771,11 @@ body.theme-dark {
   text-decoration: underline;
   text-underline-offset: 2px;
   text-decoration-thickness: 1px;
-  text-decoration-color: color-mix(
-    in srgb,
-    var(--text-accent) 45%,
-    transparent
-  );
+  text-decoration-color: var(--axxa-link-underline);
 }
 
 .axxa-root .axxa-markdown a:hover {
-  text-decoration-color: var(--text-accent);
+  --axxa-link-underline: var(--text-accent);
 }
 
 .axxa-root .axxa-markdown > * {

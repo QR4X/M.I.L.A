@@ -32,6 +32,8 @@ export class AxxaView extends ItemView {
   /** Último valor lido de --keyboard-height (early-return do observer). */
   private lastKeyboardHeight = -1;
   private settingsUnsub: (() => void) | null = null;
+  /** A `.workspace-leaf` marcada com `axxa-leaf` — guardada, ver onClose. */
+  private folhaMarcada: HTMLElement | null = null;
   private hapticsOff: (() => void) | null = null;
 
   constructor(
@@ -54,6 +56,14 @@ export class AxxaView extends ItemView {
   }
 
   async onOpen(): Promise<void> {
+    // A folha que embrulha esta view (o pai do containerEl, que é o
+    // `.workspace-leaf-content`) ganha uma classe nossa. Ela substitui um
+    // `.workspace-leaf:has(.workspace-leaf-content[data-type="axxa-agent"])` no
+    // CSS: a folha é fixa durante a vida da view, e o `.workspace-drawer-active-
+    // tab-container .axxa-leaf` continua dinâmico — quando outra aba da gaveta
+    // vira a corrente, a nossa folha sai do DOM e o seletor para de casar.
+    this.folhaMarcada = this.containerEl.parentElement;
+    this.folhaMarcada?.addClass("axxa-leaf");
     // containerEl.children[1] é o miolo da view (o [0] é o header nativo).
     const container = this.containerEl.children[1] as HTMLElement;
     container.empty();
@@ -90,6 +100,12 @@ export class AxxaView extends ItemView {
   }
 
   async onClose(): Promise<void> {
+    // Pela referência guardada, e não por `containerEl.parentElement`: o
+    // `View.close` do Obsidian faz `containerEl.detach()` ANTES de chamar o
+    // onClose, então aqui o pai já é null. Sem isto a classe ficava na folha,
+    // e a folha é reaproveitada pela próxima view que abrir nela.
+    this.folhaMarcada?.removeClass("axxa-leaf");
+    this.folhaMarcada = null;
     this.hapticsOff?.();
     this.hapticsOff = null;
     this.teardownKeyboardObserver();

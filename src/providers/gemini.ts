@@ -34,6 +34,7 @@ import {
   usageFrom,
   parseOpenAICompatSSE,
   streamFallbackToChat,
+  fetchStream,
 } from "./_shared";
 import type { ErroNoFio, RespostaNoFio } from "./_shared";
 
@@ -182,7 +183,7 @@ export class GeminiProvider implements Provider {
 
     let res: Response;
     try {
-      res = await fetch(GEMINI_ENDPOINT, {
+      res = await fetchStream(GEMINI_ENDPOINT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

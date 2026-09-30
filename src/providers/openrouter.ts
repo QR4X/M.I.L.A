@@ -28,6 +28,7 @@ import {
   parseOpenAICompatSSE,
   streamFallbackToChat,
   hasPdfAttachment,
+  fetchStream,
 } from "./_shared";
 import type { RespostaNoFio } from "./_shared";
 
@@ -157,7 +158,7 @@ export class OpenRouterProvider implements Provider {
 
     let res: Response;
     try {
-      res = await fetch(OPENROUTER_ENDPOINT, {
+      res = await fetchStream(OPENROUTER_ENDPOINT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

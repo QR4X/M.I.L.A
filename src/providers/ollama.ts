@@ -35,6 +35,7 @@ import {
   toOpenAIMessages,
   ensureOkRequest,
   ensureOkStream,
+  fetchStream,
 } from "./_shared";
 
 // ---- O que o Ollama devolve (ver a nota em _shared.ts) -------------------
@@ -240,7 +241,7 @@ export class OllamaProvider implements Provider {
 
     let res: Response;
     try {
-      res = await fetch(`${endpoint}/api/chat`, {
+      res = await fetchStream(`${endpoint}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

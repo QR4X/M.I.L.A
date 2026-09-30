@@ -3,43 +3,40 @@
 // eslint-plugin-obsidianmd). Existe aqui pra a gente ver o relatório ANTES de
 // submeter, em vez de descobrir na reprovação: `npm run lint`.
 //
-// Duas categorias reprovam a submissão (Error); o resto é aviso. A 0.9.4
-// derrubou os avisos de TypeScript de ~290 pra 10, tipando a resposta das APIs
-// (`JSON.parse` devolve `any`, e `any` desliga a checagem de tudo que encosta
-// nele). O que fica é deliberado:
+// Duas categorias reprovam a submissão (Error); o resto é aviso. Desde a
+// 0.9.10 o que fica aberto neste linter são 2 avisos, os dois deliberados:
 //
-//   no-restricted-globals (5×, `fetch` nos providers)
-//     requestUrl não faz streaming, e streaming é o produto. Todo provider
-//     tem o caminho não-streaming por requestUrl como fallback (mobile).
-//
-//   prefer-create-el (1×, Markdown.tsx)
-//     um nó temporário, solto de propósito, no documento do destino (janela
-//     destacada). A regra sugere `el.ownerDocument.win.createDiv()`; apurado
-//     na 0.9.9 que `createDiv` NÃO está declarado em `Window` na tipagem
-//     oficial e que o app.js do Obsidian não usa `.win.createDiv(` nenhuma
-//     vez. É sugestão, não API firmada — e o que depende disso é o markdown
-//     de toda resposta do chat. Os outros 3 saíram na 0.9.6.
-//
-//   no-deprecated (2×, `setWarning`)
-//     setDestructive é API 1.13 e o manifest declara minAppVersion 1.11.4.
-//     Trocar vira Error — foi o que reprovou a 0.9.2.
+//   no-restricted-globals (1×, `fetchStream` em src/providers/_shared.ts)
+//     requestUrl não faz streaming, e streaming é o produto. Os cinco
+//     providers que fazem SSE por fetch passam por esse helper só; o resto do
+//     tráfego vai por requestUrl (e o NIM, no desktop, por Node https).
 //
 //   settings-tab/prefer-setting-definitions (1×)
-//     API declarativa de settings do 1.13. Adotar com o mínimo em 1.11.4
-//     arrisca o mesmo Error acima; é tarefa própria, junto com subir o mínimo.
+//     a API declarativa de settings do 1.13. Um `getSettingDefinitions()` que
+//     devolva [] calaria o aviso sem pôr nenhuma configuração na busca — o
+//     aviso continuaria verdadeiro, só que escondido. Implementar de verdade
+//     troca a nossa aba pelo layout declarativo do Obsidian no 1.13+, e exige
+//     `update()`, que é API 1.13 (o mínimo declarado é 1.11.4). Tarefa própria.
 //
-//   ui/sentence-case (20×)
+//   ui/sentence-case (20×) — ruído deste linter, não da revisão
 //     falso positivo de nome próprio: a regra quer "HTTP://localhost",
-//     "Elevenlabs", "iphone". Nosso texto já está em sentence case, e o bot
-//     da revisão nem roda esta regra.
+//     "Elevenlabs", "iphone". O bot da revisão nem roda esta regra.
 //
-//   react-hooks/exhaustive-deps (0 agora)
+//   react-hooks/exhaustive-deps (0)
 //     os 6 efeitos que rodam só quando o resultado do assistente CHEGA têm a
-//     razão escrita na linha. Listar `extras`/`set` faria a sugestão ser
-//     re-aplicada por cima do que a pessoa está digitando.
+//     razão escrita na linha.
 //
-// O CSS tem linter PRÓPRIO na revisão (este aqui não olha .css). O que fica
-// aberto lá, e por quê, está no cabeçalho de styles/main.css.
+// O que já saiu, e como — pra ninguém refazer o caminho:
+//   - prefer-create-el: o temporário do Markdown.tsx nasce de
+//     `(el.win as typeof window).createDiv()` — o `createDiv` da janela do
+//     próprio nó, instalado pelo enhance.js do Obsidian em TODA janela;
+//   - no-deprecated (`setWarning`): `marcarPerigoso()` em ui/modals.ts reproduz
+//     o que cada versão faz, pelas classes, sem chamar a API velha nem a nova;
+//   - no-unsafe-* (~260): a forma das respostas das APIs foi declarada (0.9.4).
+//
+// O CSS tem linter PRÓPRIO na revisão (stylelint-config-obsidianmd — este aqui
+// não olha .css). O que fica aberto lá, e por quê, está no cabeçalho de
+// styles/main.css.
 
 import { defineConfig } from "eslint/config";
 import obsidianmd from "eslint-plugin-obsidianmd";

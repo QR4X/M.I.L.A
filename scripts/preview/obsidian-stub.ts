@@ -3,6 +3,24 @@
 // toca: setIcon, Menu, Modal/Setting, MarkdownRenderer, Notice.
 // setIcon emite <i data-lucide="nome"> e o index.html hidrata com lucide do CDN.
 
+declare const PREVIEW_OBSIDIAN_VERSION: string;
+
+/**
+ * Como a de verdade: true se a versão do app é >= `version`. A versão é a do
+ * asar de onde o preview tirou o app.css (injetada pelo preview.mjs), pra que
+ * a escolha de classe por versão (ver marcarPerigoso em ui/modals.ts) bata com
+ * o CSS que está desenhando a tela.
+ */
+export function requireApiVersion(version: string): boolean {
+  const a = PREVIEW_OBSIDIAN_VERSION.split(".").map(Number);
+  const b = version.split(".").map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const d = (a[i] ?? 0) - (b[i] ?? 0);
+    if (d !== 0) return d > 0;
+  }
+  return true;
+}
+
 export function normalizePath(p: string): string {
   return p.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\/|\/$/g, "");
 }

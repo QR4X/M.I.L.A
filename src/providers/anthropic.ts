@@ -35,6 +35,7 @@ import {
   ensureOkStream,
   streamFallbackToChat,
   parseDataUrl,
+  fetchStream,
 } from "./_shared";
 
 const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages";
@@ -433,7 +434,7 @@ export class AnthropicProvider implements Provider {
 
     let res: Response;
     try {
-      res = await fetch(ANTHROPIC_ENDPOINT, {
+      res = await fetchStream(ANTHROPIC_ENDPOINT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

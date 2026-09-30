@@ -52,6 +52,28 @@ export async function streamFallbackToChat(
   return resp;
 }
 
+/**
+ * O ÚNICO `fetch` do plugin: por onde passa o streaming dos providers.
+ *
+ * `requestUrl` do Obsidian não faz streaming — ele devolve a resposta inteira
+ * de uma vez —, e streaming é o produto. Então os cinco providers que fazem
+ * SSE por fetch (Anthropic, Gemini, Ollama, OpenAI, OpenRouter) passam por
+ * aqui, em vez de cinco chamadas espalhadas. Não é TODA a saída de rede: o
+ * resto (chamadas sem streaming, embeddings do RAG, o "anexar link" do chat)
+ * vai por `requestUrl`, e o NIM, no desktop, faz o streaming por Node `https`.
+ *
+ * É repasse puro, de propósito. Nada de timeout (uma geração longa seria
+ * cortada, e o TimeoutError escaparia do teste de AbortError e dispararia o
+ * fallback, fazendo uma SEGUNDA requisição), nada de embrulhar o erro (os
+ * `catch` dos providers dependem do erro original) e nada de ler a Response
+ * (o Gemini precisa dela crua pra detectar o erro de billing). E `fetch` é lido
+ * na CHAMADA, não guardado no carregamento do módulo — senão os testes, que
+ * trocam o global, iriam pra rede de verdade.
+ */
+export function fetchStream(url: string, init: RequestInit): Promise<Response> {
+  return fetch(url, init);
+}
+
 // ============================================================
 // Data URLs (anexos) — parse único usado por imagem e PDF
 // ============================================================

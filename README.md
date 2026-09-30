@@ -2,14 +2,13 @@
 
 > **Your AI workspace, native to Obsidian.** Chat, ask your vault, and let an agent act on your notes — across 6 LLM providers, with your own API keys. Mobile-first.
 
-[![Version](https://img.shields.io/badge/version-0.7.57-6c5ce7)](manifest.json)
+[![Version](https://img.shields.io/github/v/release/axxalab/axxa-agent?label=version&color=6c5ce7)](https://github.com/axxalab/axxa-agent/releases/latest)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.11.4%2B-7c3aed)](https://obsidian.md)
 [![Mobile](https://img.shields.io/badge/mobile-supported-success)](#)
 
-> **Status (v0.7.57 · Sep 2026):** feature-complete e em ciclo de revisão
-> para envio à galeria de plugins da comunidade. As telas descritas abaixo
-> são as que estão no build.
+> **Install it from inside Obsidian:** Settings → Community plugins → Browse →
+> search **AXXA Agent**. Free, and everything in this release stays free.
 
 AXXA Agent turns Obsidian into a full AI workspace. It feels like a native feature, not a bolted-on panel: a chat lives in the right sidebar (a drawer on mobile), talks to the model of your choice, and — when you let it — reads, searches, and edits the notes in your vault. Bring your own keys, pick any of six providers, and keep every conversation as plain Markdown inside your vault.
 
@@ -341,7 +340,7 @@ Tudo isso está nos prints. Nada ali é maquete.
 
 ## 🚀 Instalação
 
-**Pela loja do Obsidian (recomendado, após publicação):** Settings → Community plugins → Browse → busque **AXXA Agent** → Install → Enable.
+**Pela loja do Obsidian (recomendado):** Settings → Community plugins → Browse → busque **AXXA Agent** → Install → Enable.
 
 **Manual:** baixe `main.js`, `manifest.json` e `styles.css` da [última release](../../releases) e copie pra `<vault>/.obsidian/plugins/axxa-agent/`. Recarregue o Obsidian e ative o plugin.
 

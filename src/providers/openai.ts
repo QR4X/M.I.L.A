@@ -26,6 +26,7 @@ import {
   usageFrom,
   parseOpenAICompatSSE,
   streamFallbackToChat,
+  fetchStream,
 } from "./_shared";
 // Reexporta os helpers compartilhados (gemini/nim/openrouter importavam daqui).
 export { toOpenAIMessages, finalizeOpenAIResponse } from "./_shared";
@@ -124,7 +125,7 @@ export class OpenAIProvider implements Provider {
 
     let res: Response;
     try {
-      res = await fetch(OPENAI_ENDPOINT, {
+      res = await fetchStream(OPENAI_ENDPOINT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

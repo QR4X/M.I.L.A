@@ -78,6 +78,9 @@ function readFromAsar(asarPath, name) {
   }
 }
 
+/** A versão do Obsidian dentro do asar — a mesma de onde sai o app.css. */
+let obsidianVersion = "0.0.0";
+
 function extractAppCss() {
   const target = path.join(OUT, "app.css");
   const asar = asarCandidates().find((p) => fs.existsSync(p));
@@ -89,8 +92,21 @@ function extractAppCss() {
     process.exit(1);
   }
   fs.writeFileSync(target, readFromAsar(asar, "app.css"));
+  obsidianVersion = JSON.parse(readFromAsar(asar, "package.json").toString("utf8")).version;
   const kb = (fs.statSync(target).size / 1024).toFixed(0);
-  console.log(`[preview] app.css extraído de ${asar} (${kb}KB)`);
+  console.log(`[preview] app.css do Obsidian ${obsidianVersion}, de ${asar} (${kb}KB)`);
+
+  // O enhance.js é quem instala os helpers de DOM do Obsidian: os globais
+  // `createEl`/`createDiv`/`createSpan`/`createFragment`; no protótipo de Node,
+  // `createEl`, `createDiv`, `createSpan`, `empty`, `doc`, `win`; e no de
+  // Element, `addClass`, `setText`, `setAttr`… Sem ele o preview
+  // não consegue rodar código que usa esses helpers — e o plugin inteiro usa.
+  // Foi o que escondeu, na 0.9.6, que o menu reescrito com `createDiv` nunca
+  // tinha rodado aqui: o bundle era anterior à mudança, e mesmo rebuildado
+  // teria quebrado por falta do helper. Proprietário como o app.css: vai pro
+  // .out/, que não é versionado.
+  fs.writeFileSync(path.join(OUT, "enhance.js"), readFromAsar(asar, "enhance.js"));
+  console.log("[preview] enhance.js extraído (helpers de DOM do Obsidian)");
 }
 
 // ── 2. bundle da casca com o stub da API ────────────────────────────────────
@@ -111,6 +127,9 @@ async function bundle() {
     alias: { obsidian: path.join(HERE, "obsidian-stub.ts") },
     define: {
       "process.env.NODE_ENV": '"development"',
+      // `requireApiVersion` do stub responde por ESTA versão: o CSS do preview
+      // é o dela, então a lógica que escolhe classe por versão tem de bater.
+      PREVIEW_OBSIDIAN_VERSION: JSON.stringify(obsidianVersion),
       PREVIEW_VERSION: JSON.stringify(
         JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.json"), "utf8"))
           .version

@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>AXXA preview</title>
     <script src="lucide.js"></script>
+    <!-- Os helpers de DOM do Obsidian (createDiv, el.win, addClass…), extraídos
+         do app instalado. Antes do bundle, como no app de verdade. -->
+    <script src="enhance.js"></script>
     <!-- CSS REAL do Obsidian (extraído de obsidian.asar). Tem que vir antes do
          nosso styles.css, como acontece no app: o plugin carrega depois. -->
     <link rel="stylesheet" href="app.css" />
@@ -143,7 +146,9 @@
                  mas pode não existir na versão atual do Obsidian: o parâmetro
                  &chain=short tira o elo pra provar que nada depende dele. -->
             <div class="__TAB_CONTAINER__">
-            <div class="workspace-leaf">
+            <!-- `axxa-leaf`: o AxxaView.onOpen põe esta classe na folha que o
+                 embrulha. Aqui a árvore é montada à mão, então vem escrita. -->
+            <div class="workspace-leaf axxa-leaf">
               <div
                 class="workspace-leaf-content"
                 data-type="axxa-agent"
@@ -157,8 +162,9 @@
           </div>
         </div>
       </div>
-      <!-- navbar nativa: exercita a reserva de espaço do composer
-           (`:has(.mobile-navbar)`), o recuo com o teclado e o fullscreen. -->
+      <!-- navbar nativa: exercita a reserva de espaço do composer, o recuo
+           com o teclado e o fullscreen. A regra lê `body.axxa-has-navbar`, que
+           no app o observarNavbar() do main.ts mantém — aqui, o script abaixo. -->
       <div class="mobile-navbar"></div>
     </div>
     <script>
@@ -265,38 +271,23 @@
       // `is-hidden-nav` é o que o Obsidian marca quando esconde a navbar —
       // acontece com o teclado aberto. É o gatilho que tira a nossa reserva.
       document.body.classList.toggle("is-hidden-nav", q.get("nav") === "hidden");
+      // O que o observarNavbar() do main.ts faz no app: a classe segue a
+      // PRESENÇA da navbar no DOM. ?nav=none tira a navbar, como o Obsidian
+      // faz quando o teclado abre.
+      if (q.get("nav") === "none") document.querySelector(".mobile-navbar")?.remove();
+      document.body.classList.toggle(
+        "axxa-has-navbar",
+        document.querySelector(".mobile-navbar") !== null
+      );
       const fs = q.get("fs") === "1";
       drawer.classList.toggle("axxa-fullscreen", fs);
       document.body.classList.toggle("axxa-fullscreen", fs);
-      // Extensões de HTMLElement que o Obsidian injeta e o browser não tem.
-      HTMLElement.prototype.empty = function () {
-        while (this.firstChild) this.removeChild(this.firstChild);
-      };
-      HTMLElement.prototype.createEl = function (tag, o) {
-        const el = document.createElement(tag);
-        if (o && o.text) el.textContent = o.text;
-        if (o && o.cls) el.className = o.cls;
-        this.appendChild(el);
-        return el;
-      };
-      HTMLElement.prototype.createDiv = function (o) {
-        return this.createEl("div", typeof o === "string" ? { cls: o } : o);
-      };
-      HTMLElement.prototype.createSpan = function (o) {
-        return this.createEl("span", typeof o === "string" ? { cls: o } : o);
-      };
-      HTMLElement.prototype.addClass = function (...c) {
-        this.classList.add(...c);
-      };
-      HTMLElement.prototype.removeClass = function (...c) {
-        this.classList.remove(...c);
-      };
-      HTMLElement.prototype.toggleClass = function (c, v) {
-        this.classList.toggle(c, v);
-      };
-      HTMLElement.prototype.setText = function (t) {
-        this.textContent = t;
-      };
+      // Os helpers de DOM (createEl, createDiv, addClass, setText, empty…) vêm
+      // do enhance.js REAL do Obsidian, carregado no <head>. Aqui havia um
+      // substituto escrito à mão que só entendia `text` e `cls`: ignorava
+      // `attr`, `title`, `prepend`, `parent`… e, por morar em
+      // HTMLElement.prototype, SOMBREAVA o helper real. O preview mostrava um
+      // menu sem role/type que o app não tem — preview mentindo de novo.
     </script>
     <script src="bundle.js"></script>
     <script>
