@@ -8,6 +8,7 @@ não editar à mão; rode o script.
 | `genLogos.mjs` | `src/components/_shared/brandLogos.ts` | ao adicionar/trocar SVG em `assets/svg/` |
 | `collect-hot.mjs` | `src/providers/hotData.generated.ts` | **semanal** (popularidade dos modelos) |
 | `deploy.mjs` | copia o build pro vault de teste | manual, no dev |
+| `lote.mjs` | nada — conta as modificações desde a última beta e a última estável | depois de cada `fix`/`feat`/`perf` (`npm run lote`): 3 → beta, 10 → release |
 
 ## Coleta de popularidade ("hot") — automação semanal
 

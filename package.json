@@ -14,7 +14,8 @@
     "collect:hot": "node scripts/collect-hot.mjs",
     "deploy:output": "node scripts/deploy.mjs",
     "preview": "node scripts/preview/preview.mjs",
-    "gen:logos": "node scripts/genLogos.mjs"
+    "gen:logos": "node scripts/genLogos.mjs",
+    "lote": "node scripts/lote.mjs"
   },
   "dependencies": {
     "preact": "^10.29.2",

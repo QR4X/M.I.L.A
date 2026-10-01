@@ -71,6 +71,11 @@ inside the app.
   carries that version. Testers get it through [BRAT](https://github.com/TfTHacker/obsidian42-brat);
   the Obsidian directory keeps serving the stable version from `main`'s `manifest.json`.
   Changes accumulate on `main` and ship together in the next stable release.
+- Cadence: every **3** modifications get a test build, and **10** since the last stable
+  get a release. A modification is a `fix`, `feat` or `perf` commit; `npm run lote` counts
+  them and prints the next tag. Test builds need the tests and the build (the tag's
+  workflow runs both); the full lint pass — `npm run lint`, the `strict` type-check mirror
+  and the CSS stylelint — runs before a release.
 
 ## License
 
