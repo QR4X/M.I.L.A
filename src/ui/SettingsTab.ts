@@ -68,6 +68,7 @@ import {
 } from "./settings/tree";
 import { drawLegacyTree, type LegacyTree } from "./settings/legacy";
 import { isControlKey, readControl, writeControl } from "./settings/values";
+import { putThumb, seedThumb, thumbOf, type Thumb } from "./settings/thumb";
 
 /** Frase do botão Test — curta, pra não virar conta. */
 const SAMPLE_LINE = "This is the voice that will read your answers out loud.";
@@ -409,15 +410,11 @@ export class AxxaSettingsTab extends PluginSettingTab {
   /**
    * Posiciona o thumb do segmented sobre o item ativo. As colunas são do
    * tamanho do CONTEÚDO (colunas iguais cortavam "OpenRouter" e "Anthropic"
-   * num painel de 375px), então o thumb não dá pra calcular só em CSS.
+   * num painel de 375px), então o thumb não dá pra calcular só em CSS. Quando
+   * ele desliza e quando aparece direto: ver settings/thumb.ts.
    */
   private placeThumb(row: HTMLElement): void {
-    const put = () => {
-      const active = row.querySelector<HTMLElement>(".axxa-seg-item.is-active");
-      if (!active) return;
-      row.style.setProperty("--axxa-seg-x", `${active.offsetLeft}px`);
-      row.style.setProperty("--axxa-seg-w", `${active.offsetWidth}px`);
-    };
+    const put = () => putThumb(row);
     put();
     // De novo no frame seguinte: na primeira passada a linha pode nem estar
     // no documento ainda, ou as fontes não assentaram. A janela é a da linha —
@@ -724,14 +721,23 @@ export class AxxaSettingsTab extends PluginSettingTab {
 
   private paintCatalog(row: Setting, providerId: string): void {
     const el = row.settingEl;
+    // O filtro é remontado junto com a lista (a cada toque nele e a cada
+    // modelo marcado). O novo nasce onde o thumb do velho estava, e desliza
+    // de lá — não do primeiro item.
+    const velho = el.querySelector<HTMLElement>(".axxa-models-filter");
+    const thumb = velho ? thumbOf(velho) : null;
     el.empty();
     el.addClass("axxa-set-block", "axxa-set-catalog");
     if (providerId !== this.provider) return;
-    this.drawModels(el.createDiv({ cls: "axxa-models" }), providerId);
+    this.drawModels(el.createDiv({ cls: "axxa-models" }), providerId, thumb);
   }
 
   /** A lista de modelos — o único pedaço que os toggles e o filtro remontam. */
-  private drawModels(list: HTMLElement, providerId: string): void {
+  private drawModels(
+    list: HTMLElement,
+    providerId: string,
+    thumb?: Thumb | null
+  ): void {
     const redraw = () => this.repaint(`catalog:${providerId}`);
 
     // A lista é o catálogo buscado UNIDO ao que já está marcado — sem fetch,
@@ -800,6 +806,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
 
     if (groups.length > 1 || gratis.length > 0) {
       const filter = list.createDiv({ cls: "axxa-seg axxa-models-filter" });
+      seedThumb(filter, thumb);
       const items = [
         { id: "all", label: "All", icon: "layers" },
         ...(gratis.length > 0
