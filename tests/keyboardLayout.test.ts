@@ -95,6 +95,20 @@ describe("a única conta de teclado", () => {
     expect(dentro).toContain("calc(100dvh - var(--keyboard-height, 0px))");
   });
 
+  it("a LARGURA da tela cheia vence a largura inline do tablet sem !important", () => {
+    // 0.9.16: o Obsidian 1.13 escreve `style.width` INLINE na gaveta fixada e
+    // redimensionada do tablet (setPinnedSize). Até a 0.9.15 isso era vencido
+    // com `width: 100vw !important`; agora é o `min-width: 100vw`, que vale
+    // mais que qualquer largura menor, inline ou não. Tirar o min-width não
+    // quebra nada no celular — e corta a tela cheia nesse tablet. Tirar o
+    // width corta 62px à direita no celular comum (a gaveta fica em 84vw).
+    const b = bloco("body.is-mobile .workspace-drawer.axxa-fullscreen {");
+    const sem = b.replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(sem).toMatch(/(?:^|[\s;])width:\s*100vw;/);
+    expect(sem).toMatch(/min-width:\s*100vw;/);
+    expect(sem).not.toContain("!important");
+  });
+
   it("as quatro alturas da gaveta carregam o reforço de especificidade", () => {
     // 0.9.12: sem `!important`, o que faz a altura da gaveta vencer as regras
     // do app.css é o `:not(#axxa-especificidade)` (+1 ID). Tirar o reforço

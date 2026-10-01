@@ -15,12 +15,13 @@
    Uma classe nossa sozinha (`.axxa-mode`) vale 0,1,0 e PERDE dessas regras —
    foi o que encheu de fundo cinza todo botão da casca. Por isso TODO seletor
    aqui vem prefixado com `.axxa-root` (0,2,x) e existe o bloco de reset
-   abaixo. Regra: nada de seletor sem o prefixo, nada de !important.
+   abaixo. Regra: nada de seletor sem o prefixo, nada de !important, nada de
+   `:has` — o linter da revisão do Obsidian conta cada um como issue, a nota
+   pública é função dessa contagem, e desde a 0.9.16 são ZERO (o teste
+   tests/sheetChrome.test.ts quebra se um voltar).
 
-   A EXCEÇÃO: 1 `!important`, e por que fica.
-   O bloco logo abaixo (teclado + tela cheia no mobile) tinha 27. A revisão
-   do Obsidian conta cada um como issue, e a nota pública é função dessa
-   contagem. 22 saíram na 0.9.10 e mais 4 na 0.9.12, e foram PROVADOS:
+   COMO OS `!important` SAÍRAM (eram 27, no bloco de teclado + tela cheia).
+   22 na 0.9.10, 4 na 0.9.12 e o último na 0.9.16, todos PROVADOS:
 
    · Os 22 que saíram perderam o !important e ganharam `:not(#axxa-
      especificidade)` no seletor — +1 de peso de ID, igual pra todos, o que
@@ -49,9 +50,15 @@
          antes vinha num `@supports selector(:has)` e era pulada, agora vale —
          esses aparelhos passam a ter a mesma folga dos outros.
 
-   · O que FICA é a largura da gaveta: o Obsidian 1.13 escreve `style.width`
-     INLINE nela (`setPinnedSize`, no tablet com a gaveta fixada), e contra
-     inline só !important vence.
+   · O último (0.9.16) era a LARGURA da gaveta em tela cheia. O Obsidian 1.13
+     escreve `style.width` INLINE nela no tablet com a gaveta fixada e
+     redimensionada à mão (`setPinnedSize`), e a nota daqui dizia que contra
+     inline só !important vence — não é verdade: `min-width: 100vw` vence
+     qualquer largura menor, inline ou não, e ainda impede a gaveta fixada
+     do 1.12.7 (um item flex sem `flex-shrink: 0`) de encolher. Medido numa
+     réplica com o app.css real do 1.12.7 e do 1.13.7: igual ao !important no
+     celular e no tablet 1.13.7, e melhor no tablet 1.12.7 fixado. Ver a nota
+     na regra.
 
    · As quatro ALTURAS da gaveta (tela cheia e teclado, com e sem dvh)
      perderam o !important na 0.9.12, EM TESTE NO APARELHO. Nada foi achado
@@ -63,15 +70,19 @@
      estas quatro regras (o da versão é outro, separado de propósito), ou
      reinstalar a 0.9.11, que é a última com elas.
 
-   · `:has` (2×). Os outros 9 viraram classe (6 na 0.9.6, 3 na 0.9.10): o
-     `.modal-container` é o `containerEl` do Modal; a folha da view é marcada
-     pelo AxxaView (`.axxa-leaf`); a navbar é observada pelo main.ts
-     (`.axxa-has-navbar`). Os 2 que ficam não têm classe possível: o
-     `.workspace-tab-container` da aba corrente (uma classe estática ficaria
-     no contêiner com outra aba na frente, e o caso do tablet fixado não foi
-     verificado) e a faixa atrás da folha aberta (várias folhas montadas,
-     desmontagem com a folha aberta, troca de aba — dois observadores pra um
-     aviso).
+   COMO OS `:has` SAÍRAM (eram 11). 9 viraram classe (6 na 0.9.6, 3 na
+   0.9.10): o `.modal-container` é o `containerEl` do Modal; a folha da view é
+   marcada pelo AxxaView (`.axxa-leaf`); a navbar é observada pelo main.ts
+   (`.axxa-has-navbar`). Os 2 últimos, na 0.9.16 — a nota daqui dizia que
+   não tinham classe possível, e as duas razões estavam erradas:
+     — o que esticava um `.workspace-tab-container` dentro da gaveta era regra
+       MORTA: o 1.12.7 e o 1.13.7 nunca põem esse contêiner na gaveta (nem no
+       tablet fixado, que só troca classes e a largura), e na réplica ela
+       casava com zero elementos em 84 estados. Saiu;
+     — a faixa atrás da folha aberta virou a classe `.axxa-sheet-open`,
+       recalculada do DOM por src/ui/sheetStrip.ts (várias folhas montadas,
+       desmontagem com a folha aberta e troca de aba caem na mesma conta, sem
+       observador nenhum).
 
    RESOLVIDO na 0.9.11 — "text-decoration" (era 3×): o sublinhado dos links
    do markdown deixou de declarar espessura e cor próprias (o caniuse marca o
@@ -92,7 +103,10 @@
      - `.axxa-header` → `.axxa-topbar` (o nome da nossa barra de topo);
      - 0.9.8: o par vh/dvh virou vh + `@supports (height: 100dvh)`;
      - 0.9.10: 22 `!important` viraram `:not(#axxa-especificidade)`, e dois
-       `:has` viraram as classes `.axxa-has-navbar` e `.axxa-leaf`.
+       `:has` viraram as classes `.axxa-has-navbar` e `.axxa-leaf`;
+     - 0.9.16: o `width: 100vw !important` da tela cheia virou
+       `width` + `min-width: 100vw`, e saiu o `:has` morto do
+       `.workspace-tab-container`.
    Não reescrever sem repetir a prova: o teste A/B contra o app.css real e
    tests/keyboardLayout.test.ts.
 
@@ -277,13 +291,20 @@ body.is-mobile.axxa-fullscreen .mobile-navbar {
    - dvh acompanha a barra dinâmica do WebView; cai pra vh onde dvh não existe.
    - Sem position:fixed de propósito: preservamos o transform nativo de
      abrir/fechar, então o gesto de swipe-pra-fechar continua (o drawer fechado
-     sai 100% pra fora). !important vence uma largura inline que o Obsidian
-     possa ter setado no drawer. */
+     sai 100% pra fora). */
 body.is-mobile .workspace-drawer.axxa-fullscreen {
-  /* O ÚNICO !important que sobrou no arquivo: o Obsidian 1.13 escreve
-     `style.width` INLINE na gaveta quando ela é fixada no tablet
-     (`setPinnedSize`), e contra estilo inline só !important vence. */
-  width: 100vw !important;
+  width: 100vw;
+  /* Sem !important desde a 0.9.16. O único caso em que ele agia: tablet no
+     Obsidian 1.13 com a gaveta FIXADA e redimensionada à mão — o
+     `setPinnedSize` escreve `style.width = "Npx"` INLINE nela, e contra
+     inline o `width` acima perde. O `min-width` não perde: quando o mínimo é
+     maior que a largura, vale o mínimo, venha a largura de onde vier.
+     Medido numa réplica com o app.css real: idêntico ao !important no
+     celular e no tablet 1.13.7; no tablet 1.12.7 fixado fica MELHOR — lá a
+     gaveta fixada é um item flex que ENCOLHE (o `.is-pinned` do 1.12.7 não
+     tem o `flex-shrink: 0` do 1.13.7), e o `width` só virava a base dela:
+     ela caía pra metade da tela. O `min-width` impede o encolhimento. */
+  min-width: 100vw;
 }
 /* Menos a altura do teclado (v0.1.254): o composer de chat/agent é `absolute`
    dentro da .axxa-root, então só sobe se a CAIXA encolher — e o Obsidian
@@ -384,22 +405,16 @@ body.is-mobile:not(#axxa-especificidade)
    `A:has(nossa) .workspace-leaf:has(nossa)` — o primeiro `:has` era redundante
    (se a folha contém a view e está dentro de A, A contém a view) e o segundo
    é a própria classe. Continua dinâmico: quando outra aba vira a corrente, a
-   nossa folha SAI do DOM, e o descendente deixa de casar. */
+   nossa folha SAI do DOM, e o descendente deixa de casar.
+   Até a 0.9.15 havia aqui uma irmã com `:has` pra esticar um
+   `.workspace-tab-container` dentro da gaveta. Saiu: no 1.12.7 e no 1.13.7 a
+   gaveta NUNCA tem esse contêiner (a folha entra direto no
+   `.workspace-drawer-active-tab-content`, no celular e no tablet, fixado ou
+   não — fixar só troca classes e a largura), e medida numa réplica com o
+   app.css real ela casava com zero elementos em 84 estados. */
 .workspace-drawer-active-tab-container .workspace-leaf.axxa-leaf {
   height: 100%;
   width: 100%;
-}
-/* O `.workspace-tab-container` da aba corrente fica com o `:has`, e de
-   propósito. A análise diz que ele não existe dentro da gaveta mobile (a
-   folha entra direto no active-tab-content), mas não cobriu o TABLET com a
-   gaveta fixada, que no 1.13 tem outro caminho de DOM. E aqui uma classe
-   estática não serve: ela ficaria no contêiner com OUTRA aba na frente. */
-@supports selector(:has(*)) {
-  .workspace-drawer-active-tab-container:has(.workspace-leaf-content[data-type="axxa-agent"])
-    .workspace-tab-container {
-    height: 100%;
-    width: 100%;
-  }
 }
 body.is-mobile:not(#axxa-especificidade)
 .workspace-drawer.axxa-keyboard-open
@@ -4257,16 +4272,21 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-layer .axxa-sheet {
    Com o teclado aberto a reserva vira zero (a conta do Obsidian desconta o
    teclado), e a faixa pintada fica por trás do conteúdo — não aparece.
 
-   `:has()` porque quem sabe que há folha aberta é a nossa árvore, e a caixa a
-   pintar é a do Obsidian, alguns andares acima. */
-@supports selector(:has(*)) {
-  body.is-mobile .workspace-drawer-inner:has(.axxa-root .axxa-sheet-layer.is-open) {
-    background-image: linear-gradient(
-      to top,
-      var(--axxa-sheet-bg) max(var(--safe-area-inset-bottom), var(--size-4-4)),
-      transparent max(var(--safe-area-inset-bottom), var(--size-4-4))
-    );
-  }
+   Quem sabe que há folha aberta é a nossa árvore, e a caixa a pintar é a do
+   Obsidian, alguns andares acima: a ponte é a classe `.axxa-sheet-open`,
+   recalculada pelo src/ui/sheetStrip.ts. Até a 0.9.15 era um `:has()`, que a
+   revisão do Obsidian acusa — e com razão: cada nó inserido na gaveta (o
+   streaming de uma resposta incluído) fazia o navegador varrê-la de novo.
+
+   Só na TELA CHEIA. Fora dela, no celular, o Obsidian põe o seletor de abas e
+   o cabeçalho da gaveta ENTRE a folha e a reserva (ordem 2 no app.css), e a
+   faixa pintada ficava solta, longe da folha. */
+body.is-mobile .workspace-drawer.axxa-fullscreen .workspace-drawer-inner.axxa-sheet-open {
+  background-image: linear-gradient(
+    to top,
+    var(--axxa-sheet-bg) max(var(--safe-area-inset-bottom), var(--size-4-4)),
+    transparent max(var(--safe-area-inset-bottom), var(--size-4-4))
+  );
 }
 
 .axxa-root .axxa-drawer-layer.is-open {

@@ -116,7 +116,7 @@ Everything above is in the screenshots. None of it is a mockup.
 AXXA Agent is built for the Obsidian ethos — **your notes are yours**.
 
 - **Everything stays in your vault.** Chats, generated media, and skills are plain `.md` files on disk. Nothing is uploaded to us.
-- **No telemetry, no tracking, no accounts.** The plugin phones home to *nobody*. The only network calls are the ones you trigger to the LLM provider you chose (with your own key).
+- **No telemetry, no tracking, no accounts.** The plugin phones home to *nobody*. The only network calls are to the providers you chose (with your own key) and to any web page you ask it to fetch — see [Disclosures](#disclosures).
 - **Bring your own key — keys never leave your device.** They live in your OS keychain (secure storage), used only to call the provider you picked.
 - **Works fully offline with Ollama.** Run local models with zero data leaving your machine — chat, RAG, and the agent all work air-gapped.
 - **Cite & open your notes.** Vault answers cite the source notes as clickable `[[wikilinks]]` that open the real note.
@@ -225,12 +225,28 @@ A single **Effort** selector (Low → Max) scales how hard the model works: max 
 AXXA Agent is **bring-your-own-key** and stores everything locally. Specifically:
 
 - **Your API keys** are stored in your operating system's secure storage (Obsidian's `secretStorage` / OS keychain) — **not** in the plugin's `data.json`, so they don't leak through Obsidian Sync or vault backups. They're sent **only** to the corresponding provider's official API endpoint. *(Legacy keys from older versions are migrated automatically on first load.)*
-- **Network requests** are made **only** to the LLM/embedding/image provider you choose (OpenAI, Anthropic, Google, OpenRouter, Nvidia, or your local Ollama), to send your prompts and vault context and stream back responses.
-- **Vault content** leaves your device only as part of the prompts/embeddings you explicitly send to your chosen provider. The semantic index itself is stored locally in your vault.
+- **Network requests** go only to the AI providers you choose (OpenAI, Anthropic, Google, OpenRouter, Nvidia, ElevenLabs, or your local Ollama) and to web pages you explicitly ask it to fetch. The full list of what is sent is under [Disclosures](#disclosures).
+- **Vault content** leaves your device only to the provider you chose, as part of your conversations or of the Vault Q&A index. The index itself is stored locally in your vault.
 - **No telemetry, no analytics, no tracking.** AXXA does not phone home.
 - **Chats, generated media, and settings** are saved as plain files inside your vault.
 
 When you use a third-party provider, your data is subject to **that provider's** terms and privacy policy. Review them before sending sensitive content.
+
+### Disclosures
+
+Per Obsidian's developer policies, in plain terms:
+
+- **Network use.** Requests go only to the AI providers you configure — OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM, ElevenLabs (optional, read-aloud voices) and your own Ollama endpoint — and to any web page you ask it to fetch with **+ › Link**. What each one receives:
+  - the chat provider: your messages, the notes, files, images, PDFs and web pages you attach, and the vault excerpts described under *Automatic context*;
+  - the embedding provider (Vault Q&A): the text of your notes while the index is built — and the images too, if you pick an image-capable embedding model — plus each search query;
+  - OpenAI's transcription API: your voice recordings, when you dictate;
+  - OpenAI or ElevenLabs: the text of an answer, when you press Listen.
+
+  There is no telemetry and nothing is sent to us. Answers are rendered as Markdown, so an image link inside an answer is loaded from wherever it points.
+- **Accounts and payment.** The plugin is free, but it needs your own key for at least one provider (Ollama, running locally, needs none). Most providers bill API usage per token; some offer free models or quotas.
+- **Vault enumeration.** The plugin reads your vault's file list (Obsidian's `getMarkdownFiles` / `getFiles`) to build the Vault Q&A index, for the keyword half of vault search (Vault Q&A, Agent context and the agent's `vault_search`), for the note picker (**+ › Notes**, `[[` mentions and project sources) and — only if you turn on *Let it see your note names*, off by default — so the creation assistant can suggest notes for a project. The list itself stays on your device, with three exceptions: in that last case the paths of up to 300 recent notes (never their content) go to the assistant's model; in Agent mode the `vault_list` tool sends the names of the files in a folder (the vault root included) to the chat model, without asking; and `vault_search` sends the paths and excerpts of the notes it finds.
+- **Automatic context.** In Vault Q&A and Agent conversations, a per-chat vault switch starts **on**: excerpts of the notes that match your message are sent with it to the chat provider. In Chat it starts **off**.
+- **Files read and written.** Chats and the Vault Q&A index are saved inside your vault, in the hidden `.axxa/` folder by default. When you ask for them, exports go to `axxa-ai/exports/`, usage reports to `axxa-ai/reports/` and skills to `axxa-ai/skills/`. In Agent mode the model can read any text file in your vault and create, edit, move and delete notes and folders through its tools. Changes ask for confirmation according to the permission level you set — and **Approve all** in that dialog stops asking for reversible changes until the session ends — but deletes always ask.
 
 ---
 
@@ -368,11 +384,27 @@ A primeira mensagem **trava** provedor, modelo e modo daquela conversa, mantendo
 O AXXA é **BYOK** (suas próprias chaves) e guarda tudo localmente:
 
 - **Suas chaves** ficam no armazenamento seguro do sistema operacional (o `secretStorage` do Obsidian / keychain do SO) — **não** no `data.json` do plugin, então não vazam por Obsidian Sync nem backup do vault. São enviadas **apenas** pra API oficial do provedor correspondente. *(Chaves legadas de versões antigas são migradas automaticamente no primeiro load.)*
-- **Requisições de rede** acontecem **só** com o provedor que você escolher (OpenAI, Anthropic, Google, OpenRouter, Nvidia ou seu Ollama local), pra mandar seus prompts/contexto e receber as respostas.
-- **Conteúdo do vault** sai do aparelho apenas como parte dos prompts/embeddings que você explicitamente envia. O índice semântico fica salvo localmente no vault.
+- **Requisições de rede** vão só pros provedores de IA que você escolher (OpenAI, Anthropic, Google, OpenRouter, Nvidia, ElevenLabs ou seu Ollama local) e pras páginas da web que você pedir pra buscar. A lista completa do que é enviado está em [Declarações](#declarações).
+- **Conteúdo do vault** sai do aparelho só pro provedor que você escolheu, nas suas conversas ou no índice do Vault Q&A. O índice em si fica salvo localmente no vault.
 - **Sem telemetria, sem analytics, sem rastreio.** O AXXA não "liga pra casa".
 
 Ao usar um provedor terceiro, seus dados ficam sujeitos aos termos e à política de privacidade **daquele provedor**. Revise antes de enviar conteúdo sensível.
+
+### Declarações
+
+Pelas políticas de desenvolvedor do Obsidian, em linguagem direta:
+
+- **Uso de rede.** As requisições vão só pros provedores de IA que você configurar — OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM, ElevenLabs (opcional, vozes da leitura) e o seu Ollama — e pras páginas da web que você pedir pra buscar no **+ › Link**. O que cada um recebe:
+  - o provedor do chat: as suas mensagens, as notas, arquivos, imagens, PDFs e páginas que você anexa, e os trechos do vault descritos em *Contexto automático*;
+  - o provedor de embedding (Vault Q&A): o texto das suas notas enquanto o índice é montado — e as imagens também, se você escolher um modelo de embedding que aceita imagem — e cada busca;
+  - a API de transcrição da OpenAI: as suas gravações de voz, quando você dita;
+  - a OpenAI ou a ElevenLabs: o texto de uma resposta, quando você toca em Listen.
+
+  Não há telemetria e nada é enviado pra nós. As respostas são renderizadas como Markdown, então um link de imagem dentro de uma resposta é carregado de onde ele aponta.
+- **Contas e pagamento.** O plugin é gratuito, mas precisa da sua chave de pelo menos um provedor (o Ollama, rodando local, não precisa). A maioria cobra o uso da API por token; alguns oferecem modelos ou cotas gratuitas.
+- **Listagem do vault.** O plugin lê a lista de arquivos do vault (o `getMarkdownFiles` / `getFiles` do Obsidian) pra montar o índice do Vault Q&A, pra metade por palavra-chave da busca no vault (Vault Q&A, contexto do Agent e a ferramenta `vault_search` do agente), pro seletor de notas (**+ › Notes**, menções `[[` e fontes de projeto) e — só se você ligar *Let it see your note names*, que vem desligado — pra assistente de criação sugerir notas pra um projeto. A lista fica no aparelho, com três exceções: nesse último caso os caminhos de até 300 notas recentes (nunca o conteúdo) vão pro modelo da assistente; no modo Agent a ferramenta `vault_list` manda os nomes dos arquivos de uma pasta (a raiz inclusive) pro modelo do chat, sem perguntar; e a `vault_search` manda os caminhos e trechos das notas que acha.
+- **Contexto automático.** Nas conversas de Vault Q&A e Agent, um interruptor de vault por conversa nasce **ligado**: trechos das notas que combinam com a sua mensagem vão junto dela pro provedor do chat. No Chat ele nasce **desligado**.
+- **Arquivos lidos e gravados.** As conversas e o índice do Vault Q&A ficam dentro do vault, na pasta oculta `.axxa/` por padrão. Quando você pede, exportações vão pra `axxa-ai/exports/`, relatórios de uso pra `axxa-ai/reports/` e skills pra `axxa-ai/skills/`. No modo Agent o modelo pode ler qualquer arquivo de texto do vault e criar, editar, mover e apagar notas e pastas pelas ferramentas dele. Mudanças pedem confirmação conforme o nível de permissão escolhido — e o **Approve all** dessa confirmação deixa de perguntar pelas mudanças reversíveis até o fim da sessão —, mas apagar sempre pergunta.
 
 ## 📄 Licença
 

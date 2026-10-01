@@ -22,8 +22,7 @@ describe("a faixa da barra de gestos tem a cor da folha", () => {
   // gaveta do Obsidian (`.workspace-drawer-inner`), pintada com a cor da
   // gaveta — um degrau mais escura que a folha. Aparecia como uma barra grudada
   // no fim dela.
-  const faixa = () =>
-    bloco(".workspace-drawer-inner:has(.axxa-root .axxa-sheet-layer.is-open)");
+  const faixa = () => bloco(".workspace-drawer-inner.axxa-sheet-open {");
 
   it("a folha e a faixa usam o MESMO token de cor", () => {
     // Duas contas pra mesma cor é como se descobre, meses depois, que uma
@@ -47,10 +46,32 @@ describe("a faixa da barra de gestos tem a cor da folha", () => {
     );
   });
 
-  it("só enquanto há folha aberta", () => {
-    expect(CSS).toContain(
-      ".workspace-drawer-inner:has(.axxa-root .axxa-sheet-layer.is-open)"
+  it("só enquanto há folha aberta, e só na tela cheia", () => {
+    // 0.9.16: a ponte entre a folha (nossa) e a caixa (do Obsidian) é uma
+    // classe que o sheetStrip.ts recalcula do DOM — era um `:has`. Fora da
+    // tela cheia o seletor de abas e o cabeçalho da gaveta ficam entre a folha
+    // e a reserva, e a faixa pintada ficava solta.
+    expect(SEM_COMENTARIO).toContain(
+      "body.is-mobile .workspace-drawer.axxa-fullscreen .workspace-drawer-inner.axxa-sheet-open {"
     );
+    const js = readFileSync(resolve(__dirname, "../src/ui/sheetStrip.ts"), "utf8");
+    // A classe que o JS põe é a que o CSS espera, e o JS pergunta pela MESMA
+    // camada aberta que o `:has` perguntava.
+    expect(js).toContain('SHEET_OPEN_CLASS = "axxa-sheet-open"');
+    expect(js).toContain('".axxa-root .axxa-sheet-layer.is-open"');
+  });
+});
+
+describe("o CSS passa no linter da revisão do Obsidian", () => {
+  // A revisão (stylelint-config-obsidianmd) conta cada `!important` e cada
+  // `:has` como issue, e a nota pública é função dessa contagem. Zerados na
+  // 0.9.16 — o motivo de cada troca está no cabeçalho de styles/main.css.
+  it("nenhum `:has(`", () => {
+    expect(SEM_COMENTARIO).not.toContain(":has(");
+  });
+
+  it("nenhum `!important`", () => {
+    expect(SEM_COMENTARIO).not.toContain("!important");
   });
 });
 

@@ -152,7 +152,7 @@ item ativo, sheets.
   `npm run preview` com `?s=settings` (o stub monta `Setting`/`SettingGroup`
   com o DOM de cada versão); `-- --asar <obsidian-X.asar>` troca o CSS pro de
   outra versão.
-- `modals.ts` — `PromptModal`, `ConfirmModal`, `NotePickerModal`,
+- `modals.ts` — `PromptModal`, `ConfirmModal`,
   `openPluginSettings`.
 - `Markdown.tsx` — `MarkdownRenderer` nativo (texto puro enquanto streama).
 

@@ -1,14 +1,14 @@
 // src/ui/modals.ts
-// Modais NATIVOS do Obsidian usados pela casca CRUD: prompt de texto, confirmação
-// e picker de nota. Zero CSS próprio — o Obsidian estiliza.
+// Modais NATIVOS do Obsidian usados pela casca CRUD: prompt de texto e
+// confirmação. Zero CSS próprio — o Obsidian estiliza. (O picker de nota que
+// morava aqui listava o vault inteiro e ninguém mais o abria: saiu na 0.9.16.
+// Escolher nota é o rankNotes de ui/notePicker.ts.)
 
 import {
   App,
-  FuzzySuggestModal,
   Modal,
   Notice,
   Setting,
-  TFile,
   requireApiVersion,
   type ButtonComponent,
 } from "obsidian";
@@ -187,44 +187,6 @@ export class ConfirmModal extends Modal {
   }
 
   openAndWait(): Promise<boolean> {
-    return new Promise((res) => {
-      this.resolve = res;
-      this.open();
-    });
-  }
-}
-
-/** Fuzzy picker de notas .md do vault. Resolve o path ou null. */
-export class NotePickerModal extends FuzzySuggestModal<TFile> {
-  private resolve: ((p: string | null) => void) | null = null;
-  private chosen = false;
-
-  constructor(app: App) {
-    super(app);
-    this.setPlaceholder("Pick a note…");
-  }
-
-  getItems(): TFile[] {
-    return this.app.vault.getMarkdownFiles();
-  }
-
-  getItemText(f: TFile): string {
-    return f.path;
-  }
-
-  onChooseItem(f: TFile): void {
-    this.chosen = true;
-    this.resolve?.(f.path);
-  }
-
-  onClose(): void {
-    // O Obsidian fecha ANTES de chamar onChooseItem — decide no próximo tick.
-    window.setTimeout(() => {
-      if (!this.chosen) this.resolve?.(null);
-    }, 0);
-  }
-
-  openAndWait(): Promise<string | null> {
     return new Promise((res) => {
       this.resolve = res;
       this.open();

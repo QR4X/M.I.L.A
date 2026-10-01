@@ -17,6 +17,7 @@ import { ChatSession } from "../core/session";
 import { App } from "./App";
 import { isDrawerOnScreen, isRightDrawer } from "./fullscreenScope";
 import { hapticsOn, setHapticsEnabled } from "./haptics";
+import { syncSheetStrip } from "./sheetStrip";
 
 export const VIEW_TYPE_AXXA = "axxa-agent";
 
@@ -34,6 +35,13 @@ export class AxxaView extends ItemView {
   private settingsUnsub: (() => void) | null = null;
   /** A `.workspace-leaf` marcada com `axxa-leaf` — guardada, ver onClose. */
   private folhaMarcada: HTMLElement | null = null;
+  /** A `.workspace-drawer` onde a view esteve por último. Guardada porque,
+   *  com outra aba na frente (ou depois de fechada), a nossa folha sai do DOM
+   *  e o `closest` já não acha a gaveta — e as classes que pusemos nela (tela
+   *  cheia, faixa da folha, teclado) têm de sair mesmo assim. Até a 0.9.15
+   *  não saíam: trocar de aba ou fechar a AXXA com a tela cheia ligada
+   *  deixava a gaveta sem cabeçalho e sem o seletor de abas. */
+  private gaveta: Element | null = null;
   private hapticsOff: (() => void) | null = null;
 
   constructor(
@@ -113,6 +121,8 @@ export class AxxaView extends ItemView {
     this.settingsUnsub?.();
     this.settingsUnsub = null;
     // Fechar a view devolve o chrome do app mesmo se algo acima deu errado.
+    // A esta altura a nossa folha já saiu do DOM (o View.close do Obsidian a
+    // desanexa antes do onClose), então a gaveta é recalculada sem ela.
     this.clearFullscreen();
     this.root?.unmount();
     this.root = null;
@@ -188,7 +198,10 @@ export class AxxaView extends ItemView {
     this.keyboardObserver?.disconnect();
     this.keyboardObserver = null;
     this.lastKeyboardHeight = -1;
-    const drawer = this.containerEl.closest(".workspace-drawer");
+    // Pela gaveta guardada: no onClose a folha já saiu do DOM e o `closest`
+    // devolveria null — a gaveta ficava sem cabeçalho até o teclado abrir de
+    // novo noutra view da AXXA.
+    const drawer = this.containerEl.closest(".workspace-drawer") ?? this.gaveta;
     drawer?.classList.remove("axxa-keyboard-open");
     this.containerEl.doc.body.classList.remove("axxa-keyboard-open");
   }
@@ -212,28 +225,53 @@ export class AxxaView extends ItemView {
    */
   applyFullscreen(): void {
     if (!Platform.isMobile) return;
-    const drawer = this.containerEl.closest(".workspace-drawer");
-    // Multi-tab: só vale quando a AXXA é a aba ativa da gaveta.
-    const active = !!this.containerEl.closest(
-      ".workspace-drawer-active-tab-content"
-    );
+    const atual = this.containerEl.closest(".workspace-drawer");
+    // A gaveta de antes primeiro: com outra aba na frente, ou com a folha
+    // movida, a nossa folha saiu dela — e ela tem de perder a tela cheia e a
+    // faixa. Depois a de agora, que dá a palavra final no body.
+    if (this.gaveta && this.gaveta !== atual) this.recomputeDrawer(this.gaveta);
+    if (atual) this.gaveta = atual;
+    this.recomputeDrawer(atual);
+  }
+
+  /**
+   * Recalcula as classes de UMA gaveta pelo que está nela AGORA — não por qual
+   * view chamou. A tela cheia vale quando a aba corrente da gaveta direita é
+   * uma view da AXXA (esta ou outra) e a setting está ligada; a faixa, quando
+   * há folha nossa aberta nela (ui/sheetStrip.ts). Perguntar ao DOM é o que
+   * faz troca de aba, folha movida, view fechada e duas views na mesma gaveta
+   * darem o mesmo resultado em qualquer ordem de evento. (A gaveta só põe no
+   * `.workspace-drawer-active-tab-content` a folha da aba corrente; as outras
+   * saem do DOM.)
+   */
+  private recomputeDrawer(drawer: Element | null): void {
+    if (!drawer) return;
+    syncSheetStrip(drawer.querySelector(".workspace-drawer-inner"));
+    const axxaNaFrente =
+      drawer.querySelector(
+        '.workspace-drawer-active-tab-content .workspace-leaf-content[data-type="axxa-agent"]'
+      ) !== null;
     const on =
-      active && isRightDrawer(drawer) && !!this.plugin.settings.mobileFullscreen;
-    drawer?.classList.toggle("axxa-fullscreen", on);
+      axxaNaFrente && isRightDrawer(drawer) && !!this.plugin.settings.mobileFullscreen;
+    drawer.classList.toggle("axxa-fullscreen", on);
     // A navbar global é IRMÃ das gavetas (mora no body). Some só ENQUANTO a
     // gaveta da AXXA está na tela: abrir a gaveta esquerda (ou fechar a nossa
     // no swipe) devolve a navegação global na hora, em vez de deixar o
-    // Obsidian sem chrome.
-    this.containerEl.doc.body.classList.toggle(
-      "axxa-fullscreen",
-      on && this.hostDrawerVisible(drawer)
-    );
+    // Obsidian sem chrome. Só a gaveta DIREITA mexe no body — é a única que
+    // liga a tela cheia.
+    if (isRightDrawer(drawer)) {
+      this.containerEl.doc.body.classList.toggle(
+        "axxa-fullscreen",
+        on && this.hostDrawerVisible(drawer)
+      );
+    }
   }
 
+  /** No onClose a folha já saiu do DOM: a gaveta guardada é recalculada sem
+   *  ela — se outra view da AXXA está na frente, a tela cheia continua. */
   private clearFullscreen(): void {
-    const drawer = this.containerEl.closest(".workspace-drawer");
-    drawer?.classList.remove("axxa-fullscreen");
-    this.containerEl.doc.body.classList.remove("axxa-fullscreen");
+    this.recomputeDrawer(this.gaveta);
+    this.gaveta = null;
   }
 
   /**

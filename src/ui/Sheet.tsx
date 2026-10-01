@@ -27,6 +27,7 @@ import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 import { SearchField } from "./SearchField";
 import { screen, tap, warn } from "./haptics";
+import { drawerInnerOf, syncSheetStrip } from "./sheetStrip";
 
 /**
  * O jeito de o CONTEÚDO pedir a folha grande.
@@ -244,6 +245,18 @@ export function Sheet({
   useLayoutEffect(() => {
     setRaiz(panelRef.current?.closest<HTMLElement>(".axxa-root") ?? null);
   }, []);
+
+  // A faixa da barra de gestos (ver ui/sheetStrip.ts). Depois do commit a
+  // camada já tem o `is-open` novo: recalcula. Na limpeza — fechar, ou a folha
+  // ser desmontada aberta — recalcula de novo, mas ADIADO: o Preact roda as
+  // limpezas antes de tirar o DOM, e na hora a camada ainda estaria lá aberta.
+  useLayoutEffect(() => {
+    const inner = drawerInnerOf(panelRef.current);
+    syncSheetStrip(inner);
+    return () => {
+      queueMicrotask(() => syncSheetStrip(inner));
+    };
+  }, [open]);
   /** peek = altura do conteúdo (teto baixo) · full = quase a tela toda ·
    *  fit = altura do conteúdo, com o teto do grande (ver useSheetFit). */
   const [size, setSize] = useState<"peek" | "full" | "fit">(
