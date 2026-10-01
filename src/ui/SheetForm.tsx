@@ -98,7 +98,11 @@ export function SheetInput({
   return (
     <input
       ref={ref}
-      className={comSpark ? "axxa-input axxa-has-spark" : "axxa-input"}
+      // `axxa-field-input`, e não `axxa-input`: esse é o cartão do composer
+      // (ver o comentário da regra em styles/main.css).
+      className={
+        comSpark ? "axxa-field-input axxa-has-spark" : "axxa-field-input"
+      }
       type="text"
       value={value}
       placeholder={placeholder}

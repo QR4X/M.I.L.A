@@ -3754,7 +3754,7 @@ body.theme-light .axxa-root .axxa-sheet {
    acaso, e no claro dava a mesma lama cinza dos cartões. */
 .axxa-root .axxa-sheet .axxa-sheet-group,
 .axxa-root .axxa-sheet .axxa-form-preview,
-.axxa-root .axxa-sheet .axxa-input,
+.axxa-root .axxa-sheet .axxa-field-input,
 .axxa-root .axxa-sheet .axxa-textarea,
 .axxa-root .axxa-sheet .axxa-search-field {
   /* A busca entra junto: sem fundo próprio ela herdava o cinza da folha, e
@@ -6055,7 +6055,14 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
   font-size: var(--font-ui-smaller);
 }
 
-.axxa-root .axxa-input,
+/* `axxa-field-input`, e não `axxa-input`: da 0.6.49 até a 0.9.19 o campo dos
+   formulários usava o MESMO nome do cartão do composer, e a mistura corria nos
+   dois sentidos. Esta regra vem depois, com a mesma força, e passava por cima
+   do cartão: canto 14 em vez de 20, padding 12 em vez de 14/14/12, a borda e
+   o fundo do campo em vez dos medidos na referência. E o campo herdava do
+   cartão a sombra e o vidro — numa folha que rola com 6px de folga, a sombra
+   saía cortada reta dos dois lados. */
+.axxa-root .axxa-field-input,
 .axxa-root .axxa-textarea {
   width: 100%;
   padding: var(--axxa-3);
@@ -6074,7 +6081,7 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
   line-height: 1.45;
 }
 
-.axxa-root .axxa-input:focus,
+.axxa-root .axxa-field-input:focus,
 .axxa-root .axxa-textarea:focus {
   border-color: var(--interactive-accent);
   box-shadow: none;
@@ -7215,7 +7222,7 @@ body.is-mobile .modal-container.axxa-prompt-container .modal {
 
 /* O respiro pro botão vem do próprio campo: sem ele o texto corre por baixo
    do desenho justamente quando fica comprido. */
-.axxa-root .axxa-input.axxa-has-spark {
+.axxa-root .axxa-field-input.axxa-has-spark {
   padding-right: 42px;
 }
 

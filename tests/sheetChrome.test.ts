@@ -165,7 +165,7 @@ describe("contraste dentro das folhas — medido, e preso aqui", () => {
     expect(b).toContain("background-color: var(--axxa-s1)");
     for (const sel of [
       ".axxa-root .axxa-sheet .axxa-form-preview",
-      ".axxa-root .axxa-sheet .axxa-input",
+      ".axxa-root .axxa-sheet .axxa-field-input",
       ".axxa-root .axxa-sheet .axxa-textarea",
       ".axxa-root .axxa-sheet .axxa-search-field",
     ])

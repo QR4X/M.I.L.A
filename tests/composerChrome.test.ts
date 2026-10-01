@@ -8,6 +8,8 @@ import { resolve } from "node:path";
 const CSS = readFileSync(resolve(__dirname, "../styles/main.css"), "utf8");
 const SEM_COMENTARIO = CSS.replace(/\/\*[\s\S]*?\*\//g, "");
 const PROJETOS = readFileSync(resolve(__dirname, "../src/ui/ProjectsView.tsx"), "utf8");
+const FORM = readFileSync(resolve(__dirname, "../src/ui/SheetForm.tsx"), "utf8");
+const CHAT = readFileSync(resolve(__dirname, "../src/ui/ChatView.tsx"), "utf8");
 
 /** Os corpos (sem comentários) de TODAS as regras cujo seletor é exatamente `seletor`. */
 function blocos(seletor: string): string[] {
@@ -54,3 +56,26 @@ describe("a sombra do composer acompanha a borda arredondada", () => {
     expect(blocos(".axxa-root .axxa-swap-row")[0]).toMatch(/overflow:\s*hidden/);
   });
 });
+
+describe("o cartão do composer é só do composer", () => {
+  // Da 0.6.49 até a 0.9.19 o campo dos formulários também se chamava
+  // `axxa-input`. A regra dele vinha depois e vestia o cartão (canto 14,
+  // padding 12, borda e fundo de campo); o campo herdava a sombra e o vidro.
+  it("só o ChatView usa a classe `axxa-input`; o formulário usa `axxa-field-input`", () => {
+    expect(CHAT).toContain('className="axxa-input"');
+    expect(FORM).not.toMatch(/"axxa-input[ "]/);
+    expect(FORM).toContain("axxa-field-input");
+  });
+
+  it("`.axxa-root .axxa-input` tem UMA regra base — a do cartão", () => {
+    const regras = blocos(".axxa-root .axxa-input");
+    expect(regras).toHaveLength(1);
+    expect(regras[0]).toMatch(/padding:\s*14px 14px 12px/);
+    expect(regras[0]).toContain("var(--axxa-r-lg)");
+  });
+
+  it("nenhuma regra agrupa o cartão com campo de formulário", () => {
+    expect(SEM_COMENTARIO).not.toMatch(/\.axxa-input,\s*\.axxa-root \.axxa-textarea/);
+  });
+});
+
