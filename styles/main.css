@@ -1122,12 +1122,17 @@ body.theme-dark {
   box-shadow: none;
 }
 
+/* O anel é desenhado POR DENTRO do brasão (`inset`), e fino. Até a 0.9.19 era
+   um anel de 2px por fora: a linha chapada não tem respiro lateral, então o
+   brasão encosta na borda da lista, e a lista da home rola — quem rola recorta
+   o que passa dele. O lado esquerdo do anel sumia. Por dentro ele não depende
+   de folga em lista nenhuma; e 1px é o mesmo traço do anel do cartão. */
 .axxa-root .axxa-history-row.is-flat.is-current .axxa-card-mark {
-  box-shadow: 0 0 0 2px var(--interactive-accent);
+  box-shadow: inset 0 0 0 1px var(--interactive-accent);
 }
 
 .axxa-root .axxa-history-row.is-flat.is-waiting .axxa-card-mark {
-  box-shadow: 0 0 0 2px var(--text-warning, #e0a030);
+  box-shadow: inset 0 0 0 1px var(--text-warning, #e0a030);
 }
 
 .axxa-root .axxa-history-title {
@@ -2089,6 +2094,13 @@ body.theme-dark {
   overflow-y: auto;
   /* Chegou no fim da lista, para: não continua rolando a tela de trás. */
   overscroll-behavior: contain;
+  /* Folga por dentro, devolvida por fora: quem rola recorta tudo que passa da
+     própria caixa, e as linhas encostam nela. O halo da conversa que está
+     respondendo (3px) e a sombra do cartão saíam cortados nas laterais. Com
+     padding e margem negativa do mesmo tamanho, o recorte se afasta 8px e o
+     conteúdo não sai do lugar. */
+  padding: var(--axxa-2);
+  margin: calc(-1 * var(--axxa-2));
 }
 
 .axxa-root .axxa-dash .axxa-start {
