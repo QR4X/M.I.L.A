@@ -89,9 +89,11 @@ export function arrayBufferToDataUrl(
   const chunkSize = 0x8000; // 32K — evita stack overflow com strings gigantes
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.subarray(i, i + chunkSize);
-    // apply aceita array-like — Uint8Array funciona direto, sem cópia
-    // intermediária via Array.from por chunk. v0.1.228
-    binary += String.fromCharCode.apply(null, chunk);
+    // Spread do Uint8Array direto, sem cópia intermediária via Array.from por
+    // chunk (v0.1.228). Era `fromCharCode.apply(null, chunk)` — a mesma
+    // chamada, com os mesmos argumentos; o spread é o que o `strictBindCallApply`
+    // do tsconfig (0.9.15) aceita sem asserção.
+    binary += String.fromCharCode(...chunk);
   }
   const b64 = btoa(binary);
   return `data:${mimeType};base64,${b64}`;

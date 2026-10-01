@@ -215,7 +215,10 @@ export class AxxaSettingsTab extends PluginSettingTab {
     }
     const base = (PluginSettingTab.prototype as unknown as DefinitionLookup)
       .getElementForDefinition;
-    return base?.call(this, def) as HTMLElement | null | undefined;
+    // Sem asserção: o `.call` tem tipo porque o tsconfig liga o
+    // `strictBindCallApply` — como a revisão do Obsidian, que acusou a
+    // asserção da 0.9.14 como desnecessária.
+    return base?.call(this, def);
   }
 
   private buildTree(): SettingDefinitionItem[] {

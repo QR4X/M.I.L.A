@@ -19,6 +19,13 @@
 //     os 6 efeitos que rodam só quando o resultado do assistente CHEGA têm a
 //     razão escrita na linha.
 //
+// A revisão checa os tipos com o `strict` ligado; o nosso tsconfig não liga
+// (daria 3 erros em outros arquivos), mas liga o `strictBindCallApply`. Sem
+// ele, `.call()`/`.apply()` devolvem `any` AQUI e têm tipo LÁ — uma asserção
+// que aqui é obrigatória vira "unnecessary assertion" na revisão (0.9.14,
+// SettingsTab.ts:218). Pra espelhar a revisão inteira: troque o tsconfig pra
+// `"strict": true` só durante um `npm run lint` e compare.
+//
 // O que já saiu, e como — pra ninguém refazer o caminho:
 //   - settings-tab/prefer-setting-definitions (0.9.14): a aba descreve as
 //     settings numa árvore (src/ui/settings/tree.ts) que o 1.13 desenha e
