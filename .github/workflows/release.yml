@@ -22,6 +22,21 @@ name: Release Obsidian plugin
 # Alternativa manual (workflow_dispatch): dispara pela aba Actions / API sem
 # push de tag. A versão vem do input `version` ou, se vazio, do manifest.json —
 # e a própria Release cria a tag apontando pro commit buildado.
+#
+# BUILD DE TESTE (pré-release, desde 2026-10-01): tag com hífen, ex.
+#
+#   git tag 0.9.20-beta.1
+#   git push origin 0.9.20-beta.1
+#
+# vira uma PRÉ-RELEASE, e o manifest.json do repositório NÃO muda: a versão da
+# tag é gravada só no manifest.json que vai DENTRO da pré-release. Assim:
+#   - o BRAT (que instala a release mais nova contando pré-releases) entrega a
+#     beta no aparelho de quem testa;
+#   - o diretório do Obsidian, que lê o manifest.json do main, continua na
+#     versão estável — ninguém mais recebe a beta.
+# Não é preciso branch nem bump. Juntou o suficiente? Aí sim bump normal
+# (0.9.20, sem hífen) e o fluxo de cima. Semver: 0.9.20 > 0.9.20-beta.N, então
+# o BRAT passa da beta pra estável sozinho.
 
 on:
   push:
@@ -79,16 +94,42 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "Tag resolvida: $tag"
 
-      # Guarda contra o erro clássico: taggear sem bumpar o manifest.
+      # Guarda contra o erro clássico: taggear sem bumpar o manifest. Na
+      # pré-release (tag com hífen) a regra é outra: o manifest do repositório
+      # fica na versão estável, e a beta tem de ser MAIOR que ela — senão o BRAT
+      # não a enxerga como atualização.
       - name: Check tag matches manifest version
+        id: kind
         run: |
           tag="${{ steps.tag.outputs.tag }}"
           ver=$(node -p "require('./manifest.json').version")
-          if [ "$tag" != "$ver" ]; then
-            echo "::error::Tag ($tag) != manifest.json ($ver). Bumpe o manifest antes de taggear."
-            exit 1
-          fi
-          echo "OK: $tag == $ver"
+          case "$tag" in
+            *-*)
+              base="${tag%%-*}"
+              newer=$(node -e "const a='$base'.split('.').map(Number),b='$ver'.split('.').map(Number);let r=0;for(let i=0;i<3;i++){if(a[i]!==b[i]){r=a[i]>b[i]?1:-1;break}}console.log(r>0?'yes':'no')")
+              if [ "$newer" != "yes" ]; then
+                echo "::error::Pré-release $tag precisa ser maior que a estável ($ver) — ex.: a próxima versão com -beta.N."
+                exit 1
+              fi
+              echo "prerelease=true" >> "$GITHUB_OUTPUT"
+              echo "OK: pré-release $tag (estável no repositório: $ver)"
+              ;;
+            *)
+              if [ "$tag" != "$ver" ]; then
+                echo "::error::Tag ($tag) != manifest.json ($ver). Bumpe o manifest antes de taggear."
+                exit 1
+              fi
+              echo "prerelease=false" >> "$GITHUB_OUTPUT"
+              echo "OK: $tag == $ver"
+              ;;
+          esac
+
+      # Só na pré-release: a versão da tag vai pro manifest.json QUE SAI na
+      # release (o BRAT confere que os dois batem). O do repositório não muda.
+      - name: Stamp pre-release version
+        if: steps.kind.outputs.prerelease == 'true'
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}" node -e "const fs=require('fs');const f='output/manifest.json';const m=JSON.parse(fs.readFileSync(f,'utf8'));m.version=process.env.TAG;fs.writeFileSync(f,JSON.stringify(m,null,2)+'\n');console.log('manifest da pré-release:',m.version)"
 
       # Assina os artefatos ANTES de publicar: a atestação tem que se referir
       # exatamente aos bytes que vão pra Release.
@@ -110,8 +151,18 @@ jobs:
             echo "Release $tag já existe — nada a fazer."
             exit 0
           fi
-          gh release create "$tag" \
-            --title "$tag" \
-            --target "${GITHUB_SHA}" \
-            --notes "AXXA Agent $tag. Veja os commits para o changelog." \
-            output/main.js output/manifest.json output/styles.css
+          if [ "${{ steps.kind.outputs.prerelease }}" = "true" ]; then
+            # Pré-release: fora do "latest" do GitHub e marcada como teste.
+            gh release create "$tag" \
+              --title "$tag (teste)" \
+              --target "${GITHUB_SHA}" \
+              --prerelease --latest=false \
+              --notes "Build de TESTE do AXXA Agent ($tag), pra instalar pelo BRAT. Não é a versão do diretório do Obsidian." \
+              output/main.js output/manifest.json output/styles.css
+          else
+            gh release create "$tag" \
+              --title "$tag" \
+              --target "${GITHUB_SHA}" \
+              --notes "AXXA Agent $tag. Veja os commits para o changelog." \
+              output/main.js output/manifest.json output/styles.css
+          fi

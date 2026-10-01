@@ -66,6 +66,11 @@ inside the app.
 - Releases are cut by the maintainer: the version is bumped in `manifest.json`,
   `package.json` and `versions.json`, the tag is pushed first, and `main` only after the
   GitHub Release exists (see the header of `.github/workflows/release.yml`).
+- Test builds don't bump anything: a tag with a hyphen (e.g. `0.9.20-beta.1`, higher than
+  the current stable) publishes a GitHub **pre-release** whose bundled `manifest.json`
+  carries that version. Testers get it through [BRAT](https://github.com/TfTHacker/obsidian42-brat);
+  the Obsidian directory keeps serving the stable version from `main`'s `manifest.json`.
+  Changes accumulate on `main` and ship together in the next stable release.
 
 ## License
 
