@@ -96,4 +96,11 @@ describe("o CSS tem o desligador", () => {
   it("`.axxa-seg.is-placing::before` sem transição", () => {
     expect(CSS).toMatch(/\.axxa-settings-root \.axxa-seg\.is-placing::before\s*\{\s*transition:\s*none;\s*\}/);
   });
+
+  it("a barra de abas zera a margem da direita que o app.css dá ao 1º filho", () => {
+    // `.setting-item > *:first-child { margin-inline-end: 16px }` — a barra
+    // parava 16px antes do trilho de providers logo abaixo.
+    const corpo = CSS.match(/\.axxa-settings-root \.axxa-settings-nav\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(corpo).toMatch(/margin:\s*0 0 var\(--size-4-3\);/);
+  });
 });

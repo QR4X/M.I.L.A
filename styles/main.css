@@ -4925,7 +4925,12 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
 }
 
 .axxa-settings-root .axxa-settings-nav {
-  margin-bottom: var(--size-4-3);
+  /* `margin` inteiro, não só o de baixo: o app.css dá ao PRIMEIRO filho de
+     um `.setting-item` 16px à direita (é o respiro entre o nome e o
+     controle). A barra é o primeiro filho da linha dela e parava 16px antes
+     do trilho de providers logo abaixo — que escapa porque é também o
+     ÚLTIMO filho, e o `:last-child` zera essa margem. */
+  margin: 0 0 var(--size-4-3);
 }
 
 /* Providers: o LOGO no lugar do nome (seis nomes não cabem em uma linha, e o
