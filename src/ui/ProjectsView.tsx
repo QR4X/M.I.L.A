@@ -685,8 +685,8 @@ export function ProjectsView({
           {/* Uma etiqueta só, e ela INFORMA: sem contorno e sem superfície de
               botão, porque não há nada pra tocar aqui. A do nome saiu — ele já
               está na barra da folha, com a cor e o ícone do projeto. */}
-          <div className="axxa-pills">
-            <span className="axxa-pill">
+          <div className="axxa-info-pills">
+            <span className="axxa-info-pill">
               <Icon name="hard-drive" size={14} />
               <span>Lives in this vault · since {aberto.createdAt.slice(0, 10)}</span>
             </span>

@@ -5333,6 +5333,21 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
   overflow: hidden;
 }
 
+/* A linha ABERTA deixa a sombra do cartão passar. O recorte acima é o que
+   faz a linha fechada sumir — mas ele também cortava, rente à caixa, a sombra
+   do composer (0 6px 20px): sobrava um retângulo de sombra nos cantos do
+   cartão arredondado, a "sombra quadrada". `overflow: clip` com margem
+   continua recortando, só que 28px além da caixa, o que cobre a sombra. A
+   linha que FECHA fica com o recorte rente (a regra de cima), então ela some
+   inteira; a que ABRE pode mostrar a sombra enquanto cresce, e o conteúdo dela
+   entra com opacidade 0, então nada aparece antes da hora. Onde
+   `overflow-clip-margin` não existe (Safari), vale o recorte rente de antes. */
+.axxa-root .axxa-swap:not([data-mode="voice"]) > .axxa-swap-row:first-child,
+.axxa-root .axxa-swap[data-mode="voice"] > .axxa-swap-row:last-child {
+  overflow: clip;
+  overflow-clip-margin: 28px;
+}
+
 .axxa-root .axxa-swap-row > * {
   transition:
     transform var(--axxa-sheet-ms) ease-in-out,
@@ -6573,7 +6588,12 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    lado a lado com o que o projeto SABE e como ele deve responder, e embaixo
    as conversas — ou o vazio dizendo que é ali que elas vão aparecer. */
 
-.axxa-root .axxa-pills {
+/* `axxa-info-pill(s)`, e não `axxa-pill(s)`: até a 0.9.19 estas regras usavam
+   o MESMO nome do seletor de modelo do composer, e por virem depois no
+   arquivo ganhavam dele — o botão de trocar de modelo herdou a pele de
+   etiqueta (texto faint, fonte menor, cursor de "não toque") e ficou sem
+   contraste. Nome próprio, cada um com a sua pele. */
+.axxa-root .axxa-info-pills {
   display: flex;
   flex-wrap: wrap;
   gap: var(--axxa-2);
@@ -6583,7 +6603,7 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    escolha (as de "Opens in", os chips do uso), e quem vê uma tenta tocar. O
    que sobra é superfície baixa, ícone e texto de apoio — a mesma pele de um
    recado, não a de um alvo. O cursor também diz isso no desktop. */
-.axxa-root .axxa-pill {
+.axxa-root .axxa-info-pill {
   display: inline-flex;
   align-items: center;
   gap: var(--axxa-2);
