@@ -19,11 +19,18 @@ const userReq = (model: string) => ({
   messages: [{ role: "user" as const, content: "hi" }],
 });
 
+/**
+ * O `fetchStream` chama `window.fetch` (o MESMO fetch — ver a nota em
+ * src/providers/_shared.ts). No Node dos testes não existe `window`, então a
+ * simulação põe o fetch falso nos dois lugares.
+ */
+function stubFetch(fn: (...args: never[]) => unknown) {
+  vi.stubGlobal("fetch", fn);
+  vi.stubGlobal("window", { fetch: fn });
+}
+
 function mockFetch(chunks: string[], init?: { status?: number; ok?: boolean }) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => fakeStreamResponse(chunks, init))
-  );
+  stubFetch(vi.fn(async () => fakeStreamResponse(chunks, init)));
 }
 
 describe("openai streamChat — parser SSE real", () => {
@@ -486,8 +493,7 @@ describe("streamChat — fallback p/ chat() quando o fetch SSE falha (CORS mobil
   // (não é AbortError, não é HTTP do servidor). O provider deve cair pro chat()
   // via requestUrl (fura CORS) e emitir a resposta inteira de uma vez. v0.1.232
   function mockFetchThrows() {
-    vi.stubGlobal(
-      "fetch",
+    stubFetch(
       vi.fn(async () => {
         throw new TypeError("Failed to fetch");
       })
@@ -561,8 +567,7 @@ describe("param policy aplicada no BODY real (regressão temperature)", () => {
 
   function captureBody(chunks: string[]) {
     const cap: { body?: Record<string, unknown> } = {};
-    vi.stubGlobal(
-      "fetch",
+    stubFetch(
       vi.fn(async (_url: string, init: { body: string }) => {
         cap.body = JSON.parse(init.body);
         return fakeStreamResponse(chunks);

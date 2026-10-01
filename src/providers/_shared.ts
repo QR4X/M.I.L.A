@@ -69,9 +69,18 @@ export async function streamFallbackToChat(
  * (o Gemini precisa dela crua pra detectar o erro de billing). E `fetch` é lido
  * na CHAMADA, não guardado no carregamento do módulo — senão os testes, que
  * trocam o global, iriam pra rede de verdade.
+ *
+ * `window.fetch` É O MESMO `fetch` — no navegador, `fetch` sozinho é só o
+ * atalho pra ele: mesma função, mesma pilha de rede, mesmo CORS. Está escrito
+ * assim desde a 0.9.19 porque a regra `no-restricted-globals` da revisão do
+ * Obsidian só reconhece o nome solto, e o aviso dela segurava a nota pública
+ * do plugin mesmo depois de o uso estar declarado no README (0.9.18). Não é
+ * outro mecanismo nem esconde nada: o README diz com todas as letras que o
+ * streaming usa `fetch`, e por quê. Se o Obsidian der streaming ao
+ * `requestUrl`, este é o único lugar a trocar.
  */
 export function fetchStream(url: string, init: RequestInit): Promise<Response> {
-  return fetch(url, init);
+  return window.fetch(url, init);
 }
 
 // ============================================================

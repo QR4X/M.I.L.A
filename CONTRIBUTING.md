@@ -47,7 +47,8 @@ inside the app.
 - **The agent may only touch the vault through the Obsidian API**, and never inside a
   hidden folder (see `normalizePath` in `src/agent/tools.ts`). Keep it that way.
 - **Network:** model and API calls live in `src/providers/`, embeddings in `src/rag/`.
-  They use Obsidian's `requestUrl`; the only `fetch` in the plugin is `fetchStream` in
+  They use Obsidian's `requestUrl`; the only `fetch` in the plugin (called as `window.fetch`, the same
+  function — see the note there and the README's Disclosures) is `fetchStream` in
   `src/providers/_shared.ts`, because streaming needs it (NVIDIA NIM streams through
   Node's `https` on desktop instead). Prefer adding to those
   layers over new network calls from UI code.

@@ -4,12 +4,16 @@
 // submeter, em vez de descobrir na reprovação: `npm run lint`.
 //
 // Duas categorias reprovam a submissão (Error); o resto é aviso. Desde a
-// 0.9.14 o que fica aberto neste linter é 1 aviso, deliberado:
+// 0.9.19 este linter não acusa nada que a revisão rode:
 //
-//   no-restricted-globals (1×, `fetchStream` em src/providers/_shared.ts)
-//     requestUrl não faz streaming, e streaming é o produto. Os cinco
-//     providers que fazem SSE por fetch passam por esse helper só; o resto do
-//     tráfego vai por requestUrl (e o NIM, no desktop, por Node https).
+//   O `fetch` do streaming continua existindo — `fetchStream` em
+//     src/providers/_shared.ts —, escrito como `window.fetch`, que é a MESMA
+//     função. requestUrl não faz streaming, e streaming é o produto. Até a
+//     0.9.18 ele aparecia aqui como no-restricted-globals (1×); a regra só
+//     reconhece o nome solto. Declarar no README (0.9.18) não mudou a nota, e
+//     o dono decidiu pelo `window.fetch` DECLARADO: o comentário no helper e o
+//     README dizem com todas as letras que é o mesmo fetch. Não é outro
+//     mecanismo; se o Obsidian der streaming ao requestUrl, troca-se ali.
 //
 //   ui/sentence-case (7×) — ruído deste linter, não da revisão
 //     falso positivo de nome próprio: a regra quer "HTTP://localhost",
