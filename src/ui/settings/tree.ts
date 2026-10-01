@@ -334,14 +334,23 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
           "I share API data with OpenAI",
           "Their switch, in Data controls on platform.openai.com. Turning it on there gives your account a daily quota at no cost; telling us here is what makes this list show the real numbers.",
           "openaiDataSharing",
-          { aliases: ["free", "grátis", "quota", "cota", "data controls"] }
+          // "tier" também: com o interruptor desligado a linha do tier some da
+          // busca (no 1.13 `visible` falso tira dela), e quem procura "tier"
+          // precisa cair aqui, no que faz ela aparecer.
+          { aliases: ["free", "grátis", "quota", "cota", "data controls", "tier"] }
         ),
+        // O tier só muda a cota de quem COMPARTILHA: com o interruptor
+        // desligado não há cota nenhuma, e um seletor de tier ali seria uma
+        // escolha que não faz nada. Aparece quando o interruptor liga.
         dropdown(
           "Usage tier",
           "Tiers 1–2 get 250k tokens/day on the big models and 2.5M/day on mini and nano. Tier 3 and up get 1M and 10M.",
           "openaiTier",
           options([1, 2, 3, 4, 5].map((n) => [String(n), `Tier ${n}`] as const)),
-          { aliases: ["tier", "quota", "cota"] }
+          {
+            visible: () => s().openaiDataSharing === true,
+            aliases: ["tier", "quota", "cota"],
+          }
         ),
         hintRow(
           ui.freeOffer,

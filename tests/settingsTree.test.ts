@@ -265,6 +265,20 @@ describe("visibilidade (o que some junto do interruptor)", () => {
     return r?.visible ? r.visible() : true;
   };
 
+  it("o tier da cota só aparece com o interruptor de compartilhar ligado", () => {
+    expect(vis("Usage tier", fakeUi({ settings: { openaiDataSharing: false } }))).toBe(false);
+    expect(vis("Usage tier", fakeUi({ settings: { openaiDataSharing: true } }))).toBe(true);
+  });
+
+  it('"tier" na busca acha o interruptor mesmo com ele desligado', () => {
+    const ui = fakeUi({ settings: { openaiDataSharing: false } });
+    const achados = all(ui)
+      .filter((r) => r.searchable !== false && (r.visible ? r.visible() : true))
+      .filter((r) => [r.name, r.desc, ...(r.aliases ?? [])].some((t) => typeof t === "string" && /tier/i.test(t)))
+      .map((r) => r.name);
+    expect(achados).toContain("I share API data with OpenAI");
+  });
+
   it("ditado desligado esconde o que é do ditado", () => {
     expect(vis("Ears", fakeUi({ settings: { voiceEnabled: false } }))).toBe(false);
     expect(vis("Ears", fakeUi({ settings: { voiceEnabled: true } }))).toBe(true);
