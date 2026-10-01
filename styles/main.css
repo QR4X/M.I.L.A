@@ -3128,10 +3128,14 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-composer {
   -webkit-backdrop-filter: blur(28px) saturate(1.7);
   /* A sombra fica só pelo tema claro, onde escuro sobre claro aparece de
      verdade. No escuro ela é invisível — e é por isso que ela nunca foi o que
-     separava o cartão. */
+     separava o cartão.
+     A camada macia cabe nos 15px que o cartão tem embaixo (o padding do
+     `.axxa-composer`): era `0 6px 20px`, que precisa de 26px pra sumir. O
+     painel do Obsidian recorta na borda dele, e a sombra terminava numa linha
+     reta, ~3% de preto, a 15px do cartão. Com `0 4px 14px` sobra <1% ali. */
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.1),
-    0 6px 20px rgba(0, 0, 0, 0.16);
+    0 4px 14px rgba(0, 0, 0, 0.16);
 }
 
 .axxa-root .axxa-input:focus-within {
@@ -5347,9 +5351,10 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
 
 /* A linha ABERTA deixa a sombra do cartão passar. O recorte acima é o que
    faz a linha fechada sumir — mas ele também cortava, rente à caixa, a sombra
-   do composer (0 6px 20px): sobrava um retângulo de sombra nos cantos do
-   cartão arredondado, a "sombra quadrada". `overflow: clip` com margem
-   continua recortando, só que 28px além da caixa, o que cobre a sombra. A
+   do composer: sobrava um retângulo de sombra nos cantos do cartão
+   arredondado, a "sombra quadrada". `overflow: clip` com margem continua
+   recortando, só que 28px além da caixa, o que cobre a sombra (hoje ela
+   alcança 18px; a margem sobra de propósito). A
    linha que FECHA fica com o recorte rente (a regra de cima), então ela some
    inteira; a que ABRE pode mostrar a sombra enquanto cresce, e o conteúdo dela
    entra com opacidade 0, então nada aparece antes da hora. Onde

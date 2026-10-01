@@ -79,3 +79,41 @@ describe("o cartão do composer é só do composer", () => {
   });
 });
 
+describe("a sombra do cartão some antes da borda do painel", () => {
+  // O painel do Obsidian recorta na borda dele, e o cartão tem só o padding
+  // de baixo do `.axxa-composer` até ela. Com `0 6px 20px` a sombra ainda
+  // tinha ~3% de preto ali e terminava numa linha reta.
+
+  /** Φ, a normal acumulada (Abramowitz–Stegun 7.1.26 pro erf). */
+  function phi(x: number): number {
+    const z = Math.abs(x) / Math.SQRT2;
+    const t = 1 / (1 + 0.3275911 * z);
+    const erf =
+      1 -
+      t *
+        (0.254829592 +
+          t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429)))) *
+        Math.exp(-z * z);
+    return x >= 0 ? (1 + erf) / 2 : (1 - erf) / 2;
+  }
+
+  it("menos de 1% de preto a 15px do cartão", () => {
+    const composer = blocos(".axxa-root .axxa-composer")[0];
+    // padding: <topo> <lados> <baixo> — o terceiro valor é o de baixo
+    const baixo = Number(composer.match(/padding:[^;]*\s(\d+)px;/)?.[1]);
+    expect(baixo).toBe(15);
+
+    const sombra = blocos(".axxa-root .axxa-input")[0].match(/box-shadow:([^;]+);/)?.[1] ?? "";
+    const camadas = sombra.split(/,(?![^(]*\))/).map((c) => c.trim()).filter(Boolean);
+    expect(camadas.length).toBeGreaterThan(0);
+    let resto = 0;
+    for (const c of camadas) {
+      const [, dy, blur, spread = "0"] = c.match(/^-?[\d.]+(?:px)?\s+(-?[\d.]+)(?:px)?\s+([\d.]+)(?:px)?(?:\s+(-?[\d.]+)px)?/) ?? [];
+      const alpha = Number(c.match(/rgba\([^)]*,\s*([\d.]+)\)/)?.[1] ?? 0);
+      const sigma = Number(blur) / 2;
+      const distancia = baixo - Number(dy) - Number(spread);
+      resto += alpha * (sigma > 0 ? 1 - phi(distancia / sigma) : distancia > 0 ? 0 : 1);
+    }
+    expect(resto).toBeLessThan(0.01);
+  });
+});
