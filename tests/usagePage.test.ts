@@ -349,6 +349,18 @@ function bloco(agulha: string): string {
   return SEM_COMENTARIO.slice(abre + 1, SEM_COMENTARIO.indexOf("}", abre));
 }
 
+describe("o cartão de uso da home", () => {
+  it("não some num mês vazio — mostra o mês novo zerado", () => {
+    // 0.9.17: ele saía de cena quando o mês não tinha conversa, e o mês vazio
+    // mais comum é o que acabou de virar — no dia 1º de manhã o cartão sumia
+    // da home e parecia defeito. O índice era a única coisa que ficava.
+    expect(CARD).not.toMatch(/total\.chats === 0\)\s*return/);
+    expect(CARD).not.toMatch(/return <RagLine/);
+    // O índice continua sendo o rodapé do cartão, não uma linha solta.
+    expect(CARD).toContain('className="axxa-usage-foot"');
+  });
+});
+
 describe("o desenho da página de uso", () => {
   it("o relatório mora na barra — flutuando, ele cobria a lista", () => {
     expect(VIEW).not.toContain("axxa-fab");

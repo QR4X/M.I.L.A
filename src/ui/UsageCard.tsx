@@ -67,14 +67,12 @@ export function UsageCard({
   const ativos = diasAtivos(mapa.celulas);
   const trabalho = trabalhoDoPeriodo(chats, desde);
 
-  // Sai de cena quando não há o que contar. Zero repetido ensina a não olhar
-  // pro lugar — e um calendário todo apagado é só um retângulo cinza.
-  //
-  // O ÍNDICE não sai junto: ele não fala do mês, fala do vault, e some do mês
-  // que você não usou o app é justamente quando ele mais precisa ser
-  // lembrado. Sem o cartão, ele fica sozinho na linha que já era dele.
-  if (agg.total.chats === 0) return <RagLine plugin={plugin} />;
-
+  // O cartão NÃO sai de cena num mês vazio (0.9.17). Até aqui ele sumia
+  // quando o mês não tinha conversa — e o mês sem conversa mais comum é o que
+  // acabou de virar: no dia 1º de manhã o cartão desaparecia da home, e o que
+  // se lia era "quebrou", não "mês novo". Zerado, ele diz isso com todas as
+  // letras: o nome do mês, o calendário em branco esperando, e a sequência,
+  // que olha além do mês e não zera com ele.
   return (
     // O cartão INTEIRO abre a página: ele já é um resumo, e todo resumo
     // convida a mesma pergunta ("e daí?"). Um botãozinho "ver mais" num canto
