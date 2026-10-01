@@ -9,7 +9,7 @@
 
 import { useChatStore } from "../store/chat";
 import {
-  providerNeedsKey,
+  semCredencial,
   describeProviderError,
   agentActivitySpec,
   summarizeToolResult,
@@ -72,14 +72,17 @@ export async function runAgentTurn(
   } = useChatStore.getState();
   void userText; // já está no store (última mensagem do usuário)
 
-  // Pre-flight: sem API key, erro acionável direto.
-  if (
-    providerNeedsKey(activeProviderId) &&
-    !apiKeyFor(activeProviderId).trim()
-  ) {
+  // Pre-flight: sem API key (ou sem o endereço do Ollama), erro acionável direto.
+  const falta = semCredencial(
+    activeProviderId,
+    apiKeyFor(activeProviderId),
+    t,
+    activeProvider.name
+  );
+  if (falta) {
     addMessage({
       type: "ai-response",
-      content: `${t.ai.errorPrefix} ${t.ai.err.noKey(activeProvider.name)}`,
+      content: `${t.ai.errorPrefix} ${falta}`,
       isError: true,
       errorCode: "no-key",
     });

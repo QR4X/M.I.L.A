@@ -38,6 +38,7 @@ import type {
 } from "./core/effort";
 import type { RoleId, RoleModelEntry } from "./providers/modelRoles";
 import { chatIndexSignature } from "./core/chatIndex";
+import { revisarOllamaPadrao } from "./core/ollamaPadrao";
 import { LOCALES } from "./i18n";
 
 /** Resultado do último teste de credencial de um provider. */
@@ -57,7 +58,10 @@ export interface AxxaSettings {
   geminiApiKey: string;
   openrouterApiKey: string;
   nimApiKey: string;
+  /** Endereço do servidor Ollama. Vazio = Ollama desligado (ver core/ollamaPadrao.ts). */
   ollamaEndpoint: string;
+  /** A migração única do endereço de fábrica do Ollama já rodou. */
+  ollamaPadraoRevisto?: boolean;
   /** Provider pré-selecionado num chat novo. */
   defaultProvider: string;
   /** Modelo por provider (o que a casca usa ao selecionar o provider). */
@@ -195,7 +199,9 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   geminiApiKey: "",
   openrouterApiKey: "",
   nimApiKey: "",
-  ollamaEndpoint: "http://localhost:11434",
+  // Vazio: o Ollama começa desligado, e quem usa coloca o endereço (o campo
+  // sugere http://localhost:11434). Ver core/ollamaPadrao.ts.
+  ollamaEndpoint: "",
   defaultProvider: "openai",
   defaultModel: "gpt-4o",
   anthropicModel: "claude-sonnet-4-6",
@@ -1207,6 +1213,16 @@ export default class AxxaPlugin extends Plugin {
     // traduzir (ver i18n/index.ts), então não precisa ser consertado aqui.
     if (!LOCALES.some((l) => l.id === this.settings.language))
       this.settings.language = "en-us";
+    // O Ollama não vem mais ligado de fábrica. Quem herdou o endereço padrão
+    // gravado e nunca usou o Ollama volta pro vazio — uma vez só: a marca vai
+    // pro disco na próxima gravação, e daí um localhost digitado de propósito
+    // fica.
+    const ollama = revisarOllamaPadrao(saved, {
+      modelo: DEFAULT_SETTINGS.ollamaModel,
+      ativos: DEFAULT_SETTINGS.activeModels.ollama ?? [],
+    });
+    if (ollama !== null) this.settings.ollamaEndpoint = ollama;
+    this.settings.ollamaPadraoRevisto = true;
     // Object.assign é shallow — pra activeModels (Record por provider),
     // mescla por provider: providers não tocados pelo user mantêm defaults.
     this.settings.activeModels = {

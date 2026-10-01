@@ -181,3 +181,21 @@ export function describeProviderError(
 export function providerNeedsKey(providerId: string): boolean {
   return providerId !== "ollama";
 }
+
+/**
+ * Por que este provider não pode responder ainda — em uma frase pra bolha de
+ * erro — ou null quando a credencial está lá. O Ollama não tem key, mas tem
+ * ENDEREÇO: desde a 0.9.20 ele não vem com localhost de fábrica, e sem
+ * endereço não há pra onde mandar (ver core/ollamaPadrao.ts).
+ */
+export function semCredencial(
+  providerId: string,
+  credencial: string,
+  t: ReturnType<typeof getTranslations>,
+  providerName: string
+): string | null {
+  if (credencial.trim()) return null;
+  return providerNeedsKey(providerId)
+    ? t.ai.err.noKey(providerName)
+    : t.ai.err.noEndpoint(providerName);
+}

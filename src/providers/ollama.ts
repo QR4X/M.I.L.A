@@ -1,7 +1,7 @@
 // src/providers/ollama.ts
 // Provider Ollama — LLMs locais via servidor HTTP.
-// Endpoint default: http://localhost:11434 (configurável em settings.ollamaEndpoint)
-// Sem auth (local).
+// Endpoint: settings.ollamaEndpoint — vazio de fábrica desde a 0.9.20 (o
+// Ollama começa desligado; ver core/ollamaPadrao.ts). Sem auth (local).
 //
 // Diferenças do OpenAI:
 //   - Body: { model, messages, stream, tools?, options? }
@@ -109,7 +109,16 @@ export class OllamaProvider implements Provider {
   private getEndpoint(apiKey: string): string {
     // No nosso modelo, apiKey carrega o endpoint do Ollama (settings.ollamaEndpoint)
     const DEFAULT = "http://localhost:11434";
-    const url = (apiKey || DEFAULT).trim().replace(/\/$/, "");
+    // Vazio é DESLIGADO, não "use o localhost": cair no padrão aqui buscaria
+    // modelos (e mandaria conversa) num servidor que ninguém configurou. O
+    // chat já barra antes (helpers.semCredencial); isto cobre o Fetch.
+    if (!apiKey.trim()) {
+      throw new ProviderError(
+        "Set your Ollama server address first (Settings → Providers → Ollama, usually http://localhost:11434).",
+        "unknown"
+      );
+    }
+    const url = apiKey.trim().replace(/\/$/, "");
     // v0.1.228: valida o endpoint configurado — URL malformada ou esquema
     // não-HTTP cai pro default localhost em vez de produzir erros confusos.
     try {

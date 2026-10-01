@@ -6,7 +6,7 @@
 
 import { useChatStore } from "../store/chat";
 import type { getProvider } from "../providers";
-import { providerNeedsKey, describeProviderError } from "./helpers";
+import { semCredencial, describeProviderError } from "./helpers";
 import { resolveEffortConfig, effortToMaxTokensSmart } from "./effort";
 import { getContextWindow } from "./contextWindows";
 import {
@@ -84,15 +84,18 @@ export async function streamReply(
     endStreamTimer,
   } = useChatStore.getState();
 
-  // Pre-flight: sem API key não adianta nem mostrar "Pensando..." — emite
-  // direto a bolha de erro acionável.
-  if (
-    providerNeedsKey(activeProviderId) &&
-    !apiKeyFor(activeProviderId).trim()
-  ) {
+  // Pre-flight: sem API key (ou sem o endereço do Ollama) não adianta nem
+  // mostrar "Pensando..." — emite direto a bolha de erro acionável.
+  const falta = semCredencial(
+    activeProviderId,
+    apiKeyFor(activeProviderId),
+    t,
+    activeProvider.name
+  );
+  if (falta) {
     addMessage({
       type: "ai-response",
-      content: `${t.ai.errorPrefix} ${t.ai.err.noKey(activeProvider.name)}`,
+      content: `${t.ai.errorPrefix} ${falta}`,
       isError: true,
       errorCode: "no-key",
     });

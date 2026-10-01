@@ -122,6 +122,8 @@ export const EN_US = {
     err: {
       noKey: (provider: string) =>
         `No API key for ${provider}. Add your key in Settings to get started.`,
+      noEndpoint: (provider: string) =>
+        `No server address for ${provider}. Add it in Settings → Providers → ${provider} (usually http://localhost:11434).`,
       invalidKey: (provider: string) =>
         `Your ${provider} API key looks invalid or expired. Check it in Settings.`,
       rateLimit: "Rate limit reached. Wait a few seconds and try again.",

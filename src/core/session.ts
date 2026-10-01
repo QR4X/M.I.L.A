@@ -35,7 +35,7 @@ import {
   generateTitle,
   type ChatData,
 } from "./chatPersistence";
-import { makeId, providerNeedsKey } from "./helpers";
+import { makeId, semCredencial } from "./helpers";
 import { streamReply, type EngineCtx } from "./chatEngine";
 import { runAgentTurn } from "./agentTurn";
 import type { NoteAttachment } from "../providers/base";
@@ -287,15 +287,16 @@ export class ChatSession {
     const provider = getProvider(cfg.provider);
 
     // Pre-flight de key ANTES de criar o chat — senão o 1º envio sem key
-    // persistia um chat-fantasma (só a pergunta).
-    if (
-      st.messages.length === 0 &&
-      providerNeedsKey(cfg.provider) &&
-      !this.apiKeyFor(cfg.provider).trim()
-    ) {
+    // persistia um chat-fantasma (só a pergunta). O Ollama entra também: o
+    // que falta nele é o endereço.
+    const falta =
+      st.messages.length === 0
+        ? semCredencial(cfg.provider, this.apiKeyFor(cfg.provider), this.t, provider.name)
+        : null;
+    if (falta) {
       st.addMessage({
         type: "ai-response",
-        content: `${this.t.ai.errorPrefix} ${this.t.ai.err.noKey(provider.name)}`,
+        content: `${this.t.ai.errorPrefix} ${falta}`,
         isError: true,
         errorCode: "no-key",
       });
