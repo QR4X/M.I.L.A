@@ -57,6 +57,7 @@ export function ChatInstructionsSheet({
     return () => {
       vivo = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- carrega UMA vez por abertura (e por conversa). Listar `chat` re-rodaria isto quando a lista de conversas se atualiza com a folha aberta, e o texto do arquivo apagaria o que está sendo digitado.
   }, [open, chat?.id]);
 
   const salvar = async () => {
