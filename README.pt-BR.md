@@ -85,7 +85,7 @@ As versões de teste saem como pré-releases no GitHub. Instale o [BRAT](https:/
 <summary>Como o Vault Q&A busca</summary>
 
 - Busca híbrida: semelhança semântica mais ranqueamento por palavra-chave (BM25), reordenado pelo grafo de links do vault.
-- 8 modelos de embedding em 4 provedores: OpenAI (`text-embedding-3-small/large`, `ada-002`), Gemini (`gemini-embedding-001`, `text-embedding-004`), NVIDIA NIM (`nv-embedqa-e5-v5`, `llama-3.2-nv-embedqa-1b-v2`) e o Nemotron VL grátis do OpenRouter.
+- Modelos de embedding de 4 provedores: OpenAI (`text-embedding-3-small/large`, `ada-002`), Gemini (`gemini-embedding-001`, `text-embedding-004`), NVIDIA NIM (os modelos de embedding que o catálogo dele lista quando você busca os modelos) e o Nemotron VL grátis do OpenRouter, que também faz embedding de imagens.
 - O índice fica salvo no vault e se atualiza só nos arquivos que mudaram. Sem modelo de embedding (ou offline), a busca usa só palavra-chave.
 </details>
 
@@ -95,14 +95,14 @@ Todos usam a sua própria chave. Você só precisa de uma.
 
 | Provedor | Tipo | Opção grátis | Onde conseguir a chave |
 |---|---|---|---|
-| **OpenAI** | Nuvem | Não | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| **OpenAI** | Nuvem | Tokens grátis por dia pra organizações elegíveis que compartilham dados da API | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 | **Anthropic (Claude)** | Nuvem | Não | [console.anthropic.com](https://console.anthropic.com/) |
 | **Google Gemini** | Nuvem | Cota grátis em projeto sem cobrança; geração de imagem é paga | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | **OpenRouter** | Nuvem, muitos modelos | Modelos grátis: 50 pedidos por dia, 1.000 depois de US$ 10 em créditos | [openrouter.ai/keys](https://openrouter.ai/keys) |
 | **NVIDIA NIM** | Nuvem | Free Endpoints: 20 modelos hospedados, 40 pedidos por minuto, pra desenvolvimento | [build.nvidia.com](https://build.nvidia.com/) |
 | **Ollama** | Local, sem chave | Grátis | [ollama.com](https://ollama.com/), depois coloque o endereço do servidor em Settings |
 
-A lista de modelos vem ao vivo de cada provedor. Etiquetas mostram o que cada modelo faz (visão, ferramentas, geração de imagem ou áudio), e um aviso aparece quando o modelo não faz o que o modo precisa. Um modelo grátis traz o limite dele: `free · 50/day` no OpenRouter (o número da sua chave), `free · 40/min` no NVIDIA NIM, `free tier` no Gemini.
+A lista de modelos vem ao vivo de cada provedor. Etiquetas mostram o que cada modelo faz (visão, ferramentas, geração de imagem ou áudio), e um aviso aparece quando o modelo não faz o que o modo precisa. Um modelo grátis traz o limite dele: `free · 50/day` no OpenRouter (o número da sua chave), `free · 40/min` no NVIDIA NIM, `free tier` no Gemini, e a cota diária na OpenAI (`250k/day` nos tiers 1–2) com o compartilhamento de dados ligado, com um `+` na frente enquanto está desligado.
 
 ## Segurança do agente
 
@@ -176,6 +176,7 @@ Cada provedor tem a sua regra, e a lista de modelos nas Settings mostra o limite
 - **Google Gemini:** a cota grátis cobre os modelos Flash (2.5 e 3.x, inclusive Lite, Live e TTS), o 2.5 Pro, os embeddings e o Gemma, num projeto sem cobrança ativada. Em troca, o Google pode usar o que você manda pra melhorar os produtos dele. Geração de imagem (Nano Banana incluído), 3.1 Pro preview, Veo e Lyria são só pagos.
 - **OpenRouter:** modelos com preço zero, marcados `free · 50/day`. Eles dividem 20 pedidos por minuto e 50 por dia por chave, ou 1.000 por dia depois que a conta compra US$ 10 em créditos. Preço zero no catálogo não basta: o Lyria do Google aparece com 0 mas cobra por clipe, então não é marcado como grátis.
 - **NVIDIA NIM:** só os modelos que a NVIDIA marca *Free Endpoint* (20 dos 81 modelos hospedados em outubro de 2026), pra desenvolvimento e teste, até 40 pedidos por minuto. O resto do NIM é pago.
+- **OpenAI:** algumas organizações ganham tokens grátis todo dia se compartilharem as entradas e saídas da API com a OpenAI, que usa isso pra melhorar os modelos dela. Nos tiers de uso 1–2 são 250 mil tokens por dia nos modelos principais e 2,5 milhões nos pequenos; nos tiers 3–5, 1 milhão e 10 milhões. Passou disso, o uso é cobrado. A conta precisa ter saldo, modelos de imagem nunca contam, e a elegibilidade aparece em Data controls › Sharing.
 - **Ollama:** qualquer modelo local. O único limite é a sua máquina.
 </details>
 

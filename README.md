@@ -83,7 +83,7 @@ Test builds are published as GitHub pre-releases. Install [BRAT](https://github.
 <summary>How Vault Q&A searches</summary>
 
 - Hybrid search: semantic similarity plus keyword (BM25) ranking, re-ranked with your vault's link graph.
-- 8 embedding models across 4 providers: OpenAI (`text-embedding-3-small/large`, `ada-002`), Gemini (`gemini-embedding-001`, `text-embedding-004`), NVIDIA NIM (`nv-embedqa-e5-v5`, `llama-3.2-nv-embedqa-1b-v2`) and OpenRouter's free Nemotron VL.
+- Embedding models from 4 providers: OpenAI (`text-embedding-3-small/large`, `ada-002`), Gemini (`gemini-embedding-001`, `text-embedding-004`), NVIDIA NIM (the embedding models its catalog lists when you fetch models) and OpenRouter's free Nemotron VL, which also embeds images.
 - The index is stored in your vault and updates incrementally, only for changed files. Without an embedding model (or offline), search falls back to keywords.
 </details>
 
@@ -93,14 +93,14 @@ All providers use your own key. You only need one.
 
 | Provider | Type | Free option | Get a key |
 |---|---|---|---|
-| **OpenAI** | Cloud | No | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| **OpenAI** | Cloud | Free daily tokens for eligible organizations that share API data | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 | **Anthropic (Claude)** | Cloud | No | [console.anthropic.com](https://console.anthropic.com/) |
 | **Google Gemini** | Cloud | Free tier on a project without billing; image generation is paid | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | **OpenRouter** | Cloud, many models | Free models: 50 requests a day, 1,000 after $10 in credits | [openrouter.ai/keys](https://openrouter.ai/keys) |
 | **NVIDIA NIM** | Cloud | Free Endpoints: 20 hosted models, 40 requests a minute, for development | [build.nvidia.com](https://build.nvidia.com/) |
 | **Ollama** | Local, no key | Free | [ollama.com](https://ollama.com/), then set the server address in Settings |
 
-Model lists come live from each provider. Badges show what each model can do (vision, tools, image or audio generation), and a banner warns you when a model can't do what the current mode needs. A free model carries its limit: `free · 50/day` on OpenRouter (your key's own number), `free · 40/min` on NVIDIA NIM, `free tier` on Gemini.
+Model lists come live from each provider. Badges show what each model can do (vision, tools, image or audio generation), and a banner warns you when a model can't do what the current mode needs. A free model carries its limit: `free · 50/day` on OpenRouter (your key's own number), `free · 40/min` on NVIDIA NIM, `free tier` on Gemini, and the daily allowance on OpenAI (`250k/day` at tiers 1–2) once data sharing is on, with a `+` in front while it's off.
 
 ## Agent safety
 
@@ -174,6 +174,7 @@ Each provider has its own rule, and the model list in Settings shows the limit n
 - **Google Gemini:** the free tier covers the Flash models (2.5 and 3.x, including Lite, Live and TTS), 2.5 Pro, embeddings and Gemma, on a project without billing turned on. In exchange, Google may use what you send to improve its products. Image generation (Nano Banana included), 3.1 Pro preview, Veo and Lyria are paid only.
 - **OpenRouter:** models priced at zero, tagged `free · 50/day`. They share 20 requests a minute and 50 a day per key, or 1,000 a day once the account has bought $10 in credits. A price of zero in the catalog isn't enough: Google's Lyria shows 0 but bills per clip, so it isn't marked free.
 - **NVIDIA NIM:** only the models NVIDIA marks *Free Endpoint* (20 of its 81 hosted models in October 2026), for development and testing, up to 40 requests a minute. The rest of NIM is paid.
+- **OpenAI:** some organizations get free tokens every day if they share their API inputs and outputs with OpenAI, which uses them to improve its models. At usage tiers 1–2 that's 250k tokens a day on the flagship models and 2.5M on the small ones; tiers 3–5 get 1M and 10M. Past that, usage is billed. The account needs a positive balance, image models never count, and you check eligibility in Data controls › Sharing.
 - **Ollama:** any local model. The only limit is your machine.
 </details>
 
