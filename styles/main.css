@@ -7365,6 +7365,62 @@ body.is-mobile .modal-container.axxa-prompt-container .modal {
   color: var(--text-accent);
 }
 
+/* Uma linha com um segundo botão na ponta (o ▶ de cada voz): os dois dividem
+   a linha — o item fica com tudo menos a ponta. O ▶ tem 40px, e com o ícone
+   centrado ele cai na coluna do ⌃⌄ do botão fechado (12 de respiro + meio
+   ícone). Com a lista rolando, a barra de rolagem do Obsidian come a ponta
+   (5px no Android, 12 no computador) e a coluna dos ▶ anda junto. */
+.axxa-pop-layer .axxa-pop-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.axxa-pop-layer .axxa-pop-row > button.axxa-pop-item {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.axxa-pop-layer button.axxa-pop-extra {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+}
+
+.axxa-pop-layer button.axxa-pop-extra:hover {
+  background-color: var(--axxa-s1);
+  color: var(--text-normal);
+}
+
+.axxa-pop-layer button.axxa-pop-extra svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Tocando: o ■ na cor do ✓ da opção atual — é o que está "ligado" agora. */
+.axxa-pop-layer button.axxa-pop-extra.is-playing {
+  color: var(--text-accent);
+}
+
+/* Buscando o áudio na rede: gira (a mesma volta da assistente). */
+.axxa-pop-layer button.axxa-pop-extra.is-loading svg {
+  animation: axxa-assist-gira 900ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .axxa-pop-layer button.axxa-pop-extra.is-loading svg {
+    animation: none;
+  }
+}
+
 /* A volta do segundo nível não é uma ação do objeto: é navegação DENTRO do
    menu, e por isso ela se apresenta como cabeçalho — letra menor que a dos
    itens e um fio separando as duas naturezas. Sem o fio, "Back" era só o

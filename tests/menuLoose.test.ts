@@ -58,6 +58,16 @@ describe("o balão não depende da raiz", () => {
     );
   });
 
+  it("linha com ▶ (as vozes): o item fica com a linha menos a ponta", () => {
+    expect(bloco(".axxa-pop-layer .axxa-pop-row")).toMatch(/display:\s*flex/);
+    const item = bloco(".axxa-pop-layer .axxa-pop-row > button.axxa-pop-item");
+    expect(item).toMatch(/flex:\s*1 1 auto/);
+    expect(item).toMatch(/min-width:\s*0/);
+    const extra = bloco(".axxa-pop-layer button.axxa-pop-extra");
+    expect(extra).toMatch(/width:\s*40px/);
+    expect(extra).toMatch(/flex:\s*0 0 auto/);
+  });
+
   it("as linhas da lista têm as colunas do botão", () => {
     const linha = bloco(".axxa-pop-layer .axxa-pop.is-pick button.axxa-pop-item");
     const botao = bloco(".axxa-settings-root .setting-item-control button.axxa-pick");
@@ -76,6 +86,13 @@ describe("o menu.ts decide onde o balão mora pelo BOTÃO", () => {
     // `doc.querySelector(".axxa-root")` acharia o painel do chat ATRÁS do
     // modal das settings — o balão abriria escondido.
     expect(MENU).toMatch(/ancoraEl\.closest<HTMLElement>\("\.axxa-root"\)/);
+  });
+
+  it("o ▶ não fecha o balão nem escolhe a linha, e quem abriu sabe quando ele fecha", () => {
+    // O clique do ▶ não pode subir pra camada (que fecha no clique).
+    expect(MENU).toMatch(/cls: "axxa-pop-extra"[\s\S]{0,400}e\.stopPropagation\(\);\s*run\(x\);/);
+    // Fechar por qualquer caminho avisa (a amostra de uma voz para junto).
+    expect(MENU).toMatch(/camada\.remove\(\);\s*opts\.aoFechar\?\.\(\);/);
   });
 
   it("fora da raiz, mora no modal (some junto com ele) ou no body", () => {

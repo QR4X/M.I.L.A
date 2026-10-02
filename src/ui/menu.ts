@@ -43,6 +43,10 @@ export interface MenuAction {
   /** Abre um SEGUNDO nível no mesmo balão. Com `children`, o `run` não roda:
    *  quem tem filhos navega. */
   children?: MenuAction[];
+  /** Um SEGUNDO botão na ponta da linha (o ▶ de cada voz): age sem escolher
+   *  a linha e sem fechar o balão. Recebe o próprio botão, pra quem chama
+   *  trocar o desenho dele (▶ → buscando → ■). */
+  extra?: { icon: string; label: string; run: (botao: HTMLButtonElement) => void };
   run?: () => void;
 }
 
@@ -132,6 +136,10 @@ export interface MenuOptions {
    *  <select> de largura cheia. Sem isto, um balão de 168px pendurado na
    *  ponta direita de um botão de 330 parecia de outro controle. */
   escolha?: boolean;
+  /** Roda quando o balão fecha, por qualquer caminho (escolheu, tocou fora,
+   *  Esc, rolou a tela): a amostra de uma voz para junto, em vez de seguir
+   *  falando sem a lista na tela. */
+  aoFechar?: () => void;
 }
 
 /**
@@ -213,7 +221,10 @@ export function openActions(
     a: MenuAction,
     aoTocar: () => void
   ): HTMLButtonElement => {
-    const b = pai.createEl("button", {
+    // Com um segundo botão, os dois dividem uma LINHA: botão dentro de botão
+    // não existe em HTML (e o leitor de tela leria os dois como um só).
+    const linha = a.extra ? pai.createDiv({ cls: "axxa-pop-row", attr: { role: "none" } }) : pai;
+    const b = linha.createEl("button", {
       cls:
         "axxa-pop-item" +
         (a.danger ? " is-danger" : "") +
@@ -251,6 +262,19 @@ export function openActions(
       e.stopPropagation();
       aoTocar();
     });
+    if (a.extra) {
+      const { icon, label, run } = a.extra;
+      const x = linha.createEl("button", {
+        cls: "axxa-pop-extra",
+        attr: { type: "button", role: "menuitem", "aria-label": label },
+      });
+      setIcon(x, icon);
+      x.addEventListener("click", (e) => {
+        // Nem sobe pra camada (que fecharia o balão), nem escolhe a linha.
+        e.stopPropagation();
+        run(x);
+      });
+    }
     return b;
   };
 
@@ -376,6 +400,7 @@ export function openActions(
     ondeRola.removeEventListener("scroll", onScroll, { capture: true });
     ancoraEl?.removeClass("is-open-down", "is-open-up");
     camada.remove();
+    opts.aoFechar?.();
   };
   camada.addEventListener("click", fechar);
   doc.addEventListener("keydown", onKey);

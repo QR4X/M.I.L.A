@@ -30,6 +30,7 @@
 
 import {
   App,
+  getLanguage,
   Notice,
   Platform,
   PluginSettingTab,
@@ -53,12 +54,14 @@ import { freeTag } from "../usage/freeTag";
 import { openaiFreeTierForModel } from "../usage/freeTokens";
 import { buildModelCatalog } from "./modelCatalog";
 import { prettyModelName } from "../providers/modelDescriptions";
-import { speak, TTS_PROVIDERS, ttsReady } from "./readAloud";
+import { speak, stopSpeaking, TTS_PROVIDERS, ttsReady } from "./readAloud";
+import { fraseDaAmostra, idiomaDaAmostra } from "./settings/amostra";
 import { elevenVoices } from "../providers/elevenlabs";
 import { hapticsOn, setHapticsEnabled, tap } from "./haptics";
 import { marcarPerigoso } from "./modals";
 import {
   buildSettingsTree,
+  nomeProprio,
   PROVIDER_FIELDS,
   tabsFor,
   type PickItem,
@@ -84,9 +87,6 @@ import {
   resumoDoNivel,
 } from "./settings/effortEditor";
 import { EFFORT_ICONS, type EffortLevel } from "../core/effort";
-
-/** Frase do botão Test — curta, pra não virar conta. */
-const SAMPLE_LINE = "This is the voice that will read your answers out loud.";
 
 /** Favoritos aparecem na tela inicial; mais que isso vira lista, não atalho. */
 export const FAVORITE_LIMIT = 5;
@@ -144,6 +144,8 @@ export class AxxaSettingsTab extends PluginSettingTab {
   /** Provider cujo catálogo está sendo buscado agora (um de cada vez). */
   private fetchingFor: string | null = null;
   private fetchingVoices = false;
+  /** O ▶ da voz que está tocando a amostra agora (ver tocarAmostra). */
+  private amostra: HTMLButtonElement | null = null;
   /** O recarregamento do índice espera a digitação da pasta parar. */
   private timerDoIndice = 0;
   private hapticsOff: (() => void) | null = null;
@@ -201,6 +203,14 @@ export class AxxaSettingsTab extends PluginSettingTab {
       get: (key) => this.readValue(key),
       set: (key, value) => this.writeValue(key, value),
     });
+  }
+
+  /** A aba saiu da tela (fechou as settings, trocou de página, o "voltar" do
+   *  Android): a amostra de uma voz para junto — o balão do ▶ some com o
+   *  modal sem passar pelo `fechar` dele. */
+  hide(): void {
+    this.pararAmostra();
+    super.hide();
   }
 
   /** O Obsidian lê um `control` por aqui. */
@@ -1067,9 +1077,12 @@ export class AxxaSettingsTab extends PluginSettingTab {
       items: PickItem[];
       value: string;
       onPick: (value: string) => void | Promise<void>;
+      /** Com isto, cada opção ganha um ▶ que toca a amostra dela (as vozes).
+       *  Recebe o valor e devolve o nome que a voz fala. */
+      ouvir?: (value: string) => string;
     }
   ): void {
-    const { items, value } = opts;
+    const { items, value, ouvir } = opts;
     const atual = items.find((i) => i.value === value);
     const btn = row.controlEl.createEl("button", {
       cls: "axxa-pick",
@@ -1098,11 +1111,16 @@ export class AxxaSettingsTab extends PluginSettingTab {
           icon: i.icon,
           glyph: i.glyph,
           checked: i.value === value,
+          extra: ouvir && {
+            icon: "play",
+            label: `Play ${i.label}`,
+            run: (b: HTMLButtonElement) => this.tocarAmostra(b, i.value, ouvir(i.value)),
+          },
           run: () => {
             if (i.value !== value) void opts.onPick(i.value);
           },
         })),
-        { escolha: true }
+        { escolha: true, aoFechar: ouvir && (() => this.pararAmostra()) }
       );
   }
 
@@ -1120,6 +1138,8 @@ export class AxxaSettingsTab extends PluginSettingTab {
         // Escolher pode mostrar ou esconder linhas (quem lê decide as vozes).
         this.refreshVisibility();
       },
+      // As vozes da OpenAI: o valor é o nome ("coral" → "Coral").
+      ouvir: key === "ttsVoice" ? nomeProprio : undefined,
     });
   }
 
@@ -1277,6 +1297,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
         await this.save();
         this.repaint("elevenVoice");
       },
+      ouvir: (id) => s.elevenVoices.find((v) => v.id === id)?.name ?? "ElevenLabs",
     });
   }
 
@@ -1287,10 +1308,61 @@ export class AxxaSettingsTab extends PluginSettingTab {
         b.setButtonText("Playing…").setDisabled(true);
         // `speak` precisa começar DENTRO do clique: é lá que ele destrava o
         // áudio (o navegador recusa tocar fora do gesto).
-        await speak(this.plugin, SAMPLE_LINE);
+        await speak(this.plugin, fraseDaAmostra(this.nomeDaVozAtual(), this.idiomaDaAmostra()), {
+          guardar: true,
+        });
         b.setButtonText("Play sample").setDisabled(false);
       })
     );
+  }
+
+  // ── A amostra das vozes ───────────────────────────────────────────────────
+  // O ▶ de cada voz da lista toca a frase de amostra NELA, sem escolher. Uma
+  // por vez: tocar outra para a de antes, e tocar de novo a mesma para.
+
+  private tocarAmostra(botao: HTMLButtonElement, voz: string, nome: string): void {
+    if (this.amostra === botao) {
+      stopSpeaking();
+      return;
+    }
+    const rotulo = botao.getAttribute("aria-label") ?? "Play";
+    const desenhar = (estado: "parado" | "buscando" | "tocando") => {
+      botao.toggleClass("is-loading", estado === "buscando");
+      botao.toggleClass("is-playing", estado === "tocando");
+      setIcon(botao, estado === "parado" ? "play" : estado === "buscando" ? "loader" : "square");
+      botao.setAttribute("aria-label", estado === "parado" ? rotulo : "Stop");
+    };
+    this.amostra = botao;
+    desenhar("buscando");
+    // `speak` começa DENTRO do toque: é lá que ele destrava o áudio (fora do
+    // gesto, o navegador recusa tocar quando a rede responder).
+    void speak(this.plugin, fraseDaAmostra(nome, this.idiomaDaAmostra()), {
+      voice: voz,
+      guardar: true,
+      onPlaying: () => desenhar("tocando"),
+    }).finally(() => {
+      desenhar("parado");
+      if (this.amostra === botao) this.amostra = null;
+    });
+  }
+
+  /** Para a amostra que estiver tocando (e só ela — a leitura do chat não). */
+  private pararAmostra(): void {
+    if (this.amostra) stopSpeaking();
+  }
+
+  /** O idioma em que as vozes se apresentam (ver settings/amostra.ts). */
+  private idiomaDaAmostra(): string {
+    return idiomaDaAmostra(this.s.voiceLanguage, getLanguage());
+  }
+
+  /** O nome da voz que lê hoje — o do botão Test. */
+  private nomeDaVozAtual(): string {
+    const s = this.s;
+    if (s.ttsProvider === "eleven") {
+      return s.elevenVoices.find((v) => v.id === s.elevenVoice)?.name ?? "ElevenLabs";
+    }
+    return nomeProprio(s.ttsVoice);
   }
 
   private async fetchVoices(): Promise<void> {

@@ -163,7 +163,7 @@ const ELEVEN_ICONS: Record<string, string> = {
 };
 
 /** "alloy" → "Alloy": o nome de uma voz é nome próprio. */
-function nomeProprio(s: string): string {
+export function nomeProprio(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
@@ -622,7 +622,7 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       chat,
       "Voice",
       null,
-      "Eleven of them. Hit Play sample to hear the one you picked.",
+      "Eleven of them — tap ▶ in the list to hear one before you pick it.",
       "ttsVoice",
       () =>
         OPENAI_VOICES.map((v) => ({
@@ -673,7 +673,7 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
     custom(
       "ElevenLabs voice",
       "Voice",
-      "Cloned ones are marked — that is the one that sounds like you.",
+      "Cloned ones are marked — that is the one that sounds like you. Tap ▶ in the list to hear any of them.",
       ui.elevenVoice,
       { visible: () => elevenReads() && s().elevenVoices.length > 0, aliases: ["voz"] }
     ),

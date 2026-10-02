@@ -14,8 +14,12 @@ export function parseYaml(_input: string): unknown {
   return {};
 }
 
+/** Todo aviso mostrado, em ordem — o teste zera e confere (`__avisos.length = 0`). */
+export const __avisos: string[] = [];
 export class Notice {
-  constructor(public message?: string) {}
+  constructor(public message?: string) {
+    __avisos.push(message ?? "");
+  }
   setMessage() {}
   hide() {}
 }

@@ -64,35 +64,74 @@ export function ttsReady(plugin: AxxaPlugin, id: string): boolean {
 
 let current: HTMLAudioElement | null = null;
 let currentUrl: string | null = null;
+/** Solta quem espera a fala de agora (o `await speak`). Pausar não dispara
+ *  `ended` nem `error`: sem isto, a fala parada deixava o `speak` dela
+ *  esperando pra sempre — e o botão que esperava junto, preso em "Stop". */
+let soltar: (() => void) | null = null;
 
 export function stopSpeaking(): void {
   current?.pause();
   current = null;
   if (currentUrl) URL.revokeObjectURL(currentUrl);
   currentUrl = null;
+  const solta = soltar;
+  soltar = null;
+  solta?.();
 }
+
+/** Como falar, além do texto. */
+export interface SpeakOptions {
+  /** Outra voz que não a das settings: o ▶ de cada voz da lista. */
+  voice?: string;
+  /** O som começou a sair (a rede já respondeu): o botão troca o "buscando"
+   *  pelo "parar". */
+  onPlaying?: () => void;
+  /** Guarda o áudio: tocar de novo a mesma amostra não gasta outra chamada. */
+  guardar?: boolean;
+}
+
+/** As amostras já ouvidas (voz, modelo e texto) — poucas, e só enquanto o
+ *  app está aberto. Comparar duas vozes é tocar as duas várias vezes. */
+const guardadas = new Map<string, { data: Uint8Array; mime: string }>();
+const MAX_GUARDADAS = 16;
 
 /** Gera o áudio pelo caminho configurado. */
 async function synthesize(
   plugin: AxxaPlugin,
-  text: string
+  text: string,
+  opts: SpeakOptions
 ): Promise<{ data: Uint8Array; mime: string } | null> {
   const s = plugin.settings;
-  if (s.ttsProvider === "eleven") {
-    return elevenSpeak({
+  const eleven = s.ttsProvider === "eleven";
+  const voz = opts.voice ?? (eleven ? s.elevenVoice : s.ttsVoice);
+  const chave = [eleven ? "eleven" : "openai", eleven ? s.elevenModel : s.ttsModel, voz, text].join("\n");
+  const pronta = opts.guardar ? guardadas.get(chave) : undefined;
+  if (pronta) return pronta;
+
+  let item: { data: Uint8Array; mime: string } | null = null;
+  if (eleven) {
+    item = await elevenSpeak({
       apiKey: s.elevenApiKey,
-      voiceId: s.elevenVoice,
+      voiceId: voz,
       model: s.elevenModel,
       text,
     });
+  } else {
+    const provider = getProvider("openai");
+    if (!provider.generateAudio) return null;
+    const [gerado] = await provider.generateAudio(
+      { model: s.ttsModel, prompt: text, voice: voz },
+      plugin.providerCredential("openai")
+    );
+    item = gerado ? { data: gerado.data, mime: gerado.mime } : null;
   }
-  const provider = getProvider("openai");
-  if (!provider.generateAudio) return null;
-  const [item] = await provider.generateAudio(
-    { model: s.ttsModel, prompt: text, voice: s.ttsVoice },
-    plugin.providerCredential("openai")
-  );
-  return item ? { data: item.data, mime: item.mime } : null;
+  if (item && opts.guardar) {
+    guardadas.set(chave, item);
+    // O Map lembra a ordem de entrada: a primeira chave é a mais antiga.
+    const maisVelha = guardadas.keys().next();
+    if (guardadas.size > MAX_GUARDADAS && !maisVelha.done) guardadas.delete(maisVelha.value);
+  }
+  return item;
 }
 
 /**
@@ -102,7 +141,11 @@ async function synthesize(
  * Chame DIRETO do handler do clique: a primeira linha precisa rodar dentro do
  * gesto pra destravar o áudio.
  */
-export async function speak(plugin: AxxaPlugin, text: string): Promise<void> {
+export async function speak(
+  plugin: AxxaPlugin,
+  text: string,
+  opts: SpeakOptions = {}
+): Promise<void> {
   const clean = text.trim();
   if (!clean) return;
   const s = plugin.settings;
@@ -124,7 +167,7 @@ export async function speak(plugin: AxxaPlugin, text: string): Promise<void> {
   current = audio;
 
   try {
-    const item = await synthesize(plugin, clean.slice(0, SPEAK_MAX_CHARS));
+    const item = await synthesize(plugin, clean.slice(0, SPEAK_MAX_CHARS), opts);
     if (!item) {
       new Notice("This provider can't do text-to-speech yet.");
       return;
@@ -137,16 +180,26 @@ export async function speak(plugin: AxxaPlugin, text: string): Promise<void> {
     currentUrl = url;
     audio.src = url;
     await new Promise<void>((resolve) => {
+      soltar = resolve;
       audio.onended = () => resolve();
       audio.onerror = () => resolve();
-      audio.play().catch((err: unknown) => {
-        // Recusa do sistema é diferente de erro de rede — e o usuário precisa
-        // saber qual dos dois foi.
-        new Notice(
-          `Playback blocked: ${err instanceof Error ? err.message : String(err)}`
-        );
-        resolve();
-      });
+      audio.play().then(
+        () => {
+          if (current === audio) opts.onPlaying?.();
+        },
+        (err: unknown) => {
+          // Parada antes de começar (o ■, ou outra fala) também cai aqui —
+          // e não é recusa de ninguém.
+          if (current === audio) {
+            // Recusa do sistema é diferente de erro de rede — e o usuário
+            // precisa saber qual dos dois foi.
+            new Notice(
+              `Playback blocked: ${err instanceof Error ? err.message : String(err)}`
+            );
+          }
+          resolve();
+        }
+      );
     });
   } catch (err) {
     new Notice(
@@ -157,6 +210,7 @@ export async function speak(plugin: AxxaPlugin, text: string): Promise<void> {
       if (currentUrl) URL.revokeObjectURL(currentUrl);
       current = null;
       currentUrl = null;
+      soltar = null;
     }
   }
 }
