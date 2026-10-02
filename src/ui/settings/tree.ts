@@ -38,6 +38,7 @@ import { PROVIDERS } from "../../core/providersMeta";
 import { EFFORT_ICONS, EFFORT_LABELS, EFFORT_LEVELS } from "../../core/effort";
 import { CHAT_MODES } from "../../core/session";
 import { MODULES } from "../modules";
+import { QUANT_ITENS } from "./indice";
 import { LOCALES } from "../../i18n";
 import { PERMISSION_LABELS } from "../../agent/permissions";
 import { ELEVEN_MODELS } from "../../providers/elevenlabs";
@@ -688,13 +689,30 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
   ]);
 
   // ── Vault Q&A ────────────────────────────────────────────────────────────
-  group({ tab: "rag" }, {}, [
+  const rag: Place = { tab: "rag" };
+  group(rag, {}, [
     custom(
       "Embedding model",
       null,
       "Needs the key of that model's provider. Without an index, Vault Q&A falls back to keyword search. Fetch models on a provider to list the embedding models your account has.",
       ui.embeddingModel,
       { aliases: ["embeddings", "rag", "modelo"] }
+    ),
+    // As duas voltaram pra tela (sumiram na 0.4.0; o motor continuou lendo).
+    escolha(
+      rag,
+      "Index precision",
+      null,
+      "How much detail each note keeps in the index. Lighter takes less space and memory; Light and Minimal also shrink the vectors on OpenAI's text-embedding-3. Applies on the next index update, which rebuilds it from scratch.",
+      "ragQuantProfile",
+      () => QUANT_ITENS,
+      { aliases: ["quantization", "quantização", "precisão", "int8", "memory", "memória"] }
+    ),
+    toggle(
+      "Search the index in pieces",
+      "Reads the index about 4 MB at a time instead of all at once — keeps memory low on big vaults, which matters on the phone. The catch: every index update then rebuilds it whole and re-embeds the vault, which costs tokens.",
+      "ragStreamShards",
+      { aliases: ["shards", "pedaços", "memory", "memória", "streamed"] }
     ),
     toggle(
       "Auto re-index on note changes",

@@ -291,7 +291,10 @@ describe("a aba Chat só tem menus de escolha com ícone", () => {
   });
 
   it("os menus que existiam viraram escolha, e moram na aba Chat", () => {
-    const chaves = pegos.map((p) => p.key).sort();
+    // A precisão do índice também é escolha, mas mora no Q&A.
+    expect(pegos.filter((p) => p.tab === "rag").map((p) => p.key)).toEqual(["ragQuantProfile"]);
+    const daChat = pegos.filter((p) => p.tab === "chat");
+    const chaves = daChat.map((p) => p.key).sort();
     expect(chaves).toEqual(
       [
         "defaultEffort",
@@ -305,7 +308,16 @@ describe("a aba Chat só tem menus de escolha com ícone", () => {
         "voiceModel",
       ].sort()
     );
-    expect(new Set(pegos.map((p) => p.tab))).toEqual(new Set(["chat"]));
+    expect(new Set(pegos.map((p) => p.tab))).toEqual(new Set(["chat", "rag"]));
+  });
+
+  it("a aba Q&A ganhou a precisão e os pedaços do índice", () => {
+    const rag = (tree.items as unknown as Group[])
+      .filter((x) => tree.places.get(x as object)?.tab === "rag")
+      .flatMap((x) => x.items);
+    const nomes = rag.map((r) => r.name);
+    expect(nomes).toContain("Index precision");
+    expect(rag.find((r) => r.name === "Search the index in pieces")?.control?.key).toBe("ragStreamShards");
   });
 
   it("toda opção tem ícone ou código, e um rótulo", () => {

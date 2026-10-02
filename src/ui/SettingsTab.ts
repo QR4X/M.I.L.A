@@ -77,6 +77,7 @@ import {
 import { openActions } from "./menu";
 import { modelLogo } from "../providers/modelLogo";
 import { putThumb, seedThumb, thumbOf, type Thumb } from "./settings/thumb";
+import { pendenciaDoIndice } from "./settings/indice";
 
 /** Frase do botão Test — curta, pra não virar conta. */
 const SAMPLE_LINE = "This is the voice that will read your answers out loud.";
@@ -261,6 +262,11 @@ export class AxxaSettingsTab extends PluginSettingTab {
         // Os dois mudam a etiqueta de cota de cada modelo da OpenAI.
         this.repaint("catalog:openai");
         this.repaint("freeOffer");
+        break;
+      case "ragQuantProfile":
+      case "ragStreamShards":
+        // A linha do índice avisa que falta atualizar pra valer.
+        this.repaint("index");
         break;
     }
   }
@@ -1296,10 +1302,14 @@ export class AxxaSettingsTab extends PluginSettingTab {
   private paintIndex(row: Setting): void {
     const s = this.s;
     const size = this.plugin.vectorIndex?.size ?? 0;
+    // Precisão e pedaços só valem na próxima atualização: a linha diz quando
+    // o índice carregado ainda é o do jeito antigo.
+    const pendente = pendenciaDoIndice(this.plugin.vectorIndex ?? null, s);
     row.setDesc(
-      size > 0
+      (size > 0
         ? `Index loaded: ${size} chunks (folder: ${s.ragIndexPath}).`
-        : `No index yet (folder: ${s.ragIndexPath}).`
+        : `No index yet (folder: ${s.ragIndexPath}).`) +
+        (pendente ? ` ${pendente}` : "")
     );
     row
       .addButton((b) =>

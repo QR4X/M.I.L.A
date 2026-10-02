@@ -30,6 +30,7 @@ const BOOL_KEYS = [
   "ragAutoReindex",
   "mobileFullscreen",
   "hapticsEnabled",
+  "ragStreamShards",
 ] as const;
 
 /** Menus e campos de texto — sempre string do lado do controle. */
@@ -47,6 +48,7 @@ const TEXT_KEYS = [
   "chatsPath",
   "skillsPath",
   "agentPermissionLevel",
+  "ragQuantProfile",
 ] as const;
 
 export type BoolKey = (typeof BOOL_KEYS)[number];
