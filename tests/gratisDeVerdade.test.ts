@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { compararFabricantes, fabricante } from "../src/providers/vendors";
 import { buildModelCatalog, porFabricante, soltosPorFabricante } from "../src/ui/modelCatalog";
 import { gratisDoCatalogoNvidia } from "../src/providers/nim";
-import { cotaGratisDaChave } from "../src/providers/openrouter";
-import { freeTag, gratisDeVerdade } from "../src/usage/freeTag";
+import { cotaGratisDaChave, ehGratisNoOpenRouter } from "../src/providers/openrouter";
+import { freeTag, geminiTemTierGratis, gratisDeVerdade } from "../src/usage/freeTag";
 
 // A lista de modelos dos providers que revendem os de todo mundo ganha o
 // nível do FABRICANTE, e o "free" passa a ser o de verdade: pelo preço no
@@ -145,5 +145,84 @@ describe("grátis de verdade e a etiqueta", () => {
   it("NIM diz o limite por minuto; não grátis, nada", () => {
     expect(freeTag("nim", "meta/x", { free: true, dataSharing: false, tier: 1 })?.label).toBe("free · 40/min");
     expect(freeTag("nim", "meta/x", { free: false, dataSharing: false, tier: 1 })).toBeNull();
+  });
+});
+
+describe("Google de verdade — o Rafael desconfiou, e com razão", () => {
+  // Registros no formato real do catálogo do OpenRouter (out/2026).
+  const lyria = {
+    id: "google/lyria-3-clip-preview",
+    pricing: { prompt: "0", completion: "0" },
+    architecture: { output_modalities: ["text", "audio"] },
+    description: "30 second duration clips are priced at $0.04 per clip. Lyria 3 is Google's family of music generation models…",
+  };
+  const gemmaFree = {
+    id: "google/gemma-4-31b-it:free",
+    pricing: { prompt: "0", completion: "0" },
+    architecture: { output_modalities: ["text"] },
+    description: "Gemma 4 31B Instruct is Google DeepMind's 30.7B dense multimodal model…",
+  };
+  const ling = {
+    id: "inclusionai/ling-3.1-flash",
+    pricing: { prompt: "0", completion: "0" },
+    architecture: { output_modalities: ["text"] },
+    description: "Ling 3.1 Flash is a fast MoE model…",
+  };
+
+  it("OpenRouter: o Lyria tem preço zero no catálogo mas cobra por clipe — NÃO é grátis", () => {
+    expect(ehGratisNoOpenRouter(lyria)).toBe(false);
+    // nem só pela saída de áudio: preço citado na descrição já tira
+    expect(ehGratisNoOpenRouter({ ...lyria, architecture: { output_modalities: ["text"] } })).toBe(false);
+    // nem só pelo preço citado: saída de áudio já tira
+    expect(ehGratisNoOpenRouter({ ...lyria, description: "Music model." })).toBe(false);
+  });
+
+  it("OpenRouter: o Gemma :free é grátis declarado; o Ling sem sufixo, de texto e sem preço, também", () => {
+    expect(ehGratisNoOpenRouter(gemmaFree)).toBe(true);
+    expect(ehGratisNoOpenRouter(ling)).toBe(true);
+  });
+
+  it("OpenRouter: qualquer campo de preço acima de zero tira (imagem, áudio, busca…)", () => {
+    expect(ehGratisNoOpenRouter({ ...ling, pricing: { prompt: "0", completion: "0", image: "0.04" } })).toBe(false);
+    expect(ehGratisNoOpenRouter({ ...ling, pricing: { prompt: "0", completion: "0.0000004" } })).toBe(false);
+  });
+
+  it("Gemini: tier grátis só nos modelos que o Google lista assim", () => {
+    for (const m of [
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite",
+      "gemini-2.5-pro",
+      "gemini-3.5-flash",
+      "gemini-3.8-flash-tts",
+      "gemini-2.5-flash-preview-tts",
+      "gemini-3.8-live",
+      "gemini-embedding-2",
+      "gemma-4-31b-it",
+      "models/gemini-2.5-flash",
+    ]) {
+      expect(geminiTemTierGratis(m), m).toBe(true);
+    }
+    for (const m of [
+      "gemini-2.5-flash-image", // o Nano Banana: só pago (US$ 0,039 por imagem)
+      "gemini-3.1-flash-image",
+      "gemini-3-pro-image",
+      "gemini-3.1-pro-preview",
+      "gemini-2.5-pro-preview-tts",
+      "gemini-omni-1.1-flash",
+      "veo-3.1-generate-preview",
+      "lyria-3-pro-preview",
+      "imagen-4.0-generate-001",
+      "gemini-9-ultra", // desconhecido: não afirma grátis
+    ]) {
+      expect(geminiTemTierGratis(m), m).toBe(false);
+    }
+  });
+
+  it("Gemini: a etiqueta é 'free tier' de contorno (depende da conta), e o Nano Banana fica sem", () => {
+    const base = { free: false, dataSharing: false, tier: 1 };
+    const tag = freeTag("gemini", "gemini-2.5-flash", base);
+    expect(tag).toMatchObject({ kind: "offer", label: "free tier" });
+    expect(tag?.detail).toMatch(/without billing/);
+    expect(freeTag("gemini", "gemini-2.5-flash-image", { ...base, free: true })).toBeNull();
   });
 });

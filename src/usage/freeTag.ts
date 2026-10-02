@@ -20,8 +20,9 @@
 import { openaiFreeAllowance, openaiFreeTierForModel } from "./freeTokens";
 
 export interface FreeTag {
-  /** `always` = sem fatura. `daily` = cota diária já valendo. `offer` = a cota
-   *  existe mas está desligada (data-sharing off) — é uma oferta, não um fato. */
+  /** `always` = sem fatura. `daily` = cota diária já valendo. `offer` = de graça
+   *  sob uma condição da conta que a gente não enxerga (OpenAI: data-sharing
+   *  desligado; Gemini: projeto sem cobrança) — uma oferta, não um fato. */
   kind: "always" | "daily" | "offer";
   /** Tokens/dia da cota (só em `daily` e `offer`). */
   perDay?: number;
@@ -67,6 +68,28 @@ function milhar(n: number): string {
   return n.toLocaleString("en-US");
 }
 
+/**
+ * O modelo do Gemini tem tier GRÁTIS? (ai.google.dev › Pricing, out/2026)
+ *
+ * O tier grátis é de quem usa um projeto SEM cobrança ativada — e aí o Google
+ * pode usar o que você manda pra melhorar os produtos dele. Mesmo assim, nem
+ * todo modelo entra: os que geram imagem (o Nano Banana incluído), o 3.1 Pro
+ * preview, Omni, Veo e Lyria são só pagos. Têm tier grátis os Flash (2.5 e
+ * 3.x, Lite, Live e TTS), o 2.5 Pro, os embeddings, o Gemma. Modelo que não
+ * casa com nada conhecido: não diz que é grátis.
+ */
+export function geminiTemTierGratis(model: string): boolean {
+  const id = (model || "").toLowerCase().replace(/^(models|google)\//, "");
+  if (/(image|imagen|veo|lyria|omni)/.test(id)) return false;
+  if (/^gemini-\d+(\.\d+)?-flash/.test(id)) return true;
+  if (/^gemini-2\.5-pro(-|$)/.test(id)) return !/tts/.test(id);
+  if (/^gemini-\d+(\.\d+)?-(live|transcribe)/.test(id)) return true;
+  if (/^gemini-embedding-[2-9]/.test(id)) return true;
+  if (/^gemma-/.test(id)) return true;
+  if (/^gemini-robotics/.test(id)) return true;
+  return false;
+}
+
 export function freeTag(
   provider: string,
   model: string,
@@ -107,6 +130,16 @@ export function freeTag(
     };
   }
 
+  // O Gemini decide pelo modelo e pela conta — não pelo "free" do motor.
+  if (provider === "gemini") {
+    if (!geminiTemTierGratis(model)) return null;
+    return {
+      kind: "offer",
+      label: "free tier",
+      detail:
+        "No cost on the Gemini API's free tier — a project without billing turned on, where Google may use what you send to improve its products — within its rate limits. With billing on, this model is charged.",
+    };
+  }
   if (!opts.free) return null;
   // Grátis, mas cada casa com a sua regra — e a regra é o que deixa claro o
   // que "free" quer dizer ali.

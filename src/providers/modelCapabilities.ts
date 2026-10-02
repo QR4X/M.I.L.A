@@ -101,13 +101,13 @@ const ENTRIES_BY_PROVIDER: Record<string, CapsEntry[]> = {
   gemini: [
     // Image generation — "Nano Banana" é o codename do gemini-2.5-flash-image
     // ID correto (sem -preview) confirmado em ai.google.dev/gemini-api/docs/image-generation
-    { prefix: "gemini-2.5-flash-image", caps: { vision: true, tools: false, streaming: false, imageGen: true, free: true } },
-    { prefix: "gemini-2.0-flash-exp-image", caps: { vision: true, tools: false, streaming: false, imageGen: true, free: true } },
+    { prefix: "gemini-2.5-flash-image", caps: { vision: true, tools: false, streaming: false, imageGen: true } },
+    { prefix: "gemini-2.0-flash-exp-image", caps: { vision: true, tools: false, streaming: false, imageGen: true } },
     { prefix: "imagen-3", caps: { vision: false, tools: false, streaming: false, imageGen: true } },
     { prefix: "imagen-4", caps: { vision: false, tools: false, streaming: false, imageGen: true } },
     { prefix: "imagen-", caps: { vision: false, tools: false, streaming: false, imageGen: true } },
     // Audio (TTS)
-    { prefix: "gemini-2.5-flash-preview-tts", caps: { vision: false, tools: false, streaming: false, audioGen: true, free: true } },
+    { prefix: "gemini-2.5-flash-preview-tts", caps: { vision: false, tools: false, streaming: false, audioGen: true } },
     // Video gen (Veo)
     { prefix: "veo", caps: { vision: false, tools: false, streaming: false, videoGen: true } },
     // Chat LLM — toda família Gemini 1.5+ aceita imagem nativa
