@@ -59,6 +59,15 @@ describe("os sliders do editor de nível", () => {
     expect(paradasCom(tokens, 512)).toBe(tokens.paradas);
   });
 
+  it("o ⓘ de cada ajuste explica de verdade: frase inteira, que se lê sozinha", () => {
+    for (const c of CAMPOS_DE_ESFORCO) {
+      expect(c.desc.length, c.key).toBeGreaterThan(60);
+      expect(c.desc, c.key).toMatch(/\.$/);
+      // o balão cobre as linhas vizinhas: "aquelas notas" não aponta pra nada
+      expect(c.desc, c.key).not.toMatch(/\bthose notes\b/);
+    }
+  });
+
   it("cada ajuste tem o seu desenho na frente do nome — e nenhum repete", () => {
     const icones = CAMPOS_DE_ESFORCO.map((c) => c.icone);
     for (const c of CAMPOS_DE_ESFORCO) expect(c.icone, c.key).toMatch(/^[a-z0-9-]+$/);

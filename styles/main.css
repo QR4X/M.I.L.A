@@ -5235,6 +5235,7 @@ body.is-mobile .axxa-settings-root button.axxa-pick {
 }
 
 .axxa-effort-modal .axxa-esf-topo {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--size-4-2);
@@ -5255,13 +5256,52 @@ body.is-mobile .axxa-settings-root button.axxa-pick {
 }
 
 .axxa-effort-modal .axxa-esf-nome {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   color: var(--text-normal);
   font-size: var(--font-ui-small);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* O ⓘ logo depois do nome: pequeno e apagado (é ajuda, não ação), com o
+   alvo de toque inteiro. É ele que empurra o ↺ e o valor pra ponta. */
+.axxa-effort-modal button.axxa-esf-info {
+  --icon-size: 14px;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin-inline-end: auto;
+  padding: 0;
+  color: var(--text-faint);
+}
+
+.axxa-effort-modal button.axxa-esf-info[aria-expanded="true"] {
+  color: var(--text-accent);
+}
+
+/* O balão do ⓘ: logo abaixo da linha do nome, por cima do que vem depois —
+   não empurra nada. Cores do tema (fundo secundário, borda), pra ler bem no
+   claro e no escuro. Perto do fim da lista, abre pra cima (.is-acima). */
+.axxa-effort-modal .axxa-esf-dica {
+  position: absolute;
+  top: calc(100% + 2px);
+  z-index: 1;
+  inset-inline: 0;
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background-color: var(--background-secondary);
+  box-shadow: var(--shadow-s);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-tight);
+}
+
+.axxa-effort-modal .axxa-esf-dica.is-acima {
+  top: auto;
+  bottom: calc(100% + 2px);
 }
 
 .axxa-effort-modal .axxa-esf-valor {

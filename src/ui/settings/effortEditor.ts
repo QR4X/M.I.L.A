@@ -32,7 +32,7 @@ export interface CampoDeEsforco {
   key: keyof EffortConfig;
   /** O nome na linha — curto: a tela não tem lugar pra explicação. */
   name: string;
-  /** A explicação: vai no `title` da linha (e no leitor de tela). */
+  /** A explicação: o que o ⓘ da linha abre (e o que o leitor de tela lê). */
   desc: string;
   /** O desenho na frente do nome — acha-se a linha de relance, sem ler. */
   icone: string;
@@ -68,7 +68,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
     key: "maxTokens",
     icone: "message-square-text",
     name: "Reply length",
-    desc: "How long a reply can get, in tokens. No cap = up to the share of context below.",
+    desc: "The longest a reply can get, in tokens. Longer replies take longer and cost more. No cap lets it use up to the share of context below.",
     tipo: "numero",
     min: 0,
     max: 200000,
@@ -82,7 +82,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
     key: "contextReservePercent",
     icone: "pie-chart",
     name: "Share of context",
-    desc: "With no cap on the reply, how much of the model's window it can use — the rest is left for the prompt.",
+    desc: "With no cap on the reply, how much of the model's context window it may fill. The rest is kept for your message, the chat so far and the notes.",
     tipo: "numero",
     min: 10,
     max: 95,
@@ -94,7 +94,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
     key: "temperature",
     icone: "thermometer",
     name: "Temperature",
-    desc: "Randomness: low is precise, high is creative. Provider default = don't send it.",
+    desc: "How adventurous the wording is. Low sticks to the most likely answer; high is more creative and less predictable. Provider default sends nothing and lets the model decide.",
     tipo: "numero",
     min: -1,
     max: 2,
@@ -105,7 +105,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
     key: "agentMaxTurns",
     icone: "footprints",
     name: "Agent turns",
-    desc: "How many tool rounds the Agent can take before stopping. No cap = only the loop guard stops it.",
+    desc: "How many rounds of tool use (read, search, edit…) the Agent gets before it stops and answers. No cap leaves only the loop guard to stop it.",
     tipo: "numero",
     min: 0,
     max: 1000,
@@ -119,7 +119,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
     key: "toolRetryOnError",
     icone: "wrench",
     name: "Tool retries",
-    desc: "Retries for tools that fail for a passing reason (network, timeout, locked file). A wrong path is never retried.",
+    desc: "How many times the Agent retries a tool that failed for a passing reason: network, timeout, a locked file. A wrong path is never retried.",
     tipo: "numero",
     min: 0,
     max: 20,
@@ -130,7 +130,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
     key: "loopDetectionWindow",
     icone: "shield",
     name: "Loop guard",
-    desc: "How many identical tool calls in a row make the Agent stop and rethink.",
+    desc: "How many identical tool calls in a row make the Agent stop and rethink, so it doesn't spin in place. Off turns the check off.",
     tipo: "numero",
     min: 0,
     max: 20,
@@ -141,14 +141,14 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
     key: "parallelToolCalls",
     icone: "split",
     name: "Run tools in parallel",
-    desc: "When the Agent asks for several tools at once, run them together (faster).",
+    desc: "When the Agent asks for several tools at once, run them together instead of one after another. Faster; off is easier to follow.",
     tipo: "chave",
   },
   {
     key: "vaultTopK",
     icone: "files",
     name: "Vault Q&A notes",
-    desc: "How many notes Vault Q&A brings in as context.",
+    desc: "How many of your notes Vault Q&A pulls in to answer each question. More notes, wider view, more tokens.",
     tipo: "numero",
     min: 1,
     max: 100,
@@ -159,7 +159,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
     key: "vaultExcerptChars",
     icone: "type",
     name: "Characters per note",
-    desc: "How much of each of those notes goes in.",
+    desc: "How much of each note Vault Q&A pulls in goes into the context, in characters. More text, more detail, more tokens.",
     tipo: "numero",
     min: 100,
     max: 10000,
@@ -254,6 +254,8 @@ export class EffortLevelModal extends Modal {
   /** O "Restore" do cabeçalho, ao lado do X: devolve ESTE nível aos padrões
    *  dele — cada nível tem os seus, e os outros ficam como estão. */
   private restaurarEl: HTMLButtonElement | null = null;
+  /** O balão de explicação aberto (um por vez) e o ⓘ que o abriu. */
+  private dica: { el: HTMLElement; botao: HTMLElement } | null = null;
 
   constructor(
     app: App,
@@ -269,6 +271,42 @@ export class EffortLevelModal extends Modal {
     this.titleEl.setText(`${EFFORT_LABELS[this.level]} effort`);
     this.desenhar();
     this.montarRestaurar();
+    // Qualquer toque fora do ⓘ fecha o balão — inclusive no próprio balão e
+    // no botão de um slider (o arraste segue normalmente).
+    this.modalEl.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (this.dica && !this.dica.botao.contains(e.target as Node)) this.fecharDica();
+      },
+      true
+    );
+  }
+
+  /** O ⓘ: abre a explicação do ajuste logo abaixo da linha, por cima do
+   *  que vem depois (não empurra nada — a tela continua do mesmo tamanho).
+   *  Tocar de novo no mesmo ⓘ fecha. Perto do fim da lista ele abre pra
+   *  cima, em vez de ser cortado pela borda do modal. */
+  private alternarDica(botao: HTMLButtonElement, topo: HTMLElement, campo: CampoDeEsforco): void {
+    const mesma = this.dica?.botao === botao;
+    this.fecharDica();
+    if (mesma) return;
+    const el = topo.createDiv({
+      cls: "axxa-esf-dica",
+      text: campo.desc,
+      attr: { id: `axxa-esf-dica-${campo.key}`, role: "note" },
+    });
+    botao.setAttribute("aria-expanded", "true");
+    this.dica = { el, botao };
+    if (el.getBoundingClientRect().bottom > this.contentEl.getBoundingClientRect().bottom) {
+      el.addClass("is-acima");
+    }
+  }
+
+  private fecharDica(): void {
+    if (!this.dica) return;
+    this.dica.el.remove();
+    this.dica.botao.setAttribute("aria-expanded", "false");
+    this.dica = null;
   }
 
   onClose(): void {
@@ -393,6 +431,17 @@ export class EffortLevelModal extends Modal {
     const topo = pai.createDiv({ cls: "axxa-esf-topo" });
     setIcon(topo.createSpan({ cls: "axxa-esf-ico" }), campo.icone);
     topo.createSpan({ cls: "axxa-esf-nome", text: campo.name });
+    const info = topo.createEl("button", {
+      cls: "axxa-esf-info clickable-icon",
+      attr: {
+        type: "button",
+        "aria-label": `What is ${campo.name}?`,
+        "aria-expanded": "false",
+        "aria-controls": `axxa-esf-dica-${campo.key}`,
+      },
+    });
+    setIcon(info, "info");
+    info.addEventListener("click", () => this.alternarDica(info, topo, campo));
     const volta = topo.createEl("button", {
       cls: "axxa-esf-volta clickable-icon",
       attr: {
@@ -409,7 +458,7 @@ export class EffortLevelModal extends Modal {
     const padrao = DEFAULT_EFFORT_CONFIGS[this.level][campo.key] as number;
     const mostrar = campo.mostrar ?? String;
     const salvo = () => this.editado()[campo.key] as number | undefined;
-    const linha = pai.createDiv({ cls: "axxa-esf-linha", attr: { title: campo.desc } });
+    const linha = pai.createDiv({ cls: "axxa-esf-linha" });
     const { valorEl, volta } = this.topo(linha, campo, mostrar(padrao));
 
     // As paradas valem pela vida da tela: um valor antigo fora delas ganha a
@@ -472,7 +521,7 @@ export class EffortLevelModal extends Modal {
   private linhaDeChave(pai: HTMLElement, campo: CampoDeEsforco): LinhaViva {
     const padrao = DEFAULT_EFFORT_CONFIGS[this.level][campo.key] as boolean;
     const salvo = () => this.editado()[campo.key] as boolean | undefined;
-    const linha = pai.createDiv({ cls: "axxa-esf-linha is-chave", attr: { title: campo.desc } });
+    const linha = pai.createDiv({ cls: "axxa-esf-linha is-chave" });
     const { topo, valorEl, volta } = this.topo(linha, campo, padrao ? "on" : "off");
     valorEl.remove(); // o próprio interruptor é o valor
     const chave = new ToggleComponent(topo);
