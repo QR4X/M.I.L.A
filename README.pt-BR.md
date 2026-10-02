@@ -28,7 +28,7 @@
 - **Um agente que pergunta antes.** Ele cria, edita, move e apaga notas por um conjunto pequeno de ferramentas. As mudanças esperam o seu OK, o que é apagado vai pra lixeira e mover reescreve os seus `[[links]]`.
 - **Feito pro celular.** Desenhado primeiro pra gaveta do Obsidian no celular: o composer acompanha o teclado, há um modo tela cheia opcional, e o agente funciona no celular também.
 - **Seis provedores, suas chaves.** OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM e Ollama local. As chaves ficam no cofre do sistema.
-- **Pequeno e rápido.** O `main.js` tem menos de 500 KB, menor que cada um dos 12 plugins de IA mais baixados (de 0,56 a 14,6 MB, mediana de 3,8 MB, medido em outubro de 2026).
+- **Pequeno e rápido.** O `main.js` tem cerca de 0,5 MB, menor que cada um dos 12 plugins de IA mais baixados (de 0,56 a 14,6 MB, mediana de 3,8 MB, medido em outubro de 2026).
 - **Tudo é Markdown.** Conversas, skills e relatórios de custo são arquivos no seu vault, e um painel de uso mostra o gasto por provedor, modelo e dia, e o que sobra hoje em cada cota grátis.
 
 <p align="center">
