@@ -5222,12 +5222,23 @@ body.is-mobile .axxa-settings-root button.axxa-pick {
 .axxa-effort-modal .axxa-esf {
   display: flex;
   flex-direction: column;
-  gap: var(--size-4-1);
 }
 
 .axxa-effort-modal .axxa-esf-linha {
   display: flex;
   flex-direction: column;
+  padding: var(--size-4-2) 0 var(--size-2-3);
+}
+
+/* Um fio entre um ajuste e o seguinte (pedido do Rafael). Uma linha
+   escondida (a parte do contexto, com teto na resposta) não desenha nada,
+   e a de baixo dela continua com o seu fio. */
+.axxa-effort-modal .axxa-esf-linha + .axxa-esf-linha {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.axxa-effort-modal .axxa-esf-linha:first-child {
+  padding-top: 0;
 }
 
 .axxa-effort-modal .axxa-esf-linha.is-hidden {
@@ -5347,7 +5358,9 @@ input[type="range"].axxa-slider::-webkit-slider-thumb {
    margem abre espaço pro botão do slider, que é mais alto que a trilha. */
 .axxa-effort-modal input[type="range"].axxa-esf-slider {
   width: 100%;
-  margin: 10px 0;
+  /* Embaixo, 6 + os 6 da linha = o fio a 12px da trilha: o botão (que passa
+     10px dela) não encosta nele. */
+  margin: 10px 0 6px;
 }
 
 .axxa-effort-modal .axxa-esf-linha.is-chave .axxa-esf-topo {
