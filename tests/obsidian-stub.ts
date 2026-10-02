@@ -45,6 +45,7 @@ export class PluginSettingTab {}
 export class ItemView {}
 export class Modal {}
 export class Setting {}
+export class ToggleComponent {}
 export class TFile {}
 export class TFolder {}
 export class Component {}

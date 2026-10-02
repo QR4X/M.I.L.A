@@ -10,8 +10,63 @@ import {
   comCampo,
   limitar,
   nivelEditado,
+  paradasCom,
   resumoDoNivel,
 } from "../src/ui/settings/effortEditor";
+
+const campo = (key: string) => CAMPOS_DE_ESFORCO.find((c) => c.key === key)!;
+
+describe("os sliders do editor de nível", () => {
+  it("todo padrão de fábrica é uma parada do slider — cai exato, sem arredondar", () => {
+    for (const l of EFFORT_LEVELS) {
+      for (const c of CAMPOS_DE_ESFORCO.filter((x) => x.tipo === "numero")) {
+        expect(c.paradas, `${l}.${c.key}`).toContain(DEFAULT_EFFORT_CONFIGS[l][c.key]);
+      }
+    }
+  });
+
+  it("toda parada cabe no intervalo do campo, e nenhuma se repete", () => {
+    for (const c of CAMPOS_DE_ESFORCO.filter((x) => x.tipo === "numero")) {
+      for (const p of c.paradas!) expect(limitar(p, c), `${c.key} ${p}`).toBe(p);
+      expect(new Set(c.paradas).size, c.key).toBe(c.paradas!.length);
+    }
+  });
+
+  it("os valores especiais são pontas do slider, com nome", () => {
+    const tokens = campo("maxTokens");
+    expect(tokens.paradas!.at(-1)).toBe(0); // sem teto é o maior de todos
+    expect(tokens.mostrar!(0)).toBe("No cap");
+    expect(tokens.mostrar!(2048)).toBe("2k tokens");
+    expect(campo("agentMaxTurns").paradas!.at(-1)).toBe(0);
+    expect(campo("agentMaxTurns").mostrar!(1)).toBe("1 turn");
+    const temp = campo("temperature");
+    expect(temp.paradas![0]).toBe(-1); // não mandar fica antes do zero
+    expect(temp.mostrar!(-1)).toBe("Provider default");
+    expect(temp.paradas).toContain(0.7); // sem lixo de ponto flutuante (0.7000000001)
+    expect(campo("loopDetectionWindow").mostrar!(0)).toBe("Off");
+    expect(campo("toolRetryOnError").mostrar!(0)).toBe("None");
+    expect(campo("vaultExcerptChars").mostrar!(1200)).toBe("1,200 chars");
+  });
+
+  it("um valor do editor antigo fora das paradas ganha a sua, no lugar certo", () => {
+    const tokens = campo("maxTokens");
+    const com900 = paradasCom(tokens, 900);
+    expect(com900.slice(1, 4)).toEqual([512, 900, 1000]);
+    expect(com900.at(-1)).toBe(0); // o sem teto continua na ponta
+    expect(paradasCom(tokens, 250000).slice(-2)).toEqual([250000, 0]);
+    expect(paradasCom(campo("temperature"), 0.25).slice(3, 6)).toEqual([0.2, 0.25, 0.3]);
+    // valor que já é parada não mexe na trilha
+    expect(paradasCom(tokens, 512)).toBe(tokens.paradas);
+  });
+
+  it("a parte do contexto só aparece com a resposta sem teto, logo abaixo dela", () => {
+    const reserva = campo("contextReservePercent");
+    expect(reserva.quando!({ ...DEFAULT_EFFORT_CONFIGS.max })).toBe(true);
+    expect(reserva.quando!({ ...DEFAULT_EFFORT_CONFIGS.low })).toBe(false);
+    const ordem = CAMPOS_DE_ESFORCO.map((c) => c.key);
+    expect(ordem.indexOf("contextReservePercent")).toBe(ordem.indexOf("maxTokens") + 1);
+  });
+});
 
 // O que cada nível de esforço faz voltou a ser editável (a aba existia na
 // v0.1.73 e sumiu na 0.4.0; o motor sempre leu `effortConfigs`).

@@ -5215,9 +5215,86 @@ body.is-mobile .axxa-settings-root button.axxa-pick {
   height: 17px;
 }
 
-.axxa-effort-modal .axxa-effort-intro {
-  margin: 0 0 var(--size-4-2);
+/* O editor de UM nível, o mais baixo possível: por ajuste, uma linha com
+   nome e valor e o slider logo embaixo — a explicação mora no `title` da
+   linha. Valor cinza = o de fábrica do nível; mexeu, ele ganha a cor do texto
+   e o ↺ aparece (escondido, ele guarda o lugar: o valor não pula). */
+.axxa-effort-modal .axxa-esf {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+}
+
+.axxa-effort-modal .axxa-esf-linha {
+  display: flex;
+  flex-direction: column;
+}
+
+.axxa-effort-modal .axxa-esf-linha.is-hidden,
+.axxa-effort-modal .axxa-esf-pe.is-hidden {
+  display: none;
+}
+
+.axxa-effort-modal .axxa-esf-topo {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  min-height: 24px;
+}
+
+.axxa-effort-modal .axxa-esf-nome {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.axxa-effort-modal .axxa-esf-valor {
+  flex: 0 0 auto;
   color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.axxa-effort-modal .axxa-esf-linha.is-custom .axxa-esf-valor {
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+}
+
+.axxa-effort-modal .axxa-esf-volta {
+  --icon-size: 14px;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  visibility: hidden;
+}
+
+.axxa-effort-modal .axxa-esf-linha.is-custom .axxa-esf-volta {
+  visibility: visible;
+}
+
+/* O app.css dá 100px de largura a todo range; aqui ele é a linha inteira. A
+   margem abre espaço pro botão do slider, que é mais alto que a trilha. */
+.axxa-effort-modal input[type="range"].axxa-esf-slider {
+  width: 100%;
+  margin: 10px 0;
+}
+
+.axxa-effort-modal .axxa-esf-linha.is-chave .axxa-esf-topo {
+  min-height: 36px;
+}
+
+.axxa-effort-modal .axxa-esf-pe {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--size-4-2);
+}
+
+.axxa-effort-modal button.axxa-esf-restaurar {
   font-size: var(--font-ui-small);
 }
 

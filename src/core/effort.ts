@@ -231,7 +231,7 @@ export function effortToVaultLookup(
 }
 
 /** 512 → "512", 2048 → "2k", 6000 → "6k", 1500 → "1.5k". */
-function tokensCurtos(n: number): string {
+export function tokensCurtos(n: number): string {
   if (n < 1000) return String(n);
   return `${Math.round(n / 100) / 10}k`;
 }
