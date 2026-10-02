@@ -58,6 +58,8 @@ import { getModelCapabilities } from "./modelCapabilities";
 
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_MODELS_ENDPOINT = "https://openrouter.ai/api/v1/models";
+/** A chave (limites, créditos, cota dos grátis). */
+const OPENROUTER_KEY_ENDPOINT = "https://openrouter.ai/api/v1/key";
 
 // OpenRouter usa esses headers só pra ATRIBUIÇÃO (aparece no dashboard/ranking
 // deles) — não é telemetria nossa. Referer = URL pública real do plugin.
@@ -226,6 +228,28 @@ export class OpenRouterProvider implements Provider {
    * Graceful: lista vazia em erro. Não saber quais são grátis é pior que a
    * lista antiga, mas não é motivo pra derrubar o SCAN inteiro.
    */
+  /**
+   * A cota diária dos modelos grátis NESTA chave. O OpenRouter dá 50 pedidos
+   * por dia a quem comprou menos de US$ 10 em créditos e 1.000 a quem comprou
+   * mais (fora os 20 por minuto) — o número que a etiqueta "free" precisa
+   * mostrar pra não prometer de graça sem fim. Graceful: null em erro.
+   */
+  async freeQuota(apiKey: string): Promise<{ limit: number; remaining?: number } | null> {
+    if (!apiKey || !apiKey.trim()) return null;
+    try {
+      const res = await requestUrl({
+        url: OPENROUTER_KEY_ENDPOINT,
+        method: "GET",
+        headers: { Authorization: `Bearer ${apiKey.trim()}`, ...APP_HEADERS },
+        throw: false,
+      });
+      if (res.status < 200 || res.status >= 300) return null;
+      return cotaGratisDaChave(res.json);
+    } catch {
+      return null;
+    }
+  }
+
   async listFreeModels(apiKey: string): Promise<string[]> {
     if (!apiKey || !apiKey.trim()) return [];
     try {
@@ -283,6 +307,21 @@ export class OpenRouterProvider implements Provider {
  * `"0.0000001"` também vira um número que ninguém compara certo sem converter.
  * E um modelo grátis de entrada e pago na saída não é grátis: os dois contam.
  */
+/** A cota dos grátis na resposta do /api/v1/key: o `free_model_daily_requests`
+ *  quando vem, senão o `is_free_tier` (sem crédito comprado = 50 por dia). */
+export function cotaGratisDaChave(json: unknown): { limit: number; remaining?: number } | null {
+  const d = (json as { data?: Record<string, unknown> } | undefined)?.data;
+  if (!d || typeof d !== "object") return null;
+  const f = d.free_model_daily_requests as { limit?: unknown; remaining?: unknown } | undefined;
+  if (f && typeof f.limit === "number" && f.limit > 0) {
+    return typeof f.remaining === "number"
+      ? { limit: f.limit, remaining: f.remaining }
+      : { limit: f.limit };
+  }
+  if (typeof d.is_free_tier === "boolean") return { limit: d.is_free_tier ? 50 : 1000 };
+  return null;
+}
+
 export function ehPrecoZero(pricing: unknown): boolean {
   const p = pricing as Record<string, unknown> | undefined;
   if (!p) return false;

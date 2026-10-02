@@ -129,7 +129,8 @@ Per Obsidian's developer policies, in plain terms:
   - the chat provider: your messages, the notes, files, images, PDFs and web pages you attach, and the vault excerpts described under *Automatic context*;
   - the embedding provider (Vault Q&A): the text of your notes while the index is built, and the images too if you pick an image-capable embedding model, plus each search query;
   - OpenAI's transcription API: your voice recordings, when you dictate;
-  - OpenAI or ElevenLabs: the text of an answer, when you press Listen.
+  - OpenAI or ElevenLabs: the text of an answer, when you press Listen;
+  - NVIDIA's public model catalog (`api.ngc.nvidia.com`), when you fetch NIM's model list: a search for the models NVIDIA marks *Free Endpoint*, so the list can tell which ones are really free. No key and nothing of yours goes with it.
 
   There is no telemetry and nothing is sent to us. Answers are rendered as Markdown, so an image link inside an answer is loaded from wherever it points.
 - **Accounts and payment.** The plugin is free, but it needs your own key for at least one provider (Ollama, running locally, needs none). Most providers bill API usage per token; some offer free models or quotas.

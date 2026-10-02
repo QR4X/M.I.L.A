@@ -5502,6 +5502,82 @@ input[type="range"].axxa-slider::-webkit-slider-thumb {
   border-top: none;
 }
 
+/* O FABRICANTE (OpenRouter, NIM): um nível acima das classes. É uma linha da
+   lista — logo, nome, quantos —, mais forte que a seção de classe (que é um
+   rótulo em caixa alta), e as classes dele vêm recuadas embaixo. */
+.axxa-settings-root button.axxa-model-vendor {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--size-4-2) 0;
+  border: none;
+  border-top: 1px solid var(--background-modifier-border);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-family: inherit;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.axxa-settings-root button.axxa-model-vendor:hover,
+.axxa-settings-root button.axxa-model-vendor:hover:not(:disabled) {
+  background: none;
+  box-shadow: none;
+  color: var(--text-normal);
+}
+
+.axxa-settings-root .axxa-model-vendor-ico {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--text-muted);
+}
+
+.axxa-settings-root .axxa-model-vendor-ico svg {
+  width: 18px;
+  height: 18px;
+}
+
+.axxa-settings-root .axxa-model-vendor-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.axxa-settings-root button.axxa-model-vendor.is-closed .axxa-model-section-chev {
+  transform: rotate(-90deg);
+}
+
+/* O recuo é o que diz "estas classes são deste fabricante". */
+.axxa-settings-root .axxa-model-vendor-body {
+  padding-inline-start: var(--size-4-4);
+}
+
+.axxa-settings-root .axxa-model-vendor-body.is-closed {
+  display: none;
+}
+
+/* O que "free" quer dizer neste provider, em cima da lista do filtro Free:
+   o detalhe da etiqueta (o `title`) não aparece no toque. */
+.axxa-settings-root .axxa-models-free-note {
+  margin: var(--size-4-2) 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: var(--line-height-tight);
+}
+
 .axxa-settings-root .axxa-model-row {
   display: flex;
   align-items: center;

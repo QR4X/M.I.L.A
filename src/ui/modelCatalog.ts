@@ -20,6 +20,7 @@ import {
   ROLE_ORDER,
   type RoleId,
 } from "../providers/modelRoles";
+import { compararFabricantes, fabricante, type Fabricante } from "../providers/vendors";
 
 export interface CatalogFamily {
   id: string;
@@ -83,4 +84,62 @@ export function buildModelCatalog(
     });
   }
   return out;
+}
+
+// ── um nível a mais: o FABRICANTE ─────────────────────────────────────────
+// Nos providers que revendem os modelos de todo mundo (OpenRouter, NIM), a
+// lista vira fabricante → classe → modelo. Nos de uma casa só, esse nível
+// repetiria o nome do provider em cima de tudo — lá a classe basta.
+
+/** Uma seção (papel × família) dentro de um fabricante. */
+export interface SecaoDoFabricante {
+  roleId: RoleId;
+  roleLabel: string;
+  roleIcon: string;
+  family: CatalogFamily;
+}
+
+export interface GrupoDoFabricante {
+  fabricante: Fabricante;
+  total: number;
+  secoes: SecaoDoFabricante[];
+}
+
+/** Reagrupa as seções do catálogo por fabricante, mantendo a ordem das seções
+ *  (papel, depois família) dentro de cada um. */
+export function porFabricante(groups: CatalogRole[]): GrupoDoFabricante[] {
+  const mapa = new Map<string, GrupoDoFabricante>();
+  for (const g of groups) {
+    for (const fam of g.families) {
+      for (const m of fam.models) {
+        const f = fabricante(m);
+        const grupo = mapa.get(f.chave) ?? { fabricante: f, total: 0, secoes: [] };
+        let sec = grupo.secoes.find((s) => s.roleId === g.id && s.family.id === fam.id);
+        if (!sec) {
+          sec = { roleId: g.id, roleLabel: g.label, roleIcon: g.icon, family: { ...fam, models: [] } };
+          grupo.secoes.push(sec);
+        }
+        sec.family.models.push(m);
+        grupo.total++;
+        mapa.set(f.chave, grupo);
+      }
+    }
+  }
+  return Array.from(mapa.values()).sort((a, b) => compararFabricantes(a.fabricante, b.fabricante));
+}
+
+/** Uma lista solta (o filtro Free) agrupada por fabricante. */
+export function soltosPorFabricante(
+  models: string[]
+): Array<{ fabricante: Fabricante; models: string[] }> {
+  const mapa = new Map<string, { fabricante: Fabricante; models: string[] }>();
+  for (const m of models) {
+    const f = fabricante(m);
+    const grupo = mapa.get(f.chave) ?? { fabricante: f, models: [] };
+    grupo.models.push(m);
+    mapa.set(f.chave, grupo);
+  }
+  const lista = Array.from(mapa.values());
+  for (const g of lista) g.models.sort();
+  return lista.sort((a, b) => compararFabricantes(a.fabricante, b.fabricante));
 }

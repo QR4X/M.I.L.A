@@ -86,6 +86,9 @@ export interface AxxaSettings {
    * sufixo volta a ser o palpite (ver assistant/model.ts: ehFree).
    */
   freeModels: Record<string, string[]>;
+  /** A cota diária dos grátis por provider (OpenRouter), de quando o fetch
+   *  rodou: a etiqueta "free" mostra o número ("free · 50/day"). */
+  freeQuota: Record<string, { limit: number; remaining?: number; at: number }>;
   // ---- A assistente de criação (skills e projetos)
   /**
    * Onde a ASSISTENTE roda — separada do modelo do chat de propósito.
@@ -241,6 +244,7 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   },
   favoriteModels: {},
   freeModels: {},
+  freeQuota: {},
   assistantProvider: "",
   assistantModel: "",
   // Desligada: mandar o nome das suas notas pra fora é escolha, não padrão.
@@ -631,9 +635,12 @@ export default class AxxaPlugin extends Plugin {
       const livres = await p.listFreeModels(
         this.providerCredential(providerId)
       );
-      if (!livres.length) return;
-      (this.settings.freeModels ??= {})[providerId] = livres;
-      await this.saveSettings();
+      const cota = p.freeQuota
+        ? await p.freeQuota(this.providerCredential(providerId))
+        : null;
+      if (cota) (this.settings.freeQuota ??= {})[providerId] = { ...cota, at: Date.now() };
+      if (livres.length) (this.settings.freeModels ??= {})[providerId] = livres;
+      if (cota || livres.length) await this.saveSettings();
     } catch (err) {
       console.error("[axxa] não consegui listar os modelos grátis:", err);
     }

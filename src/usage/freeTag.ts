@@ -41,16 +41,44 @@ export function compactTokens(n: number): string {
   return String(n);
 }
 
+/**
+ * O modelo é grátis DE VERDADE?
+ *
+ * Quando o fetch trouxe a lista do provider — pelo preço zero no OpenRouter,
+ * pela marca "Free Endpoint" do catálogo da NVIDIA no NIM —, ela é a verdade,
+ * e o nome não conta: o OpenRouter tem grátis sem `:free` no id, e no NIM
+ * 61 dos 81 modelos da API NÃO são do tier grátis, embora nada no id diga.
+ * Sem lista (ninguém buscou ainda), vale o palpite do motor. O "_" do
+ * catálogo da NVIDIA é o "." da API — os dois lados são comparados assim.
+ */
+export function gratisDeVerdade(
+  model: string,
+  livres: readonly string[] | undefined,
+  palpite: boolean
+): boolean {
+  if (!livres || livres.length === 0) return palpite;
+  const igual = (s: string) => s.toLowerCase().replace(/_/g, ".");
+  const alvo = igual(model);
+  return livres.some((l) => igual(l) === alvo);
+}
+
+/** 1000 → "1,000": o número da cota é o recado, e lido de relance. */
+function milhar(n: number): string {
+  return n.toLocaleString("en-US");
+}
+
 export function freeTag(
   provider: string,
   model: string,
   opts: {
-    /** O modelo é grátis "de fábrica" (capabilities do motor). */
+    /** O modelo é grátis de verdade (ver gratisDeVerdade). */
     free: boolean;
     /** Data-sharing ligado no painel da OpenAI. */
     dataSharing: boolean;
     /** Usage tier da conta OpenAI (1–5). */
     tier: number;
+    /** A cota diária dos grátis na chave (OpenRouter), quando o fetch soube. */
+    cota?: { limit: number; remaining?: number };
   }
 ): FreeTag | null {
   const pool = provider === "openai" ? openaiFreeTierForModel(model) : null;
@@ -79,12 +107,41 @@ export function freeTag(
     };
   }
 
-  if (opts.free) {
+  if (!opts.free) return null;
+  // Grátis, mas cada casa com a sua regra — e a regra é o que deixa claro o
+  // que "free" quer dizer ali.
+  if (provider === "openrouter") {
+    const c = opts.cota;
+    const dia = c
+      ? c.limit >= 1000
+        ? `and ${milhar(c.limit)} a day on this key`
+        : `and ${milhar(c.limit)} a day on this key — 1,000 once you've bought $10 in credits`
+      : "and 50 a day (1,000 once you've bought $10 in credits)";
+    const resta = c?.remaining != null ? ` ${milhar(c.remaining)} were left when you fetched.` : "";
+    return {
+      kind: "always",
+      label: c ? `free · ${milhar(c.limit)}/day` : "free",
+      detail: `No cost. OpenRouter's free models share 20 requests a minute ${dia}.${resta} A free variant can run on a different host, with a smaller context than the paid one.`,
+    };
+  }
+  if (provider === "nim") {
+    return {
+      kind: "always",
+      label: "free · 40/min",
+      detail:
+        "A Free Endpoint in NVIDIA's API catalog: no cost with your developer key, for development and testing, up to 40 requests a minute. Models without this mark aren't part of the free tier.",
+    };
+  }
+  if (provider === "ollama") {
     return {
       kind: "always",
       label: "free",
-      detail: "No cost — this model has no billing at all.",
+      detail: "Runs on your own machine — there's no bill at all.",
     };
   }
-  return null;
+  return {
+    kind: "always",
+    label: "free",
+    detail: "No cost — this model has no billing at all.",
+  };
 }

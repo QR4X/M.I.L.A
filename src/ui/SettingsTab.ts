@@ -50,9 +50,10 @@ import { escolherAssistente, ehFree } from "../assistant/model";
 import { getAllEmbeddingModels } from "../rag/types";
 import { deleteIndex } from "../rag/vectorIndex";
 import { getModelCapabilities } from "../providers/modelCapabilities";
-import { freeTag } from "../usage/freeTag";
+import { freeTag, gratisDeVerdade, type FreeTag } from "../usage/freeTag";
 import { openaiFreeTierForModel } from "../usage/freeTokens";
-import { buildModelCatalog } from "./modelCatalog";
+import { buildModelCatalog, porFabricante, soltosPorFabricante } from "./modelCatalog";
+import { PROVIDERS_MULTI_FABRICANTE } from "../providers/vendors";
 import { prettyModelName } from "../providers/modelDescriptions";
 import { speak, stopSpeaking, TTS_PROVIDERS, ttsReady } from "./readAloud";
 import { fraseDaAmostra, idiomaDaAmostra } from "./settings/amostra";
@@ -139,6 +140,8 @@ export class AxxaSettingsTab extends PluginSettingTab {
    *  fechadas: com sete classes abertas a lista volta a ser a rolagem sem fim
    *  que o agrupamento veio resolver. */
   private openFam: string | null = null;
+  /** O fabricante aberto na lista (OpenRouter, NIM) — um por vez. */
+  private openVendor: string | null = null;
   /** Resultado do último teste de conexão de cada provider (só na sessão). */
   private conn: Record<string, ConnState> = {};
   /** Provider cujo catálogo está sendo buscado agora (um de cada vez). */
@@ -716,11 +719,17 @@ export class AxxaSettingsTab extends PluginSettingTab {
       ]);
       this.catalog[providerId] = models;
       if (embeds.length > 0) this.repaint("embedding");
+      // Os grátis contados pela regra de verdade (preço no OpenRouter, marca
+      // "Free Endpoint" no NIM) — o número que a lista vai mostrar.
+      const gratis = models.filter((m) => this.tagGratis(providerId, m) !== null).length;
+      const partes = [
+        `${models.length} models found`,
+        ...(gratis > 0 ? [`${gratis} free`] : []),
+        ...(embeds.length > 0 ? [`${embeds.length} for Vault Q&A embeddings`] : []),
+      ];
       new Notice(
         models.length > 0
-          ? embeds.length > 0
-            ? `${models.length} models found · ${embeds.length} for Vault Q&A embeddings.`
-            : `${models.length} models found.`
+          ? `${partes.join(" · ")}.`
           : "No models returned — check the key or the endpoint."
       );
     } catch (err) {
@@ -847,15 +856,13 @@ export class AxxaSettingsTab extends PluginSettingTab {
       for (const m of [...favs].sort()) this.modelRow(sec, providerId, m, redraw);
     }
 
-    // Quantos modelos têm cota ou são de graça — o número decide se o filtro
-    // "Free" aparece. Filtro que leva a uma lista vazia é um toque perdido.
-    const gratis = models.filter((m) =>
-      freeTag(providerId, m, {
-        free: getModelCapabilities(providerId, m).free === true,
-        dataSharing: this.s.openaiDataSharing === true,
-        tier: this.s.openaiTier ?? 1,
-      })
-    );
+    // Quantos modelos são de graça DE VERDADE (ver usage/freeTag.ts) — o
+    // número decide se o filtro "Free" aparece. Filtro que leva a uma lista
+    // vazia é um toque perdido.
+    const gratis = models.filter((m) => this.tagGratis(providerId, m) !== null);
+    if (gratis.length > 0) {
+      head.firstElementChild?.setText(`${models.length} models · ${gratis.length} free`);
+    }
 
     if (groups.length > 1 || gratis.length > 0) {
       const filter = list.createDiv({ cls: "axxa-seg axxa-models-filter" });
@@ -891,25 +898,12 @@ export class AxxaSettingsTab extends PluginSettingTab {
       this.placeThumb(filter);
     }
 
-    // "Free" é um recorte que atravessa os papéis (tem chat, tem reasoning,
-    // tem mini), então ele não é um grupo do catálogo: é uma lista chapada.
-    if (this.kind === "free") {
-      const wrap = list.createDiv({ cls: "axxa-model-fam" });
-      for (const m of gratis) this.modelRow(wrap, providerId, m, redraw);
-      if (gratis.length === 0) {
-        list.createEl("p", {
-          cls: "axxa-models-empty",
-          text: "Nothing free in this catalog.",
-        });
-      }
-      return;
-    }
-
-    const visible =
-      this.kind === "all" ? groups : groups.filter((g) => g.id === this.kind);
-    // Acordeão: uma classe aberta por vez. Guardo os pares pra abrir/fechar só
-    // trocando classe — remontar a lista seria o piscar que já tiramos daqui.
+    const multi = PROVIDERS_MULTI_FABRICANTE.has(providerId);
+    // Acordeões: um fabricante aberto por vez e, dentro dele, uma classe.
+    // Guardo os pares pra abrir/fechar só trocando classe — remontar a lista
+    // seria o piscar que já tiramos daqui.
     const panes: { key: string; sec: HTMLElement; wrap: HTMLElement }[] = [];
+    const vendors: { key: string; sec: HTMLElement; body: HTMLElement }[] = [];
     const applyOpen = () => {
       for (const pane of panes) {
         const closed = pane.key !== this.openFam;
@@ -917,50 +911,175 @@ export class AxxaSettingsTab extends PluginSettingTab {
         pane.wrap.toggleClass("is-closed", closed);
         pane.sec.setAttribute("aria-expanded", String(!closed));
       }
+      for (const v of vendors) {
+        const closed = v.key !== this.openVendor;
+        v.sec.toggleClass("is-closed", closed);
+        v.body.toggleClass("is-closed", closed);
+        v.sec.setAttribute("aria-expanded", String(!closed));
+      }
     };
 
-    for (const g of visible) {
-      for (const fam of g.families) {
-        // Família sem linhagem conhecida ("Other") vira o próprio papel: uma
-        // seção "OTHER · Text embedding" não informa nada.
-        const orfa = fam.id === "other";
-        const key = `${providerId}:${g.id}:${fam.id}`;
-        const closed = key !== this.openFam;
+    /** O cabeçalho de um fabricante (OpenRouter, NIM): logo, nome, quantos. */
+    const fabricanteSec = (chave: string, nome: string, total: number, exemplo: string) => {
+      const key = `${providerId}:v:${chave}`;
+      const closed = key !== this.openVendor;
+      const sec = list.createEl("button", {
+        cls: closed ? "axxa-model-vendor is-closed" : "axxa-model-vendor",
+        attr: { type: "button", "aria-expanded": String(!closed) },
+      });
+      setIcon(sec.createSpan({ cls: "axxa-model-vendor-ico" }), modelLogo(exemplo));
+      sec.createSpan({ cls: "axxa-model-vendor-name", text: nome });
+      sec.createSpan({ cls: "axxa-model-section-count", text: String(total) });
+      setIcon(sec.createSpan({ cls: "axxa-model-section-chev" }), "chevron-down");
+      const body = list.createDiv({
+        cls: closed ? "axxa-model-vendor-body is-closed" : "axxa-model-vendor-body",
+      });
+      vendors.push({ key, sec, body });
+      sec.onclick = () => {
+        this.openVendor = this.openVendor === key ? null : key;
+        applyOpen();
+      };
+      return body;
+    };
 
-        const sec = list.createEl("button", {
-          cls: closed ? "axxa-model-section is-closed" : "axxa-model-section",
-          attr: { type: "button", "aria-expanded": String(!closed) },
+    /** Uma seção de classe (família) com as linhas dela. */
+    const classeSec = (
+      host: HTMLElement,
+      key: string,
+      g: { id: string; label: string; icon: string },
+      fam: { id: string; label: string; icon: string; models: string[] }
+    ) => {
+      // Família sem linhagem conhecida ("Other") vira o próprio papel: uma
+      // seção "OTHER · Text embedding" não informa nada.
+      const orfa = fam.id === "other";
+      const closed = key !== this.openFam;
+      const sec = host.createEl("button", {
+        cls: closed ? "axxa-model-section is-closed" : "axxa-model-section",
+        attr: { type: "button", "aria-expanded": String(!closed) },
+      });
+      const mark = sec.createSpan({ cls: "axxa-model-section-ico" });
+      setIcon(mark, orfa ? g.icon : fam.icon);
+      sec.createSpan({
+        cls: "axxa-model-section-name",
+        text: orfa ? g.label : fam.label,
+      });
+      // Em "All" a família sozinha é ambígua (GPT-5 em chat e em reasoning),
+      // então o papel vem junto.
+      if (this.kind === "all" && !orfa) {
+        sec.createSpan({ cls: "axxa-model-section-role", text: g.label });
+      }
+      sec.createSpan({
+        cls: "axxa-model-section-count",
+        text: String(fam.models.length),
+      });
+      const chev = sec.createSpan({ cls: "axxa-model-section-chev" });
+      setIcon(chev, "chevron-down");
+
+      const wrap = host.createDiv({
+        cls: closed ? "axxa-model-fam is-closed" : "axxa-model-fam",
+      });
+      for (const m of fam.models) this.modelRow(wrap, providerId, m, redraw);
+
+      panes.push({ key, sec, wrap });
+      sec.onclick = () => {
+        this.openFam = this.openFam === key ? null : key;
+        applyOpen();
+      };
+    };
+
+    // "Free" é um recorte que atravessa os papéis (tem chat, tem reasoning,
+    // tem mini), então ele não é um grupo do catálogo: é uma lista chapada —
+    // por fabricante, nos providers de muitos.
+    if (this.kind === "free") {
+      const nota = this.notaGratis(providerId);
+      if (nota) list.createEl("p", { cls: "axxa-models-free-note", text: nota });
+      if (gratis.length === 0) {
+        list.createEl("p", {
+          cls: "axxa-models-empty",
+          text: "Nothing free in this catalog.",
         });
-        const mark = sec.createSpan({ cls: "axxa-model-section-ico" });
-        setIcon(mark, orfa ? g.icon : fam.icon);
-        sec.createSpan({
-          cls: "axxa-model-section-name",
-          text: orfa ? g.label : fam.label,
-        });
-        // Em "All" a família sozinha é ambígua (GPT-5 em chat e em reasoning),
-        // então o papel vem junto.
-        if (this.kind === "all" && !orfa) {
-          sec.createSpan({ cls: "axxa-model-section-role", text: g.label });
+        return;
+      }
+      if (!multi) {
+        const wrap = list.createDiv({ cls: "axxa-model-fam" });
+        for (const m of gratis) this.modelRow(wrap, providerId, m, redraw);
+        return;
+      }
+      for (const v of soltosPorFabricante(gratis)) {
+        const body = fabricanteSec(v.fabricante.chave, v.fabricante.nome, v.models.length, v.models[0]);
+        const wrap = body.createDiv({ cls: "axxa-model-fam" });
+        for (const m of v.models) this.modelRow(wrap, providerId, m, redraw);
+      }
+      return;
+    }
+
+    const visible =
+      this.kind === "all" ? groups : groups.filter((g) => g.id === this.kind);
+
+    // Uma casa só (OpenAI, Anthropic, Gemini…): as classes direto.
+    if (!multi) {
+      for (const g of visible) {
+        for (const fam of g.families) {
+          classeSec(list, `${providerId}:${g.id}:${fam.id}`, g, fam);
         }
-        sec.createSpan({
-          cls: "axxa-model-section-count",
-          text: String(fam.models.length),
-        });
-        const chev = sec.createSpan({ cls: "axxa-model-section-chev" });
-        setIcon(chev, "chevron-down");
+      }
+      return;
+    }
 
-        const wrap = list.createDiv({
-          cls: closed ? "axxa-model-fam is-closed" : "axxa-model-fam",
-        });
-        for (const m of fam.models) this.modelRow(wrap, providerId, m, redraw);
-
-        panes.push({ key, sec, wrap });
-        sec.onclick = () => {
-          this.openFam = this.openFam === key ? null : key;
-          applyOpen();
-        };
+    // Muitas casas (OpenRouter, NIM): um nível a mais — o fabricante, e as
+    // classes dele dentro. Com uma classe só, os modelos vêm direto: abrir o
+    // fabricante pra depois abrir a única classe dele seria um toque à toa.
+    for (const v of porFabricante(visible)) {
+      const body = fabricanteSec(
+        v.fabricante.chave,
+        v.fabricante.nome,
+        v.total,
+        v.secoes[0].family.models[0]
+      );
+      if (v.secoes.length === 1) {
+        const wrap = body.createDiv({ cls: "axxa-model-fam" });
+        for (const m of v.secoes[0].family.models) this.modelRow(wrap, providerId, m, redraw);
+        continue;
+      }
+      for (const s of v.secoes) {
+        classeSec(
+          body,
+          `${providerId}:${v.fabricante.chave}:${s.roleId}:${s.family.id}`,
+          { id: s.roleId, label: s.roleLabel, icon: s.roleIcon },
+          s.family
+        );
       }
     }
+  }
+
+  /** A etiqueta de grátis de um modelo — de verdade (a lista do fetch vale
+   *  sobre o palpite pelo nome; ver usage/freeTag.ts) e com a regra da casa. */
+  private tagGratis(providerId: string, m: string): FreeTag | null {
+    return freeTag(providerId, m, {
+      free: gratisDeVerdade(
+        m,
+        this.s.freeModels?.[providerId],
+        getModelCapabilities(providerId, m).free === true
+      ),
+      dataSharing: this.s.openaiDataSharing === true,
+      tier: this.s.openaiTier ?? 1,
+      cota: this.s.freeQuota?.[providerId],
+    });
+  }
+
+  /** O que "free" quer dizer neste provider — em cima da lista do filtro
+   *  Free, porque o detalhe da etiqueta (o `title`) não aparece no toque. */
+  private notaGratis(providerId: string): string | null {
+    if (providerId === "openrouter") {
+      const c = this.s.freeQuota?.[providerId];
+      const dia = c ? `${c.limit.toLocaleString("en-US")} a day on this key` : "50 a day";
+      const extra = c && c.limit >= 1000 ? "" : " (1,000 once you've bought $10 in credits)";
+      return `No cost, checked by price, not by the ":free" in the name. They share 20 requests a minute and ${dia}${extra}.`;
+    }
+    if (providerId === "nim") {
+      return "No cost: the models NVIDIA marks as Free Endpoint, for development and testing, 40 requests a minute. The rest of NIM isn't part of the free tier.";
+    }
+    return null;
   }
 
   /** Uma linha da lista de modelos: nome, tag free, id e os dois toggles. */
@@ -980,11 +1099,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
     // A etiqueta separa DE GRAÇA SEMPRE de DE GRAÇA ATÉ UM LIMITE (ver
     // usage/freeTag.ts). Chamar as duas de "free" faz a segunda parecer a
     // primeira — e a conta chega.
-    const tag = freeTag(providerId, m, {
-      free: getModelCapabilities(providerId, m).free === true,
-      dataSharing: this.s.openaiDataSharing === true,
-      tier: this.s.openaiTier ?? 1,
-    });
+    const tag = this.tagGratis(providerId, m);
     if (tag) {
       title.createSpan({
         cls: `axxa-tag is-free is-${tag.kind}`,

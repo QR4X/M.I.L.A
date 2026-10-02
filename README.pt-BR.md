@@ -131,7 +131,8 @@ Pelas políticas de desenvolvedor do Obsidian, em linguagem direta:
   - o provedor do chat: as suas mensagens, as notas, arquivos, imagens, PDFs e páginas que você anexa, e os trechos do vault descritos em *Contexto automático*;
   - o provedor de embedding (Vault Q&A): o texto das suas notas enquanto o índice é montado — e as imagens também, se você escolher um modelo de embedding que aceita imagem — e cada busca;
   - a API de transcrição da OpenAI: as suas gravações de voz, quando você dita;
-  - a OpenAI ou a ElevenLabs: o texto de uma resposta, quando você toca em Listen.
+  - a OpenAI ou a ElevenLabs: o texto de uma resposta, quando você toca em Listen;
+  - o catálogo público de modelos da NVIDIA (`api.ngc.nvidia.com`), quando você busca a lista de modelos do NIM: uma busca pelos modelos que a NVIDIA marca *Free Endpoint*, pra lista saber quais são grátis de verdade. Sem chave, e nada seu vai junto.
 
   Não há telemetria e nada é enviado pra nós. As respostas são renderizadas como Markdown, então um link de imagem dentro de uma resposta é carregado de onde ele aponta.
 - **Contas e pagamento.** O plugin é gratuito, mas precisa da sua chave de pelo menos um provedor (o Ollama, rodando local, não precisa). A maioria cobra o uso da API por token; alguns oferecem modelos ou cotas gratuitas.

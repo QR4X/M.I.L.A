@@ -570,6 +570,92 @@ export class NimProvider implements Provider {
       return [];
     }
   }
+
+  /**
+   * Os modelos GRÁTIS de verdade no NIM: os marcados "Free Endpoint" no
+   * catálogo da NVIDIA (o filtro `nimType:nim_type_preview` do
+   * build.nvidia.com). O /v1/models lista tudo que o endpoint serve —
+   * inclusive o que NÃO é do tier grátis — e não traz preço nenhum; a marca só
+   * existe no catálogo público, que não pede chave. Em out/2026 eram 20 dos 81
+   * modelos da API.
+   *
+   * Graceful: [] em erro — sem o catálogo, o fetch não cai por isso.
+   */
+  async listFreeModels(_apiKey: string): Promise<string[]> {
+    const ids = new Set<string>();
+    try {
+      for (let page = 0; page < 5; page++) {
+        const q = JSON.stringify({
+          query: "*:*",
+          page,
+          pageSize: 100,
+          filters: [{ field: "nimType", value: "nim_type_preview" }],
+        });
+        const res = await requestUrl({
+          url: `${NGC_CATALOGO}?q=${encodeURIComponent(q)}`,
+          method: "GET",
+          throw: false,
+        });
+        if (res.status < 200 || res.status >= 300) break;
+        const { ids: pagina, total } = gratisDoCatalogoNvidia(res.json);
+        for (const id of pagina) ids.add(id);
+        if (pagina.length === 0 || (page + 1) * 100 >= total) break;
+      }
+    } catch {
+      // Sem o catálogo: segue sem a lista.
+    }
+    return Array.from(ids).sort();
+  }
+}
+
+/** O catálogo público da NVIDIA — o mesmo que o build.nvidia.com consulta pra
+ *  marcar "Free Endpoint". Não precisa de chave. */
+const NGC_CATALOGO = "https://api.ngc.nvidia.com/v2/search/catalog/resources/ENDPOINT";
+
+interface RecursoDoCatalogo {
+  name?: unknown;
+  labels?: unknown;
+}
+
+interface EtiquetaDoCatalogo {
+  key?: unknown;
+  values?: unknown;
+  unresolvedValues?: unknown;
+}
+
+/**
+ * Os ids GRÁTIS numa página do catálogo da NVIDIA. O id da API é
+ * `publisher/nome` (o publisher vem numa etiqueta), e o "_" do catálogo vira
+ * "." como na API (`riva-translate-4b-instruct-v1_1` → `…-v1.1`). Só entra o
+ * que tem a marca "Free Endpoint" no próprio registro: se o filtro da busca
+ * um dia deixar de valer, nada vira grátis por engano. O grupo "_scored" só
+ * repete os primeiros resultados.
+ */
+export function gratisDoCatalogoNvidia(json: unknown): { ids: string[]; total: number } {
+  const j = json as { resultTotal?: unknown; results?: unknown } | undefined;
+  const grupos = Array.isArray(j?.results)
+    ? (j.results as Array<{ groupValue?: unknown; resources?: unknown }>)
+    : [];
+  const ids = new Set<string>();
+  for (const g of grupos) {
+    if (g?.groupValue === "_scored" || !Array.isArray(g?.resources)) continue;
+    for (const r of g.resources as RecursoDoCatalogo[]) {
+      if (typeof r?.name !== "string") continue;
+      const etiquetas = Array.isArray(r.labels) ? (r.labels as EtiquetaDoCatalogo[]) : [];
+      const valores = (e: EtiquetaDoCatalogo | undefined, campo: "values" | "unresolvedValues") =>
+        Array.isArray(e?.[campo]) ? (e[campo] as unknown[]).filter((v): v is string => typeof v === "string") : [];
+      const marcadoGratis = etiquetas.some(
+        (e) =>
+          valores(e, "unresolvedValues").includes("nim_type_preview") ||
+          valores(e, "values").includes("Free Endpoint")
+      );
+      const publisher = valores(etiquetas.find((e) => e?.key === "publisher"), "values")[0];
+      if (!marcadoGratis || !publisher) continue;
+      ids.add(`${publisher}/${r.name}`.toLowerCase().replace(/_/g, "."));
+    }
+  }
+  const total = typeof j?.resultTotal === "number" ? j.resultTotal : ids.size;
+  return { ids: Array.from(ids), total };
 }
 
 /**
