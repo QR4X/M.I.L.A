@@ -1,6 +1,6 @@
 # Contributing to AXXA Agent
 
-Thanks for looking. AXXA Agent is maintained by Axxa Lab. Bug reports, reproductions
+Thanks for looking. AXXA Agent is maintained by AXXA Lab™. Bug reports, reproductions
 and focused pull requests are welcome.
 
 ## Reporting a bug

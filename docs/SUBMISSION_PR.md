@@ -15,7 +15,7 @@ Fork do `obsidianmd/obsidian-releases`, e **adicione no FIM do array** em
 {
   "id": "axxa-agent",
   "name": "AXXA Agent",
-  "author": "Axxa Lab",
+  "author": "AXXA Lab™",
   "description": "Chat with AI, query your vault with local RAG, and let an agent read and edit your notes across six LLM providers. Bring your own API key.",
   "repo": "axxalab/axxa-agent"
 }

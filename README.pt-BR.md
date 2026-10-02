@@ -211,4 +211,4 @@ Ideias e votos ficam em [Discussions › Ideas](https://github.com/axxalab/axxa-
 
 **GPL-3.0-or-later**, veja o [LICENSE](LICENSE). Use pra qualquer coisa, inclusive no trabalho, e faça fork à vontade; se você distribuir uma versão modificada, publique o código dela nos mesmos termos. Os logos dos provedores vêm do [lobe-icons](https://github.com/lobehub/lobe-icons) (MIT) e estão creditados no [NOTICE.md](NOTICE.md).
 
-© 2026 AXXA Lab.
+© 2026 AXXA Lab™.

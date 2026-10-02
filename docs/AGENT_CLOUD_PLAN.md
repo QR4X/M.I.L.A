@@ -1,7 +1,7 @@
 # AXXA Remote Agent — Planejamento de Produto (PM/PO)
 
 > **Codinome:** `axxa-remote-agent` · **Status:** Planejamento aprovado — aguardando início da execução
-> **Data:** 2026-07-23 · **Owner de produto:** Rafael (Axxa Lab) · **Documento vivo** — atualizar a cada milestone.
+> **Data:** 2026-07-23 · **Owner de produto:** Rafael (AXXA Lab™) · **Documento vivo** — atualizar a cada milestone.
 
 ---
 
