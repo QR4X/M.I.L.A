@@ -71,7 +71,7 @@ As versões de teste saem como pré-releases no GitHub. Instale o [BRAT](https:/
 2. Coloque a chave de um provedor ([onde conseguir](#provedores)) ou o endereço do seu servidor Ollama (normalmente `http://localhost:11434`).
 3. Comece uma conversa na tela inicial, escolha o modo e envie.
 
-**Jeitos grátis de começar:** a cota grátis do Google Gemini, os modelos grátis do OpenRouter, ou um modelo local pelo Ollama, que não pede chave nem conta. A primeira mensagem trava o provedor, o modelo e o modo daquela conversa.
+**Jeitos grátis de começar:** a cota grátis do Google Gemini (num projeto sem cobrança ativada), os modelos grátis do OpenRouter, os Free Endpoints do NVIDIA NIM, ou um modelo local pelo Ollama, que não pede chave nem conta. A primeira mensagem trava o provedor, o modelo e o modo daquela conversa.
 
 ## Os três modos
 
@@ -97,12 +97,12 @@ Todos usam a sua própria chave. Você só precisa de uma.
 |---|---|---|---|
 | **OpenAI** | Nuvem | Não | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 | **Anthropic (Claude)** | Nuvem | Não | [console.anthropic.com](https://console.anthropic.com/) |
-| **Google Gemini** | Nuvem | Cota grátis | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| **OpenRouter** | Nuvem, muitos modelos | Modelos grátis | [openrouter.ai/keys](https://openrouter.ai/keys) |
-| **NVIDIA NIM** | Nuvem | Créditos grátis | [build.nvidia.com](https://build.nvidia.com/) |
+| **Google Gemini** | Nuvem | Cota grátis em projeto sem cobrança; geração de imagem é paga | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| **OpenRouter** | Nuvem, muitos modelos | Modelos grátis: 50 pedidos por dia, 1.000 depois de US$ 10 em créditos | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| **NVIDIA NIM** | Nuvem | Free Endpoints: 20 modelos hospedados, 40 pedidos por minuto, pra desenvolvimento | [build.nvidia.com](https://build.nvidia.com/) |
 | **Ollama** | Local, sem chave | Grátis | [ollama.com](https://ollama.com/), depois coloque o endereço do servidor em Settings |
 
-A lista de modelos vem ao vivo de cada provedor. Etiquetas mostram o que cada modelo faz (visão, ferramentas, cota grátis, geração de imagem ou áudio), e um aviso aparece quando o modelo não faz o que o modo precisa.
+A lista de modelos vem ao vivo de cada provedor. Etiquetas mostram o que cada modelo faz (visão, ferramentas, geração de imagem ou áudio), e um aviso aparece quando o modelo não faz o que o modo precisa. Um modelo grátis traz o limite dele: `free · 50/day` no OpenRouter (o número da sua chave), `free · 40/min` no NVIDIA NIM, `free tier` no Gemini.
 
 ## Segurança do agente
 
@@ -171,7 +171,12 @@ Só o que vai pro provedor que você escolheu: suas mensagens, o que você anexa
 <details>
 <summary><b>Quais modelos são grátis?</b></summary>
 
-A cota grátis do Gemini, os modelos grátis do OpenRouter (marcados no seletor de modelo), os créditos grátis do NVIDIA NIM e qualquer modelo local pelo Ollama.
+Cada provedor tem a sua regra, e a lista de modelos nas Settings mostra o limite ao lado de cada modelo grátis.
+
+- **Google Gemini:** a cota grátis cobre os modelos Flash (2.5 e 3.x, inclusive Lite, Live e TTS), o 2.5 Pro, os embeddings e o Gemma, num projeto sem cobrança ativada. Em troca, o Google pode usar o que você manda pra melhorar os produtos dele. Geração de imagem (Nano Banana incluído), 3.1 Pro preview, Veo e Lyria são só pagos.
+- **OpenRouter:** modelos com preço zero, marcados `free · 50/day`. Eles dividem 20 pedidos por minuto e 50 por dia por chave, ou 1.000 por dia depois que a conta compra US$ 10 em créditos. Preço zero no catálogo não basta: o Lyria do Google aparece com 0 mas cobra por clipe, então não é marcado como grátis.
+- **NVIDIA NIM:** só os modelos que a NVIDIA marca *Free Endpoint* (20 dos 81 modelos hospedados em outubro de 2026), pra desenvolvimento e teste, até 40 pedidos por minuto. O resto do NIM é pago.
+- **Ollama:** qualquer modelo local. O único limite é a sua máquina.
 </details>
 
 <details>

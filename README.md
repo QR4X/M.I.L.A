@@ -69,7 +69,7 @@ Test builds are published as GitHub pre-releases. Install [BRAT](https://github.
 2. Add a key for one provider ([where to get one](#providers)), or set your Ollama server address (usually `http://localhost:11434`).
 3. Start a chat from the home screen, pick a mode, and send.
 
-**Free ways to start:** Google Gemini's free tier, OpenRouter's free models, or a local model through Ollama, which needs no key and no account. The first message locks the provider, model and mode for that conversation.
+**Free ways to start:** Google Gemini's free tier (on a project without billing), OpenRouter's free models, NVIDIA NIM's Free Endpoints, or a local model through Ollama, which needs no key and no account. The first message locks the provider, model and mode for that conversation.
 
 ## The three modes
 
@@ -95,12 +95,12 @@ All providers use your own key. You only need one.
 |---|---|---|---|
 | **OpenAI** | Cloud | No | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 | **Anthropic (Claude)** | Cloud | No | [console.anthropic.com](https://console.anthropic.com/) |
-| **Google Gemini** | Cloud | Free tier | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| **OpenRouter** | Cloud, many models | Free models | [openrouter.ai/keys](https://openrouter.ai/keys) |
-| **NVIDIA NIM** | Cloud | Free credits | [build.nvidia.com](https://build.nvidia.com/) |
+| **Google Gemini** | Cloud | Free tier on a project without billing; image generation is paid | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| **OpenRouter** | Cloud, many models | Free models: 50 requests a day, 1,000 after $10 in credits | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| **NVIDIA NIM** | Cloud | Free Endpoints: 20 hosted models, 40 requests a minute, for development | [build.nvidia.com](https://build.nvidia.com/) |
 | **Ollama** | Local, no key | Free | [ollama.com](https://ollama.com/), then set the server address in Settings |
 
-Model lists come live from each provider. Badges show what each model can do (vision, tools, free tier, image or audio generation), and a banner warns you when a model can't do what the current mode needs.
+Model lists come live from each provider. Badges show what each model can do (vision, tools, image or audio generation), and a banner warns you when a model can't do what the current mode needs. A free model carries its limit: `free · 50/day` on OpenRouter (your key's own number), `free · 40/min` on NVIDIA NIM, `free tier` on Gemini.
 
 ## Agent safety
 
@@ -169,7 +169,12 @@ Only what goes to the provider you chose: your messages, what you attach, and th
 <details>
 <summary><b>Which models are free?</b></summary>
 
-Gemini's free tier, OpenRouter's free models (marked in the model picker), NVIDIA NIM's free credits, and any local model through Ollama.
+Each provider has its own rule, and the model list in Settings shows the limit next to each free model.
+
+- **Google Gemini:** the free tier covers the Flash models (2.5 and 3.x, including Lite, Live and TTS), 2.5 Pro, embeddings and Gemma, on a project without billing turned on. In exchange, Google may use what you send to improve its products. Image generation (Nano Banana included), 3.1 Pro preview, Veo and Lyria are paid only.
+- **OpenRouter:** models priced at zero, tagged `free · 50/day`. They share 20 requests a minute and 50 a day per key, or 1,000 a day once the account has bought $10 in credits. A price of zero in the catalog isn't enough: Google's Lyria shows 0 but bills per clip, so it isn't marked free.
+- **NVIDIA NIM:** only the models NVIDIA marks *Free Endpoint* (20 of its 81 hosted models in October 2026), for development and testing, up to 40 requests a minute. The rest of NIM is paid.
+- **Ollama:** any local model. The only limit is your machine.
 </details>
 
 <details>
