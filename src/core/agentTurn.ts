@@ -14,7 +14,7 @@ import {
   agentActivitySpec,
   summarizeToolResult,
 } from "./helpers";
-import { resolveEffortConfig, effortToMaxTokensSmart } from "./effort";
+import { resolveEffortConfig, effortToMaxTokensSmart, isEffortLevel } from "./effort";
 import { getContextWindow } from "./contextWindows";
 import {
   buildAgentSystemPrompt,
@@ -210,6 +210,7 @@ export async function runAgentTurn(
             plugin.settings.effortConfigs
           ),
           temperature: effortCfg.temperature,
+          effort: isEffortLevel(effort) ? effort : undefined,
           tools,
         },
         apiKey,

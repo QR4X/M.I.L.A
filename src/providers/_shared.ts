@@ -20,7 +20,7 @@ import {
   type UsageHandler,
   type ReasoningHandler,
 } from "./base";
-import { resolveTemperature, resolveMaxTokens } from "./paramPolicy";
+import { aplicarEsforco, resolveTemperature, resolveMaxTokens } from "./paramPolicy";
 
 // ============================================================
 // Fallback de streaming → não-streaming (pseudo-stream). v0.1.232
@@ -218,8 +218,10 @@ export function buildChatBody(
   const body: Record<string, unknown> = {
     model: req.model,
     messages: toOpenAIMessages(req.messages),
-    [field]: resolveMaxTokens(opts.provider, req.model, req.maxTokens ?? 2000),
+    [field]: resolveMaxTokens(opts.provider, req.model, req.maxTokens ?? 2000, req.effort),
   };
+  // Quanto pensar (reasoning_effort / reasoning.effort), quando o modelo tem.
+  aplicarEsforco(body, opts.provider, req.model, req.effort);
   if (opts.stream) {
     body.stream = true;
     if (opts.includeUsage) body.stream_options = { include_usage: true };

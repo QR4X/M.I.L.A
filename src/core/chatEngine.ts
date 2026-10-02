@@ -7,7 +7,8 @@
 import { useChatStore } from "../store/chat";
 import type { getProvider } from "../providers";
 import { semCredencial, describeProviderError } from "./helpers";
-import { resolveEffortConfig, effortToMaxTokensSmart } from "./effort";
+import { resolveEffortConfig, effortToMaxTokensSmart, isEffortLevel } from "./effort";
+import { resolveMaxTokens } from "../providers/paramPolicy";
 import { getContextWindow } from "./contextWindows";
 import {
   blocoDeNotasAnexadas,
@@ -181,6 +182,7 @@ export async function streamReply(
         messages: history,
         maxTokens,
         temperature: effortCfg.temperature,
+        effort: isEffortLevel(effort) ? effort : undefined,
       },
       apiKey,
       (token) => {
@@ -214,11 +216,20 @@ export async function streamReply(
     );
     endStreamTimer();
 
-    // Heurística de truncamento: output ≈ teto de tokens → "Continuar".
+    // Heurística de truncamento: output ≈ teto de tokens → "Continuar". O
+    // teto é o que FOI pro provider: modelo que pensa recebe um piso bem acima
+    // do nível (ver paramPolicy) — comparar com o do nível acusaria corte em
+    // toda resposta dele.
+    const tetoEnviado = resolveMaxTokens(
+      activeProviderId,
+      activeModel,
+      maxTokens,
+      isEffortLevel(effort) ? effort : undefined
+    );
     if (
       responseId !== null &&
       lastOutputTokens > 0 &&
-      lastOutputTokens >= maxTokens * 0.95
+      lastOutputTokens >= tetoEnviado * 0.95
     ) {
       useChatStore.getState().setTruncated(responseId, true);
     }

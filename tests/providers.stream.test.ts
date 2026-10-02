@@ -593,12 +593,22 @@ describe("param policy aplicada no BODY real (regressão temperature)", () => {
     expect(cap.body?.temperature).toBeUndefined();
   });
 
-  it("Claude > 1 é clampado pra 1 no body", async () => {
+  it("Claude que aceita temperatura: > 1 é clampado pra 1 no body", async () => {
     const cap = captureBody([
       sse({ type: "message_start", message: { usage: { input_tokens: 1 } } }),
       sse({ type: "message_stop" }),
     ]);
-    await anthropicProvider.streamChat(reqT("claude-opus-4-8", 1.7), "key", () => {});
+    await anthropicProvider.streamChat(reqT("claude-sonnet-4-6", 1.7), "key", () => {});
     expect(cap.body?.temperature).toBe(1);
+  });
+
+  it("Claude atual (Opus 4.7+, Sonnet 5+, Fable): a temperatura nem vai — seria 400", async () => {
+    const cap = captureBody([
+      sse({ type: "message_start", message: { usage: { input_tokens: 1 } } }),
+      sse({ type: "message_stop" }),
+    ]);
+    await anthropicProvider.streamChat(reqT("claude-opus-4-8", 0.7), "key", () => {});
+    expect(cap.body).toBeDefined();
+    expect(cap.body).not.toHaveProperty("temperature");
   });
 });

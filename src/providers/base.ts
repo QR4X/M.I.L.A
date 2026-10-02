@@ -3,6 +3,8 @@
 // Quando adicionarmos mais providers no Módulo 2, todos implementam esse contrato.
 // Pensa nele como o "design token" do sistema de providers — quem encaixa aqui é compatível.
 
+import type { EffortLevel } from "../core/effort";
+
 /** Tool definition genérica — providers convertem pro seu formato wire-level. */
 export interface ProviderToolDefinition {
   name: string;
@@ -81,6 +83,10 @@ export interface ProviderRequest {
   /** Temperatura 0..2 — se omitido, provider usa default próprio.
    *  Effort baixo = temp alta (criativo); effort alto = temp baixa (preciso). */
   temperature?: number;
+  /** O nível do Effort do pedido (chat/agente). Modelo que pensa antes de
+   *  responder recebe dele QUANTO pensar e um piso de max_tokens (ver
+   *  paramPolicy). Sem ele (assistente, títulos), vale o padrão do provider. */
+  effort?: EffortLevel;
 }
 
 export interface ProviderResponse {

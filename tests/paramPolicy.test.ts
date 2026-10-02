@@ -42,9 +42,9 @@ describe("resolveTemperature", () => {
     expect(resolveTemperature("gemini", "gemini-2.5-flash", 0.7)).toBe(0.7);
   });
 
-  it("Claude clampa em 0..1 (não 0..2)", () => {
-    expect(resolveTemperature("anthropic", "claude-opus-4-8", 0.7)).toBe(0.7);
-    expect(resolveTemperature("anthropic", "claude-opus-4-8", 1.5)).toBe(1);
+  it("Claude que aceita temperatura clampa em 0..1 (não 0..2)", () => {
+    expect(resolveTemperature("anthropic", "claude-sonnet-4-6", 0.7)).toBe(0.7);
+    expect(resolveTemperature("anthropic", "claude-sonnet-4-6", 1.5)).toBe(1);
     // Claude via OpenRouter também: detecta pelo id
     expect(resolveTemperature("openrouter", "anthropic/claude-sonnet-4", 1.8)).toBe(1);
   });

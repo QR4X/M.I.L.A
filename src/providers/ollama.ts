@@ -183,6 +183,72 @@ function toolCallsDoOllama(brutas: unknown): ProviderToolCall[] {
   return saida;
 }
 
+// ── o tamanho da janela (num_ctx) ────────────────────────────────────────
+
+/** O contexto máximo de cada modelo local, lido do /api/show uma vez. Sem
+ *  resposta (servidor fora, Ollama antigo, modelo sem o campo) não guarda
+ *  nada — tenta de novo no próximo pedido. */
+const contextoMaximo = new Map<string, number>();
+
+async function contextoDoModelo(endpoint: string, model: string): Promise<number | undefined> {
+  const chave = `${endpoint}|${model}`;
+  const sabido = contextoMaximo.get(chave);
+  if (sabido) return sabido;
+  try {
+    const res = await requestUrl({
+      url: `${endpoint}/api/show`,
+      method: "POST",
+      contentType: "application/json",
+      body: JSON.stringify({ model }),
+      throw: false,
+    });
+    if (res.status < 200 || res.status >= 300) return undefined;
+    const info = (res.json as { model_info?: Record<string, unknown> } | undefined)?.model_info;
+    for (const [k, v] of Object.entries(info ?? {})) {
+      if (k.endsWith(".context_length") && typeof v === "number" && v > 0) {
+        contextoMaximo.set(chave, v);
+        return v;
+      }
+    }
+  } catch {
+    // Sem o /api/show: segue sem o teto do modelo (ver contextoDoOllama).
+  }
+  return undefined;
+}
+
+/** Tokens que um pedido ocupa, por alto: 3 caracteres por token (português e
+ *  o JSON das ferramentas rendem menos que os 4 do inglês), ~1k por imagem. */
+export function tokensDoPedido(req: ProviderRequest): number {
+  let chars = 0;
+  let imagens = 0;
+  for (const m of req.messages) {
+    chars += m.content.length;
+    if (m.toolCalls) chars += JSON.stringify(m.toolCalls).length;
+    for (const a of m.attachments ?? []) if (a.type === "image") imagens++;
+  }
+  if (req.tools && req.tools.length > 0) chars += JSON.stringify(req.tools).length;
+  return Math.ceil(chars / 3) + imagens * 1000;
+}
+
+const DEGRAUS_DE_CONTEXTO = [8192, 16384, 32768, 65536, 131072, 262144];
+
+/**
+ * O num_ctx de um pedido. Sem ele o Ollama usa a janela padrão do servidor
+ * (pequena) e CORTA o começo do prompt sem avisar — justamente as instruções
+ * e as ferramentas do agente. Aqui: o menor degrau que cabe o prompt e a
+ * resposta (até 8k dela), sem passar do que o modelo aguenta. Degraus fixos
+ * porque mudar o num_ctx recarrega o modelo: com eles, uma conversa que
+ * cresce recarrega poucas vezes. Sem saber o máximo do modelo, até 32k.
+ */
+export function contextoDoOllama(prompt: number, resposta: number, maxModelo?: number): number {
+  const precisa = prompt + Math.min(resposta, 8192);
+  const degrau =
+    DEGRAUS_DE_CONTEXTO.find((d) => d >= precisa) ??
+    DEGRAUS_DE_CONTEXTO[DEGRAUS_DE_CONTEXTO.length - 1];
+  const teto = maxModelo && maxModelo > 0 ? maxModelo : 32768;
+  return Math.min(degrau, teto);
+}
+
 export class OllamaProvider implements Provider {
   id = "ollama";
   name = "Ollama";
@@ -220,21 +286,29 @@ export class OllamaProvider implements Provider {
     return url;
   }
 
-  async chat(req: ProviderRequest, apiKey: string): Promise<ProviderResponse> {
-    const endpoint = this.getEndpoint(apiKey);
-
+  /** O corpo do /api/chat — o mesmo pros dois caminhos (com e sem stream). */
+  private async corpo(
+    req: ProviderRequest,
+    endpoint: string,
+    stream: boolean
+  ): Promise<Record<string, unknown>> {
+    const numPredict = resolveMaxTokens("ollama", req.model, req.maxTokens ?? 2000, req.effort);
+    const numCtx = contextoDoOllama(
+      tokensDoPedido(req),
+      numPredict,
+      await contextoDoModelo(endpoint, req.model)
+    );
+    const temp = resolveTemperature("ollama", req.model, req.temperature);
     // Body com OpenAI-compat messages — reusa o converter pra normalizar
     // assistant.tool_calls e tool results.
     const body: Record<string, unknown> = {
       model: req.model,
       messages: toOllamaMessages(req.messages),
-      stream: false,
+      stream,
       options: {
-        num_predict: resolveMaxTokens("ollama", req.model, req.maxTokens ?? 2000),
-        ...(() => {
-          const t = resolveTemperature("ollama", req.model, req.temperature);
-          return t !== undefined ? { temperature: t } : {};
-        })(),
+        num_predict: numPredict,
+        num_ctx: numCtx,
+        ...(temp !== undefined ? { temperature: temp } : {}),
       },
     };
     if (req.tools && req.tools.length > 0) {
@@ -248,6 +322,12 @@ export class OllamaProvider implements Provider {
       }));
       // Ollama NÃO usa tool_choice — qualquer valor é ignorado, então omitimos.
     }
+    return body;
+  }
+
+  async chat(req: ProviderRequest, apiKey: string): Promise<ProviderResponse> {
+    const endpoint = this.getEndpoint(apiKey);
+    const body = await this.corpo(req, endpoint, false);
 
     let res;
     try {
@@ -310,29 +390,7 @@ export class OllamaProvider implements Provider {
     _onReasoning?: ReasoningHandler
   ): Promise<ProviderResponse> {
     const endpoint = this.getEndpoint(apiKey);
-
-    const body: Record<string, unknown> = {
-      model: req.model,
-      messages: toOllamaMessages(req.messages),
-      stream: true,
-      options: {
-        num_predict: resolveMaxTokens("ollama", req.model, req.maxTokens ?? 2000),
-        ...(() => {
-          const t = resolveTemperature("ollama", req.model, req.temperature);
-          return t !== undefined ? { temperature: t } : {};
-        })(),
-      },
-    };
-    if (req.tools && req.tools.length > 0) {
-      body.tools = req.tools.map((t) => ({
-        type: "function",
-        function: {
-          name: t.name,
-          description: t.description,
-          parameters: t.parameters,
-        },
-      }));
-    }
+    const body = await this.corpo(req, endpoint, true);
 
     let res: Response;
     try {

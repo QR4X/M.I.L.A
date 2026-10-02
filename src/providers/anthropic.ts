@@ -29,7 +29,7 @@ import {
   UsageHandler,
   ReasoningHandler,
 } from "./base";
-import { resolveTemperature, resolveMaxTokens } from "./paramPolicy";
+import { aplicarEsforco, resolveTemperature, resolveMaxTokens } from "./paramPolicy";
 import {
   ensureOkRequest,
   ensureOkStream,
@@ -106,6 +106,8 @@ interface AnthropicBody {
   system?: string;
   tools?: AnthropicTool[];
   temperature?: number;
+  /** Quanto pensar (low…max), nos Claude que têm o controle. */
+  output_config?: { effort: string };
 }
 
 // ---- O que a Anthropic devolve (ver a nota em _shared.ts) ----------------
@@ -319,14 +321,18 @@ function buildBody(req: ProviderRequest, stream: boolean): AnthropicBody {
 
   const body: AnthropicBody = {
     model: req.model,
-    max_tokens: resolveMaxTokens("anthropic", req.model, req.maxTokens ?? 2000),
+    max_tokens: resolveMaxTokens("anthropic", req.model, req.maxTokens ?? 2000, req.effort),
     messages,
     stream,
   };
   if (system) body.system = system;
-  // Claude usa range 0..1 (paramPolicy clampa) — não 0..2 como a OpenAI.
+  // Claude usa range 0..1 (paramPolicy clampa) — não 0..2 como a OpenAI — e
+  // os atuais (Fable, Opus 4.7+, Sonnet 5+) não aceitam nenhuma: a política
+  // devolve undefined e o campo nem vai.
   const temp = resolveTemperature("anthropic", req.model, req.temperature);
   if (temp !== undefined) body.temperature = temp;
+  // O nível do Effort vira o `output_config.effort` dos que têm o controle.
+  aplicarEsforco(body as unknown as Record<string, unknown>, "anthropic", req.model, req.effort);
   if (req.tools && req.tools.length > 0) {
     body.tools = req.tools.map((t) => ({
       name: t.name,
