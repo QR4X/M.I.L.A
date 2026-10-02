@@ -41,6 +41,8 @@ import { EMBEDDING_PROVIDERS, somarDescobertos } from "./rag/descobertos";
 import { chatIndexSignature } from "./core/chatIndex";
 import { revisarOllamaPadrao } from "./core/ollamaPadrao";
 import { definirGratisConhecidos } from "./usage/pricing";
+import { lancar, podar, type LivroDoDia } from "./usage/livroDoDia";
+import { definirAnotadorDeUso } from "./usage/anotador";
 import { LOCALES } from "./i18n";
 
 /** Resultado do último teste de credencial de um provider. */
@@ -90,6 +92,13 @@ export interface AxxaSettings {
   /** A cota diária dos grátis por provider (OpenRouter), de quando o fetch
    *  rodou: a etiqueta "free" mostra o número ("free · 50/day"). */
   freeQuota: Record<string, { limit: number; remaining?: number; at: number }>;
+  /** O livro do dia: pedidos e tokens por modelo, hora a hora, nas últimas
+   *  ~48h (ver usage/livroDoDia.ts). Sai daqui o "quanto sobra hoje". */
+  usoDoDia: LivroDoDia;
+  /** Limites diários que a PESSOA informou ("provider\u0001modelo" → pedidos
+   *  por dia) — o Gemini não publica os do tier grátis: eles moram no AI
+   *  Studio de cada projeto. */
+  limitesDiarios: Record<string, number>;
   // ---- A assistente de criação (skills e projetos)
   /**
    * Onde a ASSISTENTE roda — separada do modelo do chat de propósito.
@@ -246,6 +255,8 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   favoriteModels: {},
   freeModels: {},
   freeQuota: {},
+  usoDoDia: {},
+  limitesDiarios: {},
   assistantProvider: "",
   assistantModel: "",
   // Desligada: mandar o nome das suas notas pra fora é escolha, não padrão.
@@ -1009,13 +1020,40 @@ export default class AxxaPlugin extends Plugin {
       void this.carregarEmSegundoPlano();
     });
 
+    // O livro do dia: todo pedido de chat a um provider soma ali (ver
+    // providers/index.ts). Grava agrupado — um gravar por resposta seria
+    // um data.json reescrito a cada mensagem.
+    definirAnotadorDeUso((provider, model, delta) => this.anotarUso(provider, model, delta));
+
     // NÃO auto-abrimos o painel no startup — o Obsidian abre "normal". O AI
     // Agent abre sob demanda pela ribbon (ícone do robô) ou pelo comando
     // "Abrir AI Agent". Se o painel estava aberto ao fechar o Obsidian, o
     // próprio Obsidian restaura o layout — respeitando o que o usuário deixou.
   }
 
+  /** Soma um pedido (ou os tokens dele) no livro do dia e agenda a gravação. */
+  anotarUso(provider: string, model: string, delta: { r?: number; i?: number; o?: number }): void {
+    const agora = new Date();
+    const livro = (this.settings.usoDoDia ??= {});
+    lancar(livro, agora, provider, model, delta);
+    podar(livro, agora);
+    if (this.usoTimer !== null) return;
+    this.usoTimer = window.setTimeout(() => {
+      this.usoTimer = null;
+      void this.saveSettings();
+    }, 5000);
+  }
+
+  private usoTimer: number | null = null;
+
   onunload() {
+    definirAnotadorDeUso(null);
+    // O que o livro anotou e ainda não gravou não se perde ao sair.
+    if (this.usoTimer !== null) {
+      window.clearTimeout(this.usoTimer);
+      this.usoTimer = null;
+      void this.saveSettings();
+    }
     // Cancela timers/abort pendentes pra não vazar entre reloads (v0.1.228)
     if (this.autoReindexTimer !== null) {
       window.clearTimeout(this.autoReindexTimer);

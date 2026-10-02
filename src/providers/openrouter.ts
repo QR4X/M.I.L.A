@@ -255,6 +255,25 @@ export class OpenRouterProvider implements Provider {
     }
   }
 
+  /** O estado da chave AGORA (o /api/v1/key): os grátis de hoje e o
+   *  crédito. Conta o uso de qualquer app com esta chave, não só o do vault.
+   *  Graceful: null em erro. */
+  async keyStatus(apiKey: string): Promise<EstadoDaChave | null> {
+    if (!apiKey || !apiKey.trim()) return null;
+    try {
+      const res = await requestUrl({
+        url: OPENROUTER_KEY_ENDPOINT,
+        method: "GET",
+        headers: { Authorization: `Bearer ${apiKey.trim()}`, ...APP_HEADERS },
+        throw: false,
+      });
+      if (res.status < 200 || res.status >= 300) return null;
+      return estadoDaChave(res.json);
+    } catch {
+      return null;
+    }
+  }
+
   async listFreeModels(apiKey: string): Promise<string[]> {
     if (!apiKey || !apiKey.trim()) return [];
     try {
@@ -312,6 +331,46 @@ export class OpenRouterProvider implements Provider {
  * `"0.0000001"` também vira um número que ninguém compara certo sem converter.
  * E um modelo grátis de entrada e pago na saída não é grátis: os dois contam.
  */
+/** O que a tela de Uso mostra da chave do OpenRouter. */
+export interface EstadoDaChave {
+  /** Pedidos grátis de hoje: limite, usados e o que sobra. */
+  gratis?: { limite: number; usados?: number; restantes?: number };
+  /** Crédito que ainda cabe NA CHAVE (null = a chave não tem teto). */
+  creditoRestante?: number | null;
+  /** De quanto em quanto o teto da chave volta ("daily", "weekly",
+   *  "monthly"); sem isto, ele é um teto só, pra sempre. */
+  creditoVolta?: string;
+  /** Gasto de hoje, em dólar. */
+  gastoHoje?: number;
+}
+
+const numero = (v: unknown): number | undefined =>
+  typeof v === "number" && Number.isFinite(v) ? v : undefined;
+
+/** Lê o /api/v1/key. Campo que não vem fica de fora — a tela não inventa. */
+export function estadoDaChave(json: unknown): EstadoDaChave | null {
+  const d = (json as { data?: Record<string, unknown> } | undefined)?.data;
+  if (!d || typeof d !== "object") return null;
+  const out: EstadoDaChave = {};
+  const cota = cotaGratisDaChave(json);
+  if (cota) {
+    const f = d.free_model_daily_requests as { used?: unknown } | undefined;
+    const usados = numero(f?.used);
+    out.gratis = {
+      limite: cota.limit,
+      ...(usados != null ? { usados } : {}),
+      ...(cota.remaining != null ? { restantes: cota.remaining } : {}),
+    };
+  }
+  if ("limit_remaining" in d) {
+    out.creditoRestante = d.limit_remaining === null ? null : (numero(d.limit_remaining) ?? null);
+  }
+  if (typeof d.limit_reset === "string" && d.limit_reset) out.creditoVolta = d.limit_reset;
+  const hoje = numero(d.usage_daily);
+  if (hoje != null) out.gastoHoje = hoje;
+  return out;
+}
+
 /** A cota dos grátis na resposta do /api/v1/key: o `free_model_daily_requests`
  *  quando vem, senão o `is_free_tier` (sem crédito comprado = 50 por dia). */
 export function cotaGratisDaChave(json: unknown): { limit: number; remaining?: number } | null {

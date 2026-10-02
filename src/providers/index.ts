@@ -2,13 +2,14 @@
 // Registry de todos os providers disponíveis.
 // AxxaApp usa getProvider(settings.defaultProvider) pra escolher o provider ativo.
 
-import type { Provider } from "./base";
+import type { Provider, Usage } from "./base";
 import { openaiProvider } from "./openai";
 import { anthropicProvider } from "./anthropic";
 import { geminiProvider } from "./gemini";
 import { openrouterProvider } from "./openrouter";
 import { nimProvider } from "./nim";
 import { ollamaProvider } from "./ollama";
+import { anotarUso } from "../usage/anotador";
 
 export const providers: Record<string, Provider> = {
   openai: openaiProvider,
@@ -20,11 +21,78 @@ export const providers: Record<string, Provider> = {
 };
 
 /**
- * Retorna o provider pelo id. Se o id for desconhecido (ex: settings corrompida),
- * cai pro OpenAI como default seguro.
+ * O provider com o uso ANOTADO (ver usage/anotador.ts): cada pedido de chat
+ * que o servidor ACEITOU soma 1 pedido e os tokens que o provider reportou —
+ * é disso que sai o "quanto sobra hoje" da tela de Uso.
+ *
+ * Aceito = respondeu, ou mandou ao menos um pedaço antes de parar (Stop no
+ * meio também gastou a cota). Recusado antes de começar (chave errada, 429,
+ * rede) não conta: a cota do provider também não andou.
+ *
+ * Do stream vale o ÚLTIMO uso reportado, somado uma vez no fim: o leitor de
+ * SSE chama o aviso a cada pedaço que traz uso, e há provider que manda o
+ * acumulado mais de uma vez (somar todos multiplicaria). O resto do provider
+ * (listar modelos, gerar mídia…) passa direto, pelo protótipo.
+ */
+function comRegistro(p: Provider): Provider {
+  const w = Object.create(p) as Provider;
+  w.chat = async (req, apiKey) => {
+    const res = await p.chat(req, apiKey);
+    anotarUso(p.id, req.model, { r: 1, i: res.usage?.input ?? 0, o: res.usage?.output ?? 0 });
+    return res;
+  };
+  w.streamChat = async (req, apiKey, onToken, onUsage, signal, onReasoning) => {
+    let aceito = false;
+    let ultimo: Usage | null = null;
+    try {
+      const res = await p.streamChat(
+        req,
+        apiKey,
+        (t) => {
+          aceito = true;
+          onToken(t);
+        },
+        (u) => {
+          aceito = true;
+          ultimo = u;
+          onUsage?.(u);
+        },
+        signal,
+        onReasoning &&
+          ((d) => {
+            aceito = true;
+            onReasoning(d);
+          })
+      );
+      aceito = true;
+      ultimo ??= res.usage ?? null;
+      return res;
+    } finally {
+      if (aceito) {
+        anotarUso(p.id, req.model, { r: 1, i: ultimo?.input ?? 0, o: ultimo?.output ?? 0 });
+      }
+    }
+  };
+  return w;
+}
+
+/** Um embrulho por OBJETO de provider (não por id): trocar o objeto — um
+ *  teste, um reload — ganha embrulho novo em vez de herdar o do antigo. */
+const comUso = new WeakMap<Provider, Provider>();
+
+/**
+ * Retorna o provider pelo id — com o uso anotado (ver comRegistro). Se o id
+ * for desconhecido (ex: settings corrompida), cai pro OpenAI como default
+ * seguro.
  */
 export function getProvider(id: string): Provider {
-  return providers[id] ?? openaiProvider;
+  const p = providers[id] ?? openaiProvider;
+  let w = comUso.get(p);
+  if (!w) {
+    w = comRegistro(p);
+    comUso.set(p, w);
+  }
+  return w;
 }
 
 export {

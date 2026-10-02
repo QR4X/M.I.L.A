@@ -201,6 +201,8 @@ export interface Provider {
   /** A cota diária dos modelos grátis nesta chave, quando o provider diz
    *  (OpenRouter: 50 ou 1.000 pedidos por dia). null quando não dá pra saber. */
   freeQuota?(apiKey: string): Promise<{ limit: number; remaining?: number } | null>;
+  /** O estado da chave agora — grátis de hoje e crédito (OpenRouter). */
+  keyStatus?(apiKey: string): Promise<import("./openrouter").EstadoDaChave | null>;
 }
 
 /**

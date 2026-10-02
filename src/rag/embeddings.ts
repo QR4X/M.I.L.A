@@ -12,6 +12,7 @@
 import { requestUrl } from "obsidian";
 import { ProviderError } from "../providers/base";
 import { getEmbeddingSpec } from "./types";
+import { anotarUso } from "../usage/anotador";
 
 const OPENAI_EMBEDDINGS_ENDPOINT = "https://api.openai.com/v1/embeddings";
 const OPENROUTER_EMBEDDINGS_ENDPOINT =
@@ -115,6 +116,8 @@ async function embedOpenAICompat(
   model: string,
   endpoint: string,
   label: string,
+  /** O id do provider no livro do dia (ver usage/anotador.ts). */
+  provider: string,
   opts?: { dimensions?: number; extraBody?: Record<string, unknown> }
 ): Promise<number[][]> {
   if (!apiKey || !apiKey.trim()) {
@@ -198,6 +201,9 @@ async function embedOpenAICompat(
       );
     }
   }
+  // Indexar o vault gasta a cota DIÁRIA do provider (no Gemini, o limite é
+  // de pedidos por dia por modelo) — a tela de Uso conta isto também.
+  anotarUso(provider, model, { r: 1, i: parsed.usage?.prompt_tokens ?? 0 });
   return out;
 }
 
@@ -214,6 +220,7 @@ export async function embedBatch(
     model,
     OPENAI_EMBEDDINGS_ENDPOINT,
     "OpenAI",
+    "openai",
     { dimensions }
   );
 }
@@ -373,6 +380,9 @@ export async function embedBatchOpenRouter(
       );
     }
     results.push(emb);
+    // Um pedido por item: no grátis do OpenRouter, cada um conta no limite
+    // do dia (as tentativas recusadas com 429 não contam).
+    anotarUso("openrouter", model, { r: 1, i: parsed.usage?.prompt_tokens ?? 0 });
   }
   return results;
 }
@@ -426,6 +436,7 @@ export async function embedItems(
       model,
       GEMINI_EMBEDDINGS_ENDPOINT,
       "Gemini",
+      "gemini",
       { dimensions: spec.supportsDimensions ? dimensions : undefined }
     );
   }
@@ -437,6 +448,7 @@ export async function embedItems(
       model,
       NIM_EMBEDDINGS_ENDPOINT,
       "NIM",
+      "nim",
       { extraBody: { input_type: "passage" } }
     );
   }

@@ -1,0 +1,391 @@
+// src/ui/LeftToday.tsx
+// A seção "Left today" da tela de Uso: quanto sobra HOJE em cada lugar com
+// cota grátis — os tokens do data-sharing da OpenAI, os pedidos por modelo do
+// Gemini, os grátis do OpenRouter, o dia do NIM.
+//
+// Ela não depende do período nem dos filtros da página: cota é do dia, e o
+// dia é o de cada provider (ver usage/sobraDoDia.ts). Por isso mora no TOPO,
+// antes do seletor de período — que é a régua só do que vem abaixo dele.
+//
+// O medidor é de BATERIA: a barra é o que SOBRA e encurta conforme se usa,
+// porque a pergunta da seção é "quanto ainda tenho", não "quanto gastei".
+// Sem teto conhecido não há barra — uma barra inventada seria dado inventado;
+// fica o número do dia, e no Gemini o botão pra pessoa trazer o teto dela.
+//
+// Compacta de propósito: cada linha diz só a conta ("238 of 250 used"), e o
+// que explica o número — de onde ele vem, o que não pega, quando vira — fica
+// atrás do ⓘ do provider. À vista, as explicações dobravam a altura da seção
+// e empurravam o resto da página pra fora da tela do celular.
+
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import type AxxaPlugin from "../main";
+import { getProvider } from "../providers";
+import type { EstadoDaChave } from "../providers/openrouter";
+import { prettyModelName } from "../providers/modelDescriptions";
+import { formatCompact } from "../usage/format";
+import {
+  emQuanto,
+  fracaoQueSobra,
+  nivel,
+  sobraDoDia,
+  type Cartao,
+  type Medidor,
+} from "../usage/sobraDoDia";
+import { providerIcon } from "./ChatList";
+import { Icon } from "./Icon";
+
+/** Pedidos são poucos e contados um a um: "1,000", não "1.0k". Tokens são
+ *  muitos, e o compacto é o que se lê ("238k"). */
+function numero(n: number, unidade: Medidor["unidade"]): string {
+  return unidade === "tokens" ? formatCompact(n) : Math.round(n).toLocaleString("en-US");
+}
+
+function plural(n: number, unidade: Medidor["unidade"]): string {
+  if (unidade === "tokens") return "tokens";
+  return n === 1 ? "request" : "requests";
+}
+
+/** Dinheiro de crédito e de gasto do dia: centavos bastam ("$0.31"); a casa
+ *  a mais do formatUsd ("$0.310") é pra preço por conversa, não pra saldo. */
+function dinheiro(n: number): string {
+  if (n === 0) return "$0.00";
+  if (n > 0 && n < 0.01) return "<$0.01";
+  return `$${n.toFixed(2)}`;
+}
+
+export function LeftToday({ plugin }: { plugin: AxxaPlugin }) {
+  const s = plugin.settings;
+
+  // O relógio da seção: o "resets in" anda, e o dia vira com a tela aberta.
+  const [agora, setAgora] = useState(() => new Date());
+  useEffect(() => {
+    const t = window.setInterval(() => setAgora(new Date()), 60_000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  // O OpenRouter conta os grátis da CHAVE (qualquer app que a use): pergunta
+  // ao abrir a tela e quando a pessoa pede de novo.
+  const chaveOR = plugin.providerCredential("openrouter").trim();
+  const [viva, setViva] = useState<EstadoDaChave | null | undefined>(undefined);
+  const [lendo, setLendo] = useState(false);
+  const perguntar = useCallback(async () => {
+    if (!chaveOR) return;
+    setLendo(true);
+    try {
+      setViva((await getProvider("openrouter").keyStatus?.(chaveOR)) ?? null);
+      setAgora(new Date());
+    } finally {
+      setLendo(false);
+    }
+  }, [chaveOR]);
+  useEffect(() => {
+    void perguntar();
+  }, [perguntar]);
+
+  const salvarLimite = (chave: string, n: number | null) => {
+    const limites = (s.limitesDiarios ??= {});
+    if (n == null) delete limites[chave];
+    else limites[chave] = n;
+    void plugin.saveSettings();
+  };
+
+  const cartoes = sobraDoDia({
+    livro: s.usoDoDia ?? {},
+    agora,
+    comChave: (id) => !!plugin.providerCredential(id).trim(),
+    openai: { dataSharing: s.openaiDataSharing === true, tier: s.openaiTier ?? 1 },
+    limites: s.limitesDiarios ?? {},
+    cotaOpenRouter: s.freeQuota?.openrouter,
+    chaveOpenRouter: viva,
+  });
+  if (cartoes.length === 0) return null;
+
+  return (
+    <section className="axxa-home-block axxa-left" aria-label="Left today">
+      <div className="axxa-home-headrow">
+        <span className="axxa-section-label">Left today</span>
+      </div>
+      <div className="axxa-usage-list">
+        {cartoes.map((c) => (
+          <CartaoDoDia
+            key={c.provider}
+            c={c}
+            onSalvarLimite={salvarLimite}
+            atualizar={
+              c.provider === "openrouter" && chaveOR
+                ? { lendo, ir: () => void perguntar() }
+                : undefined
+            }
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Um provider: o nome, o ⓘ e quando o dia dele vira; os medidores; e, com o
+ *  ⓘ aberto, a explicação. */
+function CartaoDoDia({
+  c,
+  onSalvarLimite,
+  atualizar,
+}: {
+  c: Cartao;
+  onSalvarLimite: (chave: string, n: number | null) => void;
+  /** Só o OpenRouter: perguntar de novo à chave. */
+  atualizar?: { lendo: boolean; ir: () => void };
+}) {
+  const [explicando, setExplicando] = useState(false);
+  const idNota = `axxa-left-nota-${c.provider}`;
+  return (
+    <div className="axxa-left-prov">
+      <div className="axxa-left-head">
+        <span className="axxa-card-mark" aria-hidden="true">
+          <Icon name={providerIcon(c.provider)} size={20} />
+        </span>
+        <span className="axxa-left-name">{c.nome}</span>
+        {c.nota && (
+          <button
+            type="button"
+            className="axxa-left-info"
+            aria-label={`About ${c.nome}'s numbers`}
+            aria-expanded={explicando}
+            aria-controls={idNota}
+            onClick={() => setExplicando((v) => !v)}
+          >
+            <Icon name="info" />
+          </button>
+        )}
+        <span
+          className="axxa-left-reset"
+          title={c.viraOnde ? `Resets at ${c.viraOnde}` : undefined}
+        >
+          {c.viraEm != null ? `resets in ${emQuanto(c.viraEm)}` : (c.semDia ?? "")}
+        </span>
+        {atualizar && (
+          <button
+            type="button"
+            className="axxa-icon-btn axxa-left-refresh"
+            aria-label="Ask OpenRouter again"
+            title="Ask OpenRouter again"
+            disabled={atualizar.lendo}
+            onClick={atualizar.ir}
+          >
+            <Icon name={atualizar.lendo ? "loader" : "refresh-cw"} />
+          </button>
+        )}
+      </div>
+      {explicando && c.nota && (
+        <p className="axxa-left-note" id={idNota} role="note">
+          {c.nota}
+          {c.link && (
+            <>
+              {" "}
+              <a
+                className="axxa-left-link"
+                href={c.link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {c.link.rotulo}
+              </a>
+            </>
+          )}
+        </p>
+      )}
+      {c.vazio && <p className="axxa-left-note">{c.vazio}</p>}
+      {c.medidores.map((m) => (
+        <LinhaDoMedidor
+          key={m.id}
+          m={m}
+          ajuda={c.link}
+          onSalvarLimite={onSalvarLimite}
+        />
+      ))}
+      {c.credito && <LinhaDoCredito credito={c.credito} />}
+    </div>
+  );
+}
+
+/**
+ * Um medidor: o nome e o que sobra na linha de cima, a barra embaixo (só com
+ * teto conhecido), e a conta no pé — "238 of 250 requests used".
+ */
+function LinhaDoMedidor({
+  m,
+  ajuda,
+  onSalvarLimite,
+}: {
+  m: Medidor;
+  /** Onde a pessoa acha o teto que vai informar (o AI Studio). */
+  ajuda?: { rotulo: string; url: string };
+  onSalvarLimite: (chave: string, n: number | null) => void;
+}) {
+  const nome = m.modelo ? prettyModelName(m.modelo) : m.rotulo;
+  const f = fracaoQueSobra(m);
+  const n = nivel(m);
+  const valor =
+    m.restante != null
+      ? `${numero(m.restante, m.unidade)} left`
+      : `${numero(m.usado, m.unidade)} ${plural(m.usado, m.unidade)}`;
+  const conta =
+    m.limite != null
+      ? `${numero(m.usado, m.unidade)} of ${numero(m.limite, m.unidade)} ${plural(m.limite, m.unidade)} used`
+      : m.limiteEditavel
+        ? "No daily limit set"
+        : null;
+  const pe = [conta, m.nota].filter(Boolean).join(" · ");
+  return (
+    <div className={n ? `axxa-left-row is-${n}` : "axxa-left-row"}>
+      <span className="axxa-left-row-name">{nome}</span>
+      <span className="axxa-left-row-value">{valor}</span>
+      {f != null && m.limite != null && m.restante != null && (
+        <span
+          className="axxa-left-bar"
+          role="meter"
+          aria-valuemin={0}
+          aria-valuemax={m.limite}
+          aria-valuenow={m.restante}
+          aria-label={`${nome}: ${valor} of ${numero(m.limite, m.unidade)}`}
+        >
+          <span
+            className="axxa-left-fill"
+            style={{ "--axxa-left": f } as CSSProperties}
+          />
+        </span>
+      )}
+      {pe && <span className="axxa-left-row-sub">{pe}</span>}
+      {m.limiteEditavel && (
+        <EditorDeLimite
+          atual={m.limite}
+          nome={nome}
+          ajuda={ajuda}
+          onSalvar={(v) => onSalvarLimite(m.limiteEditavel!, v)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * O teto que a pessoa informa (Gemini): um botão de texto que vira campo — e,
+ * com o campo aberto, a linha que diz onde achar o número. Sem salvar ao
+ * perder o foco: tocar no ✓ tira o foco do campo ANTES do toque chegar no
+ * botão, e o campo sumiria debaixo do dedo. Vazio apaga o teto.
+ */
+function EditorDeLimite({
+  atual,
+  nome,
+  ajuda,
+  onSalvar,
+}: {
+  atual?: number;
+  nome: string;
+  ajuda?: { rotulo: string; url: string };
+  onSalvar: (n: number | null) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [txt, setTxt] = useState("");
+  const campo = useRef<HTMLInputElement>(null);
+  // O campo nasce de um toque no "Set limit": o foco vai pra onde a pessoa
+  // acabou de pedir. Por ref, e não pelo atributo autofocus — num campo
+  // inserido depois que a página carregou, o navegador pode ignorá-lo.
+  useEffect(() => {
+    if (aberto) campo.current?.focus();
+  }, [aberto]);
+  if (!aberto) {
+    return (
+      <button
+        type="button"
+        className="axxa-home-filter is-accent axxa-left-action"
+        aria-label={`${atual ? "Edit" : "Set"} the daily limit for ${nome}`}
+        onClick={() => {
+          setTxt(atual ? String(atual) : "");
+          setAberto(true);
+        }}
+      >
+        <span>{atual ? "Edit" : "Set limit"}</span>
+      </button>
+    );
+  }
+  // Lê o CAMPO, não o estado: o render que leva o último dígito pro estado
+  // pode ainda não ter rodado quando o Enter chega.
+  const salvar = () => {
+    const bruto = (campo.current?.value ?? txt).trim();
+    const v = Number(bruto);
+    onSalvar(bruto && Number.isFinite(v) && v > 0 ? Math.floor(v) : null);
+    setAberto(false);
+  };
+  return (
+    <>
+      <span className="axxa-left-action axxa-left-edit">
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          step={1}
+          className="axxa-left-input"
+          value={txt}
+          placeholder="Per day"
+          aria-label={`Requests per day for ${nome}`}
+          ref={campo}
+          onChange={(e) => setTxt(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") salvar();
+            if (e.key === "Escape") setAberto(false);
+          }}
+        />
+        <button
+          type="button"
+          className="axxa-icon-btn"
+          aria-label="Save limit"
+          onClick={salvar}
+        >
+          <Icon name="check" />
+        </button>
+      </span>
+      {ajuda && (
+        <span className="axxa-left-row-hint">
+          Requests per day.{" "}
+          <a
+            className="axxa-left-link"
+            href={ajuda.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {ajuda.rotulo}
+          </a>
+        </span>
+      )}
+    </>
+  );
+}
+
+/** O crédito da chave do OpenRouter — dinheiro, sem barra (o teto da chave
+ *  não é do dia, então uma barra "do dia" mentiria). */
+function LinhaDoCredito({
+  credito,
+}: {
+  credito: NonNullable<Cartao["credito"]>;
+}) {
+  const comTeto = credito.restante != null;
+  const pe = comTeto
+    ? [
+        credito.gastoHoje != null ? `${dinheiro(credito.gastoHoje)} spent today` : null,
+        credito.volta ? `resets ${credito.volta}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "No spending cap on this key";
+  return (
+    <div className="axxa-left-row">
+      <span className="axxa-left-row-name">
+        {comTeto ? "Key credit" : "Spent today"}
+      </span>
+      <span className="axxa-left-row-value">
+        {comTeto ? `${dinheiro(credito.restante ?? 0)} left` : dinheiro(credito.gastoHoje ?? 0)}
+      </span>
+      {pe && <span className="axxa-left-row-sub">{pe}</span>}
+    </div>
+  );
+}

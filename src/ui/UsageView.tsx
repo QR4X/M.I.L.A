@@ -68,6 +68,7 @@ import { moduleIcon, moduleLabel, relativeShort } from "./modules";
 import { PROVIDERS } from "../core/providersMeta";
 import { prettyModelName } from "../providers/modelDescriptions";
 import { modelLogo } from "../providers/modelLogo";
+import { LeftToday } from "./LeftToday";
 
 /** Janelas do período, em dias (0 = tudo). O id é o número em texto. */
 const PERIODOS = [
@@ -279,8 +280,13 @@ export function UsageView({
       </header>
 
       <div className="axxa-messages axxa-home axxa-usage-page">
-        {/* O período vem PRIMEIRO: ele é a régua da página inteira — o total,
-            a média, os modelos e a lista mudam com ele. */}
+        {/* O que sobra HOJE vem antes de tudo: é a pergunta do dia a dia
+            ("ainda dá pra usar?"), e não depende do período nem dos filtros
+            — cota é do dia de cada provider. */}
+        <LeftToday plugin={plugin} />
+
+        {/* O período é a régua de tudo o que vem DEPOIS dele — o total, a
+            média, os modelos e a lista mudam com ele. */}
         <Segmented
           options={PERIODOS}
           value={String(f.days)}
