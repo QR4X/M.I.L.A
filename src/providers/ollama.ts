@@ -64,6 +64,55 @@ interface CatalogoOllama {
   models?: Array<{ name?: unknown }>;
 }
 
+interface MensagemOpenAI {
+  role?: string;
+  content?: unknown;
+  tool_call_id?: string;
+  tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: unknown } }>;
+}
+
+/**
+ * O histórico no formato que o `/api/chat` do Ollama aceita. Parte do
+ * conversor OpenAI (que normaliza tool results e anexos) e desfaz as três
+ * diferenças que quebravam o agente na SEGUNDA volta do loop de ferramentas:
+ *   - `arguments` vai como OBJETO. O OpenAI quer string JSON; o Ollama recusa
+ *     com 400 ("Value looks like object, but can't find closing '}'") — o
+ *     agente com Ollama morria logo depois da primeira ferramenta.
+ *   - `content` nunca vai `null` numa mensagem do assistente.
+ *   - a resposta da ferramenta leva `tool_name`, que é como o Ollama liga o
+ *     resultado à chamada (ele não usa `tool_call_id`).
+ */
+export function toOllamaMessages(messages: ProviderRequest["messages"]): unknown[] {
+  const nomePorId = new Map<string, string>();
+  return (toOpenAIMessages(messages) as MensagemOpenAI[]).map((m) => {
+    if (m.role === "assistant" && Array.isArray(m.tool_calls)) {
+      return {
+        role: "assistant",
+        content: typeof m.content === "string" ? m.content : "",
+        tool_calls: m.tool_calls.map((tc) => {
+          const nome = tc.function?.name ?? "";
+          if (tc.id) nomePorId.set(tc.id, nome);
+          const bruto = tc.function?.arguments;
+          let args: unknown = bruto ?? {};
+          if (typeof bruto === "string") {
+            try {
+              args = JSON.parse(bruto);
+            } catch {
+              args = {};
+            }
+          }
+          return { function: { name: nome, arguments: args } };
+        }),
+      };
+    }
+    if (m.role === "tool") {
+      const nome = m.tool_call_id ? nomePorId.get(m.tool_call_id) : undefined;
+      return { role: "tool", content: m.content, ...(nome ? { tool_name: nome } : {}) };
+    }
+    return m;
+  });
+}
+
 /**
  * Tool calls do Ollama → ProviderToolCall[]. Era o MESMO bloco escrito duas
  * vezes (non-stream e stream); qualquer correção tinha que ser feita em dois
@@ -141,7 +190,7 @@ export class OllamaProvider implements Provider {
     // assistant.tool_calls e tool results.
     const body: Record<string, unknown> = {
       model: req.model,
-      messages: toOpenAIMessages(req.messages),
+      messages: toOllamaMessages(req.messages),
       stream: false,
       options: {
         num_predict: resolveMaxTokens("ollama", req.model, req.maxTokens ?? 2000),
@@ -227,7 +276,7 @@ export class OllamaProvider implements Provider {
 
     const body: Record<string, unknown> = {
       model: req.model,
-      messages: toOpenAIMessages(req.messages),
+      messages: toOllamaMessages(req.messages),
       stream: true,
       options: {
         num_predict: resolveMaxTokens("ollama", req.model, req.maxTokens ?? 2000),
