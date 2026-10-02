@@ -1317,18 +1317,36 @@ export class AxxaSettingsTab extends PluginSettingTab {
   // ── Vault Q&A ─────────────────────────────────────────────────────────────
 
   /** Linha viva: a lista cresce com os modelos de embedding descobertos. */
+  /** O modelo de embedding do Q&A — o último menu nativo das settings, agora
+   *  de escolha: o logo do provider (é a chave dele que o modelo usa), o nome
+   *  do jeito do app, e os avisos que decidem a escolha (grátis, falta a
+   *  chave). Os descobertos pelo Fetch entram aqui (getAllEmbeddingModels). */
   private paintEmbeddingModel(row: Setting): void {
     const s = this.s;
-    row.addDropdown((d) => {
-      for (const spec of getAllEmbeddingModels()) {
-        d.addOption(spec.model, `${spec.provider} · ${spec.model}`);
-      }
-      d.setValue(s.ragEmbeddingModel).onChange(async (v) => {
-        const spec = getAllEmbeddingModels().find((m) => m.model === v);
+    const specs = getAllEmbeddingModels();
+    this.pickButton(row, {
+      items: specs.map((spec) => {
+        const extras = [
+          spec.free ? "free" : "",
+          providerConfigured(this.plugin, spec.provider) ? "" : "needs key",
+        ].filter(Boolean);
+        return {
+          value: spec.model,
+          label: [prettyModelName(spec.model), ...extras].join(" · "),
+          icon:
+            PROVIDERS.find((p) => p.id === spec.provider)?.icon ?? "box",
+        };
+      }),
+      value: s.ragEmbeddingModel,
+      onPick: async (v) => {
+        const spec = specs.find((m) => m.model === v);
         s.ragEmbeddingModel = v;
         if (spec) s.ragEmbeddingProvider = spec.provider;
         await this.save();
-      });
+        this.repaint("embedding");
+        // Modelo novo = vetores de outro tamanho: a linha do índice avisa.
+        this.repaint("index");
+      },
     });
   }
 

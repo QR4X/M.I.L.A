@@ -17,6 +17,8 @@ export const QUANT_ITENS: PickItem[] = [
 export interface IndiceAtual {
   profile: string;
   streamed: boolean;
+  /** O modelo de embedding com que os vetores foram feitos. */
+  model?: string;
 }
 
 /**
@@ -27,10 +29,15 @@ export interface IndiceAtual {
  */
 export function pendenciaDoIndice(
   atual: IndiceAtual | null,
-  s: { ragQuantProfile?: string; ragStreamShards?: boolean }
+  s: { ragQuantProfile?: string; ragStreamShards?: boolean; ragEmbeddingModel?: string }
 ): string | null {
   if (!atual) return null;
   const partes: string[] = [];
+  // Vetores de um modelo não conversam com os de outro: trocar o modelo só
+  // vale quando o índice é refeito com ele.
+  if (s.ragEmbeddingModel && atual.model && s.ragEmbeddingModel !== atual.model) {
+    partes.push("the new embedding model");
+  }
   if ((s.ragQuantProfile || "balanced") !== (atual.profile || "balanced")) {
     partes.push("the new precision");
   }

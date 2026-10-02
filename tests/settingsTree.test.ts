@@ -282,13 +282,29 @@ describe("a aba Chat só tem menus de escolha com ícone", () => {
   };
   const tree = buildSettingsTree(ui);
 
-  it("nenhum dropdown nativo na aba Chat", () => {
+  it("nenhum dropdown nativo em aba nenhuma", () => {
     const nativos = (tree.items as unknown as Group[])
-      .filter((g) => tree.places.get(g as object)?.tab === "chat")
       .flatMap((g) => g.items)
       .filter((r) => r.control?.type === "dropdown")
       .map((r) => r.name);
     expect(nativos).toEqual([]);
+    // e o desenho à mão também não usa o <select> do Obsidian
+    expect(readFileSync(resolve(__dirname, "../src/ui/SettingsTab.ts"), "utf8")).not.toContain(
+      "addDropdown("
+    );
+  });
+
+  it("fora da aba Chat: o tier da OpenAI e o nível de permissão do agente", () => {
+    expect(pegos.filter((p) => p.tab === "providers").map((p) => p.key)).toEqual(["openaiTier"]);
+    expect(pegos.filter((p) => p.tab === "agent").map((p) => p.key)).toEqual([
+      "agentPermissionLevel",
+    ]);
+    const tier = pegos.find((p) => p.key === "openaiTier")!;
+    expect(tier.itens.map((i) => i.glyph)).toEqual(["1", "2", "3", "4", "5"]);
+    const perm = pegos.find((p) => p.key === "agentPermissionLevel")!;
+    expect(perm.itens.map((i) => i.value)).toEqual(["ask", "vault", "yolo"]);
+    // a interface é em inglês: o rótulo era metade português
+    for (const i of perm.itens) expect(i.label, i.value).not.toMatch(/confirma |sem confirmações|pergunta/);
   });
 
   it("os menus que existiam viraram escolha, e moram na aba Chat", () => {
@@ -309,7 +325,7 @@ describe("a aba Chat só tem menus de escolha com ícone", () => {
         "voiceModel",
       ].sort()
     );
-    expect(new Set(pegos.map((p) => p.tab))).toEqual(new Set(["chat", "rag"]));
+    expect(new Set(pegos.map((p) => p.tab))).toEqual(new Set(["chat", "rag", "providers", "agent"]));
   });
 
   it("os níveis de esforço têm uma linha cada, num grupo da aba Chat", () => {

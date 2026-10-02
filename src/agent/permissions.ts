@@ -77,9 +77,17 @@ export function decideToolGate(
   return evaluatePermission(tool, level).autoApprove ? "auto" : "confirm";
 }
 
-/** Helper pra exibir o nível na UI. */
+/** O nível como aparece na UI — que é em inglês (era metade português).
+ *  Cada texto diz o que `evaluatePermission` faz de verdade. */
 export const PERMISSION_LABELS: Record<PermissionLevel, string> = {
-  ask: "Ask (confirma cada ação destrutiva)",
-  vault: "Vault (read/write livre, delete pergunta)",
-  yolo: "YOLO (sem confirmações, exceto delete)",
+  ask: "Ask — confirms every change",
+  vault: "Vault — edits freely, deletes ask",
+  yolo: "YOLO — no confirmations except deletes",
+};
+
+/** O desenho de cada nível no menu de escolha das settings. */
+export const PERMISSION_ICONS: Record<PermissionLevel, string> = {
+  ask: "shield-check",
+  vault: "shield-half",
+  yolo: "zap",
 };

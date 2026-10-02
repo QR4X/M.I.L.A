@@ -45,7 +45,8 @@ import { CHAT_MODES } from "../../core/session";
 import { MODULES } from "../modules";
 import { QUANT_ITENS } from "./indice";
 import { LOCALES } from "../../i18n";
-import { PERMISSION_LABELS } from "../../agent/permissions";
+import { PERMISSION_ICONS, PERMISSION_LABELS } from "../../agent/permissions";
+import type { PermissionLevel } from "../../agent/types";
 import { ELEVEN_MODELS } from "../../providers/elevenlabs";
 import { prettyModelName } from "../../providers/modelDescriptions";
 import { FREE_TOKENS_AS_OF } from "../../usage/freeTokens";
@@ -229,12 +230,6 @@ function shownAs(name: string, render: RowRender): RowRender {
   };
 }
 
-function options(pairs: Iterable<readonly [string, string]>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [value, label] of pairs) out[value] = label;
-  return out;
-}
-
 function toggle(
   name: string,
   desc: string,
@@ -244,15 +239,9 @@ function toggle(
   return { name, desc, control: { type: "toggle", key }, ...more };
 }
 
-function dropdown(
-  name: string,
-  desc: string,
-  key: TextKey,
-  opts: Record<string, string>,
-  more: RowExtras = {}
-): SettingDefinition {
-  return { name, desc, control: { type: "dropdown", key, options: opts }, ...more };
-}
+// Não há mais `dropdown`: todo menu das settings é de ESCOLHA (o balão com
+// ícone — ver `escolha` e SettingsTab.pickButton). O <select> nativo abre, no
+// Android, a caixa do sistema, sem ícone e longe do que foi tocado.
 
 function text(
   name: string,
@@ -407,11 +396,20 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
         // O tier só muda a cota de quem COMPARTILHA: com o interruptor
         // desligado não há cota nenhuma, e um seletor de tier ali seria uma
         // escolha que não faz nada. Aparece quando o interruptor liga.
-        dropdown(
+        escolha(
+          at,
           "Usage tier",
+          null,
           "Tiers 1–2 get 250k tokens/day on the big models and 2.5M/day on mini and nano. Tier 3 and up get 1M and 10M.",
           "openaiTier",
-          options([1, 2, 3, 4, 5].map((n) => [String(n), `Tier ${n}`] as const)),
+          // O número do tier no lugar do ícone, e a cota dele no rótulo: é o
+          // que decide a escolha.
+          () =>
+            [1, 2, 3, 4, 5].map((n) => ({
+              value: String(n),
+              label: `Tier ${n} — ${n <= 2 ? "250k / 2.5M a day" : "1M / 10M a day"}`,
+              glyph: String(n),
+            })),
           {
             visible: () => s().openaiDataSharing === true,
             aliases: ["tier", "quota", "cota"],
@@ -761,12 +759,19 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
 
   // ── Agent ────────────────────────────────────────────────────────────────
   group({ tab: "agent" }, {}, [
-    dropdown(
+    escolha(
+      { tab: "agent" },
       "Permission level",
-      "ask = confirm every write · vault = only deletes ask · yolo = only irreversible actions ask.",
+      null,
+      "When the agent stops to ask you before changing the vault. Deleting a note always asks, at every level.",
       "agentPermissionLevel",
-      options(Object.entries(PERMISSION_LABELS)),
-      { aliases: ["permissão", "permissions", "yolo"] }
+      () =>
+        (Object.keys(PERMISSION_LABELS) as PermissionLevel[]).map((l) => ({
+          value: l,
+          label: PERMISSION_LABELS[l],
+          icon: PERMISSION_ICONS[l],
+        })),
+      { aliases: ["permissão", "permissions", "yolo", "confirm", "confirmar"] }
     ),
     toggle(
       "Show diff before applying edits",

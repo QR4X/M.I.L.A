@@ -32,4 +32,12 @@ describe("o índice do Q&A: precisão e pedaços", () => {
     // sem índice carregado não há o que avisar
     expect(pendenciaDoIndice(null, { ragQuantProfile: "light" })).toBeNull();
   });
+
+  it("trocar o modelo de embedding também só vale com o índice refeito", () => {
+    const idx = { profile: "balanced", streamed: false, model: "text-embedding-3-small" };
+    expect(pendenciaDoIndice(idx, { ragEmbeddingModel: "text-embedding-3-small" })).toBeNull();
+    expect(pendenciaDoIndice(idx, { ragEmbeddingModel: "gemini-embedding-001" })).toBe(
+      "Update the index to apply the new embedding model."
+    );
+  });
 });
