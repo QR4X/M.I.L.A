@@ -606,6 +606,38 @@ export async function renameChat(
  * antes de `tokens_in:` — a mesma posição que o renderFrontmatter usa, pra um
  * arquivo reescrito depois sair byte-idêntico ao de um save normal.
  */
+/**
+ * Grava (ou apaga, com texto vazio) as INSTRUÇÕES de uma conversa, no
+ * frontmatter dela. São as mesmas `instructions` que a conversa herda do
+ * projeto ao nascer: elas SOMAM ao prompt do app nos três modos (ver
+ * agent/conversation.ts) — diferente da `persona`, que substitui e levaria
+ * junto as regras do app (idioma, como citar nota, o que o agente pode
+ * mexer). Reescreve só o frontmatter; o corpo da conversa fica intacto.
+ */
+export async function setChatInstructions(
+  app: App,
+  chatsPath: string,
+  mode: string,
+  chatId: string,
+  instructions: string
+): Promise<void> {
+  const path = chatFilePath(chatsPath, mode, chatId);
+  const content = await app.vault.adapter.read(path);
+  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!match) throw new Error("Invalid frontmatter in this chat file.");
+  let fm = match[1].replace(/^instructions:\s*.*$\n?/m, "");
+  const texto = instructions.trim();
+  if (texto) {
+    const linha = `instructions: ${yamlString(texto)}`;
+    // Substituição por FUNÇÃO: com string, um "$&" ou "$1" escrito nas
+    // instruções seria lido como padrão do replace e gravado trocado.
+    fm = /^tokens_in:/m.test(fm)
+      ? fm.replace(/^tokens_in:/m, () => `${linha}\ntokens_in:`)
+      : `${fm.replace(/\n+$/, "")}\n${linha}`;
+  }
+  await app.vault.adapter.write(path, `---\n${fm}\n---\n${match[2]}`);
+}
+
 export async function setChatStarred(
   app: App,
   chatsPath: string,

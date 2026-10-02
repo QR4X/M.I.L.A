@@ -21,6 +21,8 @@ import { ProjectsView } from "./ProjectsView";
 import { SkillsView } from "./SkillsView";
 import { Drawer, type ViewId } from "./Drawer";
 import { PainelCtx } from "./painel";
+import { ChatInstructionsSheet } from "./ChatInstructionsSheet";
+import type { ChatSummary } from "../core/chatPersistence";
 
 export interface ComposerInject {
   text: string;
@@ -69,6 +71,8 @@ export function App({
   /** Conversa esperando que você ESCOLHA um projeto na folha (o "See all" do
    *  menu). Enquanto vale, a lista de projetos escolhe em vez de abrir. */
   const [escolhaPara, setEscolhaPara] = useState<string | null>(null);
+  /** Conversa cujas INSTRUÇÕES estão abertas na folha (o ⋯ dela). */
+  const [instrucoesPara, setInstrucoesPara] = useState<ChatSummary | null>(null);
   /** O recorte da lista, compartilhado pela home e pelo histórico: filtrar
    *  numa e pedir "ver tudo" leva o filtro junto. */
   const [aba, setAba] = useState(SEGMENT_ALL);
@@ -130,6 +134,7 @@ export function App({
           setProjetoAberto(null);
           setPainel("projects");
         },
+        instrucoesDe: (chat: ChatSummary) => setInstrucoesPara(chat),
       }}
     >
     <div className="axxa-root">
@@ -277,6 +282,13 @@ export function App({
           setVoltarPara("skills");
           usarSkill(sk);
         }}
+      />
+
+      <ChatInstructionsSheet
+        plugin={plugin}
+        chat={instrucoesPara}
+        open={instrucoesPara !== null}
+        onClose={() => setInstrucoesPara(null)}
       />
 
       <Drawer

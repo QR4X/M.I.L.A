@@ -12,6 +12,7 @@
 // o App.
 
 import { createContext, useContext } from "react";
+import type { ChatSummary } from "../core/chatPersistence";
 
 export interface PainelApi {
   /**
@@ -26,11 +27,17 @@ export interface PainelApi {
    * de um menu suspenso é o gesto mais frágil que existe num celular.
    */
   escolherProjetoPara: (chatId: string) => void;
+  /**
+   * Abre as INSTRUÇÕES de uma conversa (a folha mora no App, ao lado das de
+   * projetos e skills): o "Instructions…" do ⋯ dela.
+   */
+  instrucoesDe: (chat: ChatSummary) => void;
 }
 
 export const PainelCtx = createContext<PainelApi>({
   novoProjetoCom: () => {},
   escolherProjetoPara: () => {},
+  instrucoesDe: () => {},
 });
 
 export function usePainel(): PainelApi {

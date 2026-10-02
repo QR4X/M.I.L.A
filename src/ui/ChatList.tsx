@@ -362,6 +362,13 @@ export function ChatList({
                     ],
                   },
                   {
+                    // As instruções DESTA conversa — somam às do app (e às
+                    // do projeto, que já moram aqui). Ver ChatInstructionsSheet.
+                    label: "Instructions…",
+                    icon: "scroll-text",
+                    run: () => painel.instrucoesDe(c),
+                  },
+                  {
                     label: "Export to vault",
                     icon: "file-down",
                     run: () => void exportar(c),
