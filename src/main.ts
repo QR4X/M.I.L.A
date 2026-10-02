@@ -36,7 +36,7 @@ import type {
   EffortConfig,
   EffortLevel,
 } from "./core/effort";
-import type { RoleId, RoleModelEntry } from "./providers/modelRoles";
+import { limparCamposMortos } from "./core/settingsLegado";
 import { chatIndexSignature } from "./core/chatIndex";
 import { revisarOllamaPadrao } from "./core/ollamaPadrao";
 import { LOCALES } from "./i18n";
@@ -141,10 +141,6 @@ export interface AxxaSettings {
   elevenVoices: { id: string; name: string; category?: string }[];
   /** Feedback tátil nos toques (só no celular, e só onde o aparelho suporta). */
   hapticsEnabled: boolean;
-  /** Modelo-padrão por PAPEL (chat/reasoning/image/video/tts/embedding/other). */
-  roleModels: Partial<Record<RoleId, RoleModelEntry>>;
-  /** Provider preferido quando o MESMO modelo existe em 2+ providers. */
-  modelProvider: Record<string, string>;
   /** Modelos de embedding descobertos via API, por provider (RAG). */
   discoveredEmbeddings: Record<string, string[]>;
   // ---- Sessão
@@ -263,8 +259,6 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   elevenVoice: "",
   elevenVoices: [],
   hapticsEnabled: true,
-  roleModels: {},
-  modelProvider: {},
   discoveredEmbeddings: {},
   unreadChats: [],
   defaultMode: "chat",
@@ -1230,14 +1224,9 @@ export default class AxxaPlugin extends Plugin {
       ...(saved.activeModels ?? {}),
     };
     this.settings.discoveredEmbeddings = saved.discoveredEmbeddings ?? {};
-    // roleModels: ★ por papel (chat/reasoning/image/video/tts/embedding). Quando
-    // ainda não há nada salvo, semeia dos defaults espalhados (default do provider
-    // ativo → chat; ragEmbeddingModel → embedding). Migração única. v0.1.236
-    this.settings.modelProvider = saved.modelProvider ?? {};
-    this.settings.roleModels =
-      saved.roleModels && Object.keys(saved.roleModels).length
-        ? saved.roleModels
-        : this.seedRoleModels();
+    // ★ por papel e provider preferido: da casca antiga, nada lê (ver
+    // core/settingsLegado.ts). A revisão do Ollama acima já leu o `saved`.
+    limparCamposMortos(this.settings);
     // Same pra effortConfigs — preserva overrides salvos do usuário.
     this.settings.effortConfigs = saved.effortConfigs ?? {};
 
@@ -1324,48 +1313,6 @@ export default class AxxaPlugin extends Plugin {
       await ad.rmdir(de, false);
     }
     return n;
-  }
-
-  /** Semeia roleModels a partir dos defaults legados (migração única): o default
-   *  do provider ativo vira o ★ de chat; o modelo do RAG vira o ★ de embedding. */
-  private seedRoleModels(): Partial<Record<RoleId, RoleModelEntry>> {
-    const s = this.settings;
-    const roles: Partial<Record<RoleId, RoleModelEntry>> = {};
-    const prov = s.defaultProvider || "openai";
-    const chat = this.providerDefaultModel(prov);
-    if (chat) roles.chat = { model: chat, provider: prov };
-    if (s.ragEmbeddingModel) {
-      roles.embedding = {
-        model: s.ragEmbeddingModel,
-        provider: s.ragEmbeddingProvider || "openai",
-      };
-    }
-    return roles;
-  }
-
-  /** Modelo escolhido pra um PAPEL (Connections → Models). Consumidores novos
-   *  (geração de imagem/vídeo, cloud TTS) leem o ★ por aqui. v0.1.236 */
-  roleModel(role: RoleId): RoleModelEntry | undefined {
-    return this.settings.roleModels?.[role];
-  }
-
-  /** Modelo-padrão atual de um provider (lê os campos legados por provider). */
-  private providerDefaultModel(provider: string): string {
-    const s = this.settings;
-    switch (provider) {
-      case "anthropic":
-        return s.anthropicModel;
-      case "gemini":
-        return s.geminiModel;
-      case "openrouter":
-        return s.openrouterModel;
-      case "nim":
-        return s.nimModel;
-      case "ollama":
-        return s.ollamaModel;
-      default:
-        return s.defaultModel;
-    }
   }
 
   /** Popula as chaves em memória a partir do SecretStorage e migra o legado
