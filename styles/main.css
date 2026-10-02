@@ -5109,6 +5109,83 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
   margin-left: var(--size-4-1);
 }
 
+/* ── menu de ESCOLHA nas settings ──────────────────────────────────────
+   No lugar do <select>: no Android ele abre a caixa do sistema — letra
+   enorme, bolinhas de rádio, nenhum ícone, no meio da tela, longe do que foi
+   tocado. Este botão tem a cara do select do Obsidian (as MESMAS variáveis:
+   altura, canto, fundo e hover de dropdown) com o ícone da opção na frente, e
+   abre o balão do ⋯ das conversas, ancorado nele (ver menu.ts). */
+.axxa-settings-root button.axxa-pick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--size-4-2);
+  min-width: 0;
+  max-width: 100%;
+  height: var(--input-height);
+  padding: 0 var(--size-4-3) 0 var(--size-4-4);
+  border: 0;
+  border-radius: var(--input-radius);
+  background-color: var(--dropdown-background);
+  box-shadow: none;
+  color: var(--text-normal);
+  font-family: inherit;
+  font-size: var(--font-ui-small);
+  font-weight: var(--input-font-weight);
+  cursor: pointer;
+}
+
+.axxa-settings-root button.axxa-pick:hover {
+  background-color: var(--dropdown-background-hover);
+}
+
+/* No celular o select do Obsidian ocupa a linha toda; o botão também. */
+body.is-mobile .axxa-settings-root button.axxa-pick {
+  width: 100%;
+}
+
+.axxa-settings-root .axxa-pick-ico {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--text-muted);
+}
+
+.axxa-settings-root .axxa-pick-ico svg {
+  width: 18px;
+  height: 18px;
+}
+
+.axxa-settings-root .axxa-pick-ico.is-glyph {
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--text-normal) 10%, transparent);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+}
+
+.axxa-settings-root .axxa-pick-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.axxa-settings-root .axxa-pick-chev {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+.axxa-settings-root .axxa-pick-chev svg {
+  width: 15px;
+  height: 15px;
+}
+
 /* Seção de FAMÍLIA dentro do papel (GPT-5, o-series, Llama…). É um BOTÃO:
    abre e fecha a classe inteira. Zera a pintura que o app.css dá a `button`
    (`button:not(.clickable-icon)`, 0,1,1) — aqui ele é um título, não um
@@ -6935,9 +7012,20 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    Balão ancorado no botão que o abriu (ver menu.ts). Ele substituiu o `Menu`
    do Obsidian, que no celular sobe colado na base da tela: o menu de um item
    do topo da lista aparecia a quinze centímetros dele, e nada dizia de qual
-   item ele era. */
+   item ele era.
+   As regras começam pela CAMADA, e não pela `.axxa-root`: o mesmo balão abre
+   também nas settings, que são um modal do Obsidian, fora da raiz. */
 
-.axxa-root .axxa-pop-layer {
+.axxa-pop-layer {
+  /* Os tokens que o balão usa e que só a `.axxa-root` define (raio, canvas e
+     sombra moram no body). Mesmos valores da raiz — o teste
+     tests/menuLoose.test.ts compara um a um —, pra fora dela o balão ser o
+     mesmo de dentro. */
+  --axxa-1: 4px;
+  --axxa-2: 8px;
+  --axxa-3: 12px;
+  --axxa-s1: color-mix(in srgb, var(--text-normal) 10%, transparent);
+  --axxa-hairline: color-mix(in srgb, var(--text-normal) 11%, transparent);
   position: absolute;
   inset: 0;
   /* A ÚLTIMA camada nossa, e por uma margem folgada.
@@ -6952,7 +7040,12 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   z-index: 1100;
 }
 
-.axxa-root .axxa-pop {
+/* Fora da raiz (aberto das settings): a referência é a tela. */
+.axxa-pop-layer.is-loose {
+  position: fixed;
+}
+
+.axxa-pop-layer .axxa-pop {
   position: absolute;
   min-width: 168px;
   max-width: 260px;
@@ -6971,12 +7064,35 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
     opacity 120ms linear;
 }
 
-.axxa-root .axxa-pop-layer.is-open .axxa-pop {
+.axxa-pop-layer.is-open .axxa-pop {
   transform: scale(1);
   opacity: 1;
 }
 
-.axxa-root button.axxa-pop-item {
+/* O balão de ESCOLHA (as settings): a largura vem do botão que o abriu (o
+   JS põe o `min-width`), e a lista rola quando passa da tela — uma lista de
+   modelos não cabe em balão nenhum. O `menu` das ações continua sem rolar. */
+.axxa-pop-layer .axxa-pop.is-pick {
+  /* Nunca mais largo que a tela (um nome de voz enorme trunca, não vaza). A
+     altura vem do JS: o espaço do lado em que ele abre. */
+  max-width: calc(100% - 20px);
+  max-height: calc(100% - 20px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* O código de um idioma no lugar do ícone ("EN", "PT"): mesma caixa dos
+   ícones, pra os nomes começarem na mesma coluna. */
+.axxa-pop-layer .axxa-pop-glyph {
+  border-radius: var(--axxa-r-sm);
+  background-color: var(--axxa-s1);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.02em;
+}
+
+.axxa-pop-layer button.axxa-pop-item {
   display: flex;
   align-items: center;
   /* O `button` do app.css centraliza o conteúdo; menu é lista, e lista se lê
@@ -6997,11 +7113,11 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   text-align: left;
 }
 
-.axxa-root button.axxa-pop-item:hover {
+.axxa-pop-layer button.axxa-pop-item:hover {
   background-color: var(--axxa-s1);
 }
 
-.axxa-root button.axxa-pop-item.is-danger {
+.axxa-pop-layer button.axxa-pop-item.is-danger {
   color: var(--text-error);
 }
 
@@ -7009,7 +7125,7 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    que faz os nomes começarem na mesma coluna. Sem isso, a linha de um projeto
    (brasão de 26px) empurrava o nome pra direita e "New project…" ficava numa
    coluna própria — a lista parecia duas listas. */
-.axxa-root .axxa-pop-ico {
+.axxa-pop-layer .axxa-pop-ico {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -7023,33 +7139,33 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
    Ela NÃO leva traço de borda — a forma vem de máscara, e máscara apaga o que
    é desenhado fora da caixa (o contorno sairia comido nos cantos; ver
    docs/SQUIRCLE.md). Quem marca o limite é o próprio fundo tingido. */
-.axxa-root .axxa-pop-ico.axxa-thing-mark {
+.axxa-pop-layer .axxa-pop-ico.axxa-thing-mark {
   width: 26px;
   height: 26px;
 }
 
-.axxa-root .axxa-pop-ico.axxa-thing-mark svg {
+.axxa-pop-layer .axxa-pop-ico.axxa-thing-mark svg {
   width: 15px;
   height: 15px;
 }
 
-.axxa-root .axxa-pop-item.is-danger .axxa-pop-ico {
+.axxa-pop-layer .axxa-pop-item.is-danger .axxa-pop-ico {
   color: var(--text-error);
 }
 
-.axxa-root .axxa-pop-ico svg {
+.axxa-pop-layer .axxa-pop-ico svg {
   width: 17px;
   height: 17px;
 }
 
 /* A marca de "é esta a opção de agora" (o filtro de período do Agent). */
-.axxa-root .axxa-pop-check {
+.axxa-pop-layer .axxa-pop-check {
   margin-left: auto;
   color: var(--text-accent);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .axxa-root .axxa-pop {
+  .axxa-pop-layer .axxa-pop {
     transition: none;
     transform: none;
     opacity: 1;
@@ -7147,7 +7263,7 @@ body.is-mobile .modal-container.axxa-prompt-container .modal {
 
 /* Chevron do item que abre o segundo nível, e o rótulo que empurra os dois
    marcadores pra direita. */
-.axxa-root .axxa-pop-label {
+.axxa-pop-layer .axxa-pop-label {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -7155,19 +7271,19 @@ body.is-mobile .modal-container.axxa-prompt-container .modal {
   white-space: nowrap;
 }
 
-.axxa-root .axxa-pop-chev {
+.axxa-pop-layer .axxa-pop-chev {
   display: inline-flex;
   flex: 0 0 auto;
   color: var(--text-faint);
 }
 
-.axxa-root .axxa-pop-chev svg,
-.axxa-root .axxa-pop-check svg {
+.axxa-pop-layer .axxa-pop-chev svg,
+.axxa-pop-layer .axxa-pop-check svg {
   width: 16px;
   height: 16px;
 }
 
-.axxa-root .axxa-pop-check {
+.axxa-pop-layer .axxa-pop-check {
   display: inline-flex;
   flex: 0 0 auto;
   color: var(--text-accent);
@@ -7178,7 +7294,7 @@ body.is-mobile .modal-container.axxa-prompt-container .modal {
    itens e um fio separando as duas naturezas. Sem o fio, "Back" era só o
    primeiro item de uma lista de projetos, e o dedo aprendia a pular a
    primeira linha. */
-.axxa-root button.axxa-pop-item.is-back {
+.axxa-pop-layer button.axxa-pop-item.is-back {
   min-height: 32px;
   margin-bottom: var(--axxa-1);
   padding-bottom: var(--axxa-1);
@@ -7188,12 +7304,12 @@ body.is-mobile .modal-container.axxa-prompt-container .modal {
   font-size: var(--font-ui-smaller);
 }
 
-.axxa-root button.axxa-pop-item.is-back:hover {
+.axxa-pop-layer button.axxa-pop-item.is-back:hover {
   background-color: transparent;
   color: var(--text-normal);
 }
 
-.axxa-root .axxa-pop-item.is-back .axxa-pop-ico svg {
+.axxa-pop-layer .axxa-pop-item.is-back .axxa-pop-ico svg {
   width: 15px;
   height: 15px;
 }

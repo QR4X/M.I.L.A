@@ -23,6 +23,16 @@ export const EFFORT_LABELS: Record<EffortLevel, string> = {
   max: "Max",
 };
 
+/** O desenho de cada nível: as barras de sinal enchendo, e a chama no topo —
+ *  uma escala que se lê de relance, sem precisar do nome. */
+export const EFFORT_ICONS: Record<EffortLevel, string> = {
+  low: "signal-low",
+  med: "signal-medium",
+  high: "signal-high",
+  xhigh: "signal",
+  max: "flame",
+};
+
 export const EFFORT_DESCRIPTIONS: Record<EffortLevel, string> = {
   low: "Fast and economical (≤512 tok · 5 turns)",
   med: "Balanced (≤2k tok · 12 turns)",

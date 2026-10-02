@@ -61,13 +61,21 @@ import {
   buildSettingsTree,
   PROVIDER_FIELDS,
   tabsFor,
+  type PickItem,
   type Place,
   type RowRender,
   type SettingsUi,
   type TabId,
 } from "./settings/tree";
 import { drawLegacyTree, type LegacyTree } from "./settings/legacy";
-import { isControlKey, readControl, writeControl } from "./settings/values";
+import {
+  isControlKey,
+  readControl,
+  writeControl,
+  type TextKey,
+} from "./settings/values";
+import { openActions } from "./menu";
+import { modelLogo } from "../providers/modelLogo";
 import { putThumb, seedThumb, thumbOf, type Thumb } from "./settings/thumb";
 
 /** Frase do botão Test — curta, pra não virar conta. */
@@ -284,6 +292,8 @@ export class AxxaSettingsTab extends PluginSettingTab {
       freeOffer: this.slot("freeOffer", "providers", (row) =>
         this.paintHint(row, this.freeOfferText())
       ),
+      pick: (key, items, tab) =>
+        this.slot(`pick:${key}`, tab, (row) => this.paintPick(row, key, items)),
       assistantModel: this.slot("assistant", "chat", (row) =>
         this.paintAssistantModel(row)
       ),
@@ -1010,6 +1020,74 @@ export class AxxaSettingsTab extends PluginSettingTab {
       : [model, ...list];
   }
 
+  // ── Menus de ESCOLHA ──────────────────────────────────────────────────────
+  // No lugar do <select>. No Android ele abre a caixa do sistema — rádio,
+  // letra enorme, nenhum ícone, no meio da tela, longe do que foi tocado. Aqui
+  // é um botão com a cara do select do Obsidian e o ícone da opção, que abre
+  // o MESMO balão do ⋯ das conversas, ancorado nele e com a opção de agora
+  // marcada.
+
+  /** O botão e o balão. Quem grava é `onPick`; o botão não guarda estado. */
+  private pickButton(
+    row: Setting,
+    opts: {
+      items: PickItem[];
+      value: string;
+      onPick: (value: string) => void | Promise<void>;
+    }
+  ): void {
+    const { items, value } = opts;
+    const atual = items.find((i) => i.value === value);
+    const btn = row.controlEl.createEl("button", {
+      cls: "axxa-pick",
+      attr: {
+        type: "button",
+        "aria-haspopup": "menu",
+        "aria-label": `${row.nameEl.textContent ?? ""}: ${atual?.label ?? value}`,
+      },
+    });
+    const ico = btn.createSpan({ cls: "axxa-pick-ico" });
+    if (atual?.glyph) {
+      ico.addClass("is-glyph");
+      ico.setText(atual.glyph);
+    } else if (atual?.icon) {
+      setIcon(ico, atual.icon);
+    }
+    // Um valor que a lista não conhece (gravado por uma versão antiga, ou um
+    // modelo que saiu do catálogo) aparece cru em vez de sumir.
+    btn.createSpan({ cls: "axxa-pick-label", text: atual?.label ?? value });
+    setIcon(btn.createSpan({ cls: "axxa-pick-chev" }), "chevrons-up-down");
+    btn.onclick = (ev) =>
+      openActions(
+        ev,
+        items.map((i) => ({
+          label: i.label,
+          icon: i.icon,
+          glyph: i.glyph,
+          checked: i.value === value,
+          run: () => {
+            if (i.value !== value) void opts.onPick(i.value);
+          },
+        })),
+        { escolha: true }
+      );
+  }
+
+  /** Um `control` de texto desenhado como menu de escolha. Grava pelo MESMO
+   *  caminho dos controles do Obsidian (writeValue), com os mesmos efeitos. */
+  private paintPick(row: Setting, key: TextKey, items: () => PickItem[]): void {
+    this.pickButton(row, {
+      items: items(),
+      value: String(this.readValue(key) ?? ""),
+      onPick: async (v) => {
+        await this.writeValue(key, v);
+        this.repaint(`pick:${key}`);
+        // Escolher pode mostrar ou esconder linhas (quem lê decide as vozes).
+        this.refreshVisibility();
+      },
+    });
+  }
+
   // ── A assistente de criação ───────────────────────────────────────────────
   // Ela escreve skills e projetos por você. Mora no Chat, e não junto dos
   // providers, porque não é sobre com quem você conversa — é sobre quem te
@@ -1034,28 +1112,38 @@ export class AxxaSettingsTab extends PluginSettingTab {
           )}${ehFree(alvo.model, livres) ? " · free" : ""}`
         : "Nothing free found yet — run SCAN on OpenRouter, or pick a model here."
     );
-    row.addDropdown((d) => {
-      // "Automático" primeiro, e é o padrão: id de modelo free muda de nome e
-      // some do catálogo, então deixar a gente procurar sozinha envelhece
-      // melhor que fixar um.
-      d.addOption("", "Automatic — first free OpenRouter model");
-      // O nome é o NOSSO (prettyModelName), como em toda parte do app — o id
-      // cru do catálogo só aparece onde ele É o dado (a chave, o debug).
-      const todos = [
-        ...new Set([...(s.activeModels?.openrouter ?? []), ...livres]),
-      ].sort();
-      for (const id of todos) {
-        d.addOption(
-          id,
-          ehFree(id, livres) ? `${prettyModelName(id)} · free` : prettyModelName(id)
-        );
-      }
-      d.setValue(s.assistantModel ?? "").onChange(async (v) => {
+    // O nome é o NOSSO (prettyModelName), como em toda parte do app — o id
+    // cru do catálogo só aparece onde ele É o dado (a chave, o debug).
+    const todos = [
+      ...new Set([...(s.activeModels?.openrouter ?? []), ...livres]),
+    ].sort();
+    this.pickButton(row, {
+      items: [
+        // "Automático" primeiro, e é o padrão: id de modelo free muda de nome
+        // e some do catálogo, então deixar a gente procurar sozinha envelhece
+        // melhor que fixar um.
+        {
+          value: "",
+          // Curto pra caber na largura do botão: a lista embaixo dele é toda
+          // do OpenRouter, e a descrição da linha diz quando falta modelo.
+          label: "Automatic — first free model",
+          icon: "wand-sparkles",
+        },
+        ...todos.map((id) => ({
+          value: id,
+          label: ehFree(id, livres)
+            ? `${prettyModelName(id)} · free`
+            : prettyModelName(id),
+          icon: modelLogo(id),
+        })),
+      ],
+      value: s.assistantModel ?? "",
+      onPick: async (v) => {
         s.assistantModel = v;
         s.assistantProvider = v ? "openrouter" : "";
         await this.save();
         this.repaint("assistant");
-      });
+      },
     });
   }
 
@@ -1063,16 +1151,22 @@ export class AxxaSettingsTab extends PluginSettingTab {
 
   private paintTtsProvider(row: Setting): void {
     const s = this.s;
-    row.addDropdown((d) => {
-      for (const p of TTS_PROVIDERS) {
-        const ok = ttsReady(this.plugin, p.id);
-        d.addOption(p.id, ok ? p.label : p.label + " (needs " + p.needs + ")");
-      }
-      d.setValue(s.ttsProvider).onChange(async (v) => {
+    this.pickButton(row, {
+      items: TTS_PROVIDERS.map((p) => ({
+        value: p.id,
+        label: ttsReady(this.plugin, p.id)
+          ? p.label
+          : `${p.label} (needs ${p.needs})`,
+        // A ElevenLabs não tem logo no nosso set; a onda diz "voz".
+        icon: p.id === "openai" ? "logo-openai" : "audio-waveform",
+      })),
+      value: s.ttsProvider,
+      onPick: async (v) => {
         s.ttsProvider = v;
         await this.save();
+        this.repaint("ttsWho");
         this.refreshVisibility();
-      });
+      },
     });
   }
 
@@ -1107,15 +1201,22 @@ export class AxxaSettingsTab extends PluginSettingTab {
   private paintElevenVoice(row: Setting): void {
     const s = this.s;
     if (s.elevenVoices.length === 0) return;
-    row.addDropdown((d) => {
-      for (const v of s.elevenVoices) {
+    this.pickButton(row, {
+      items: s.elevenVoices.map((v) => {
+        // A voz clonada é a que soa como você — ela ganha o desenho de pessoa.
         const own = v.category === "cloned" || v.category === "professional";
-        d.addOption(v.id, own ? v.name + " · yours" : v.name);
-      }
-      d.setValue(s.elevenVoice || s.elevenVoices[0].id).onChange(async (v) => {
+        return {
+          value: v.id,
+          label: own ? `${v.name} · yours` : v.name,
+          icon: own ? "user-round" : "audio-lines",
+        };
+      }),
+      value: s.elevenVoice || s.elevenVoices[0].id,
+      onPick: async (v) => {
         s.elevenVoice = v;
         await this.save();
-      });
+        this.repaint("elevenVoice");
+      },
     });
   }
 

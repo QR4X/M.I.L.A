@@ -58,6 +58,7 @@ function fakeUi(
     fetchModels: () => noop,
     catalog: () => noop,
     freeOffer: noop,
+    pick: () => noop,
     assistantModel: noop,
     ttsProvider: noop,
     elevenKey: noop,
@@ -143,7 +144,8 @@ describe("o que a busca acha", () => {
     "Read answers out loud",
     "Who reads",
     "Voice",
-    "Quality",
+    "OpenAI voice quality",
+    "ElevenLabs voice quality",
     "Test OpenAI voice",
     "ElevenLabs key",
     "Your voices",
@@ -165,21 +167,29 @@ describe("o que a busca acha", () => {
     expect(NOMES.filter((n) => !nomes.has(n))).toEqual([]);
   });
 
-  it("nome repetido só entre linhas que nunca aparecem juntas", () => {
-    // A busca mostra só o nome: dois "Quality" à vista seriam ambíguos. Os
-    // dois que existem são da OpenAI e da ElevenLabs — um esconde o outro.
+  it("nenhum nome repetido na busca", () => {
+    // A busca mostra só o nome. Os dois "Quality" (OpenAI e ElevenLabs) viraram
+    // linhas `render` — chaveadas pelo nome —, então ganharam nome longo na
+    // busca e o curto na tela; a busca não acha mais duas linhas iguais.
     const nomes = all(fakeUi({ isMobile: true }))
       .filter((r) => r.searchable !== false)
       .map((r) => r.name as string);
     const repetidos = [...new Set(nomes.filter((n, i) => nomes.indexOf(n) !== i))];
-    expect(repetidos).toEqual(["Quality"]);
-    const [a, b] = all().filter((r) => r.name === "Quality");
-    for (const provider of ["openai", "eleven"]) {
+    expect(repetidos).toEqual([]);
+  });
+
+  it("cada qualidade de voz aparece só com quem lê", () => {
+    for (const [provider, nome] of [
+      ["openai", "OpenAI voice quality"],
+      ["eleven", "ElevenLabs voice quality"],
+    ] as const) {
       const ui = fakeUi({ settings: { ttsProvider: provider } });
-      const vis = all(ui).filter((r) => r.name === "Quality").map((r) => r.visible?.());
-      expect(vis.filter(Boolean).length, provider).toBe(1);
+      const vis = all(ui)
+        .filter((r) => /voice quality$/.test(String(r.name)))
+        .filter((r) => (r.visible ? r.visible() : true))
+        .map((r) => r.name);
+      expect(vis, provider).toEqual([nome]);
     }
-    expect(a && b).toBeTruthy();
   });
 
   it('"voice" acha os interruptores de voz mesmo com tudo desligado', () => {
@@ -256,6 +266,66 @@ describe("abas", () => {
         `.axxa-settings-root:not([data-axxa-prov="${p.id}"]) .axxa-set-prov-${p.id}`
       );
     }
+  });
+});
+
+describe("a aba Chat só tem menus de escolha com ícone", () => {
+  // No Android, o <select> abre a caixa do sistema: rádio, letra enorme,
+  // nenhum ícone. A aba Chat troca todos pelo balão do ⋯ das conversas.
+  type Pego = { key: string; tab: string; itens: { value: string; label: string; icon?: string; glyph?: string }[] };
+  const pegos: Pego[] = [];
+  const ui = { ...fakeUi({ isMobile: true }) } as SettingsUi;
+  ui.pick = (key, items, tab) => {
+    pegos.push({ key, tab, itens: items() });
+    return noop;
+  };
+  const tree = buildSettingsTree(ui);
+
+  it("nenhum dropdown nativo na aba Chat", () => {
+    const nativos = (tree.items as unknown as Group[])
+      .filter((g) => tree.places.get(g as object)?.tab === "chat")
+      .flatMap((g) => g.items)
+      .filter((r) => r.control?.type === "dropdown")
+      .map((r) => r.name);
+    expect(nativos).toEqual([]);
+  });
+
+  it("os menus que existiam viraram escolha, e moram na aba Chat", () => {
+    const chaves = pegos.map((p) => p.key).sort();
+    expect(chaves).toEqual(
+      [
+        "defaultEffort",
+        "defaultMode",
+        "defaultProvider",
+        "elevenModel",
+        "language",
+        "ttsModel",
+        "ttsVoice",
+        "voiceLanguage",
+        "voiceModel",
+      ].sort()
+    );
+    expect(new Set(pegos.map((p) => p.tab))).toEqual(new Set(["chat"]));
+  });
+
+  it("toda opção tem ícone ou código, e um rótulo", () => {
+    for (const p of pegos) {
+      expect(p.itens.length, p.key).toBeGreaterThan(0);
+      for (const i of p.itens) {
+        expect(i.label, `${p.key}:${i.value}`).toBeTruthy();
+        expect(!!(i.icon || i.glyph), `${p.key}:${i.value} sem ícone`).toBe(true);
+      }
+    }
+  });
+
+  it("o modo mostra o NOME do módulo, não o id cru", () => {
+    const modo = pegos.find((p) => p.key === "defaultMode")!;
+    expect(modo.itens.map((i) => i.label)).toEqual(["Chat", "Vault Q&A", "Agent"]);
+  });
+
+  it("idiomas usam o código no lugar do ícone", () => {
+    const lang = pegos.find((p) => p.key === "language")!;
+    expect(lang.itens.map((i) => i.glyph)).toEqual(["EN", "PT"]);
   });
 });
 

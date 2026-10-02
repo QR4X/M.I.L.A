@@ -28,6 +28,10 @@ import { screen } from "./haptics";
 export interface MenuAction {
   label: string;
   icon?: string;
+  /** Um texto curto no LUGAR do ícone (o código de um idioma: "EN", "PT").
+   *  Bandeira não existe no set de ícones, e o mesmo desenho de "idioma"
+   *  repetido em todas as linhas não diria qual é qual. */
+  glyph?: string;
   /** Cor própria do item (a de um projeto). Com ela, o ícone vira BRASÃO: o
    *  mesmo quadrado squircle da lista de projetos, no tom dele. Um menu de
    *  projetos com ícones cinzas perde justamente o que faz um projeto ser
@@ -122,30 +126,61 @@ export function posicaoDoBalao(params: {
   };
 }
 
-export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
+export interface MenuOptions {
+  /** O balão com a largura do botão que o abriu, e rolando quando a lista
+   *  passa da tela: é o menu de ESCOLHA das settings, que substitui um
+   *  <select> de largura cheia. Sem isto, um balão de 168px pendurado na
+   *  ponta direita de um botão de 330 parecia de outro controle. */
+  escolha?: boolean;
+}
+
+export function openActions(
+  ev: MenuEvent,
+  actions: MenuAction[],
+  opts: MenuOptions = {}
+): void {
   if (actions.length === 0) return;
-  // O documento do BOTÃO que abriu o menu, não o global: numa janela
-  // destacada do Obsidian (pop-out), `document` é o da janela principal — o
-  // balão nasceria na janela errada, longe do item que o pediu.
-  const doc =
-    (ev.currentTarget as HTMLElement | null)?.ownerDocument ?? document;
-  const raiz = doc.querySelector<HTMLElement>(".axxa-root") ?? doc.body;
-
-  // createDiv do Obsidian já ANEXA ao nó — por isso a camada nasce dentro da
-  // raiz e o balão dentro dela, em vez de serem anexados no fim. Não há
-  // diferença visível: nada pinta até esta tarefa terminar, e a medição do
-  // balão (offsetWidth, em `posicionar`) exige estar na árvore de qualquer jeito.
-  const camada = raiz.createDiv({ cls: "axxa-pop-layer" });
-  const balao = camada.createDiv({
-    cls: "axxa-pop",
-    attr: { role: "menu" },
-  });
-
   // O elemento âncora é guardado AGORA: `currentTarget` de um evento do React
   // é zerado quando o handler termina, e o segundo nível do menu se
   // reposiciona depois disso — sem esta cópia, ele perdia o botão e caía no
   // ponto do toque.
   const ancoraEl = (ev.currentTarget as HTMLElement | null) ?? null;
+  // O documento do BOTÃO que abriu o menu, não o global: numa janela
+  // destacada do Obsidian (pop-out), `document` é o da janela principal — o
+  // balão nasceria na janela errada, longe do item que o pediu. Vale também
+  // pras settings do desktop, que no 1.13 abrem em janela própria.
+  const doc = ancoraEl?.ownerDocument ?? document;
+  const win = doc.defaultView ?? window;
+
+  // ONDE o balão mora. Aberto de dentro do app, na `.axxa-root` dele — a
+  // mesma de sempre. Aberto de FORA (as settings são um modal do Obsidian),
+  // ele não pode ir pra raiz do painel: ela fica atrás do modal, e o balão
+  // abriria escondido. Aí ele mora no próprio modal (some junto quando o
+  // modal fecha — o "voltar" do Android fecha o modal sem passar por aqui) ou,
+  // sem modal, no body; e a camada vira `fixed`, com a tela como referência.
+  const raizApp = ancoraEl
+    ? ancoraEl.closest<HTMLElement>(".axxa-root")
+    : doc.querySelector<HTMLElement>(".axxa-root");
+  const solto = !raizApp;
+  const raiz =
+    raizApp ??
+    ancoraEl?.closest<HTMLElement>(".modal-container") ??
+    doc.body;
+
+  // createDiv do Obsidian já ANEXA ao nó — por isso a camada nasce dentro da
+  // raiz e o balão dentro dela, em vez de serem anexados no fim. Não há
+  // diferença visível: nada pinta até esta tarefa terminar, e a medição do
+  // balão (offsetWidth, em `posicionar`) exige estar na árvore de qualquer jeito.
+  const camada = raiz.createDiv({
+    cls: solto ? "axxa-pop-layer is-loose" : "axxa-pop-layer",
+  });
+  const balao = camada.createDiv({
+    cls: opts.escolha ? "axxa-pop is-pick" : "axxa-pop",
+    attr: { role: "menu" },
+  });
+  if (opts.escolha && ancoraEl) {
+    balao.style.minWidth = `${Math.round(ancoraEl.getBoundingClientRect().width)}px`;
+  }
 
   let fechar = () => {};
 
@@ -156,10 +191,20 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
     aoTocar: () => void
   ): HTMLButtonElement => {
     const b = pai.createEl("button", {
-      cls: a.danger ? "axxa-pop-item is-danger" : "axxa-pop-item",
-      attr: { type: "button", role: "menuitem" },
+      cls:
+        "axxa-pop-item" +
+        (a.danger ? " is-danger" : "") +
+        (a.checked ? " is-checked" : ""),
+      // Item de escolha (tem `checked`, mesmo falso) diz pro leitor de tela
+      // qual é a opção de agora.
+      attr:
+        a.checked === undefined
+          ? { type: "button", role: "menuitem" }
+          : { type: "button", role: "menuitemradio", "aria-checked": String(a.checked) },
     });
-    if (a.icon) {
+    if (a.glyph) {
+      b.createSpan({ cls: "axxa-pop-ico axxa-pop-glyph", text: a.glyph });
+    } else if (a.icon) {
       // Com cor, o ícone ganha a MESMA plaquinha da lista de projetos
       // (`axxa-thing-mark`): mesma forma, mesmo jeito de tingir — o fundo sai
       // do `currentColor`. Reusar a classe é o que garante que as duas telas
@@ -215,7 +260,23 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
    */
   function posicionar(): void {
     const r = ancoraEl?.getBoundingClientRect?.();
-    const base = raiz.getBoundingClientRect();
+    // A origem das coordenadas do balão é a CAMADA. Dentro do app ela tem a
+    // caixa da raiz (inset 0); solta, é `fixed` e cobre a tela — e medir a
+    // própria camada vale até se um ancestral do modal mudar a referência do
+    // `fixed`.
+    const base = camada.getBoundingClientRect();
+    // A ESCOLHA nunca cobre o botão que a abriu: a lista vai pro lado com mais
+    // espaço (embaixo, se couber inteira) e rola dentro dele. Sem isto, onze
+    // vozes não cabiam nem em cima nem embaixo, e o balão encostava no topo da
+    // tela por cima do próprio botão.
+    if (opts.escolha && r) {
+      balao.style.maxHeight = "";
+      const embaixo = win.innerHeight - r.bottom - VAO - MARGEM;
+      const emCima = r.top - VAO - MARGEM;
+      const espaco =
+        balao.offsetHeight <= embaixo ? embaixo : Math.max(embaixo, emCima);
+      balao.style.maxHeight = `${Math.max(120, Math.floor(espaco))}px`;
+    }
     const ancora = r ?? {
       left: (ev.clientX ?? 0) - 1,
       right: (ev.clientX ?? 0) + 1,
@@ -226,7 +287,7 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
     const { x, y, origem } = posicaoDoBalao({
       ancora,
       raiz: base,
-      tela: { width: window.innerWidth, height: window.innerHeight },
+      tela: { width: win.innerWidth, height: win.innerHeight },
       // `offsetWidth/Height`, e não o retângulo: o balão nasce com
       // `scale(0.94)` pra crescer, e o retângulo mede o TRANSFORMADO — a conta
       // saía 6% menor e ele pousava 10px pra fora da borda do botão.
@@ -239,6 +300,15 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
   }
 
   desenhar(actions, null);
+  // Lista que rola (uma escolha longa): abre com a opção de agora à vista,
+  // no meio — não no topo, onde ela pode nem estar.
+  const marcado = balao.querySelector<HTMLElement>(".axxa-pop-item.is-checked");
+  if (marcado && balao.scrollHeight > balao.clientHeight) {
+    balao.scrollTop = Math.max(
+      0,
+      marcado.offsetTop - (balao.clientHeight - marcado.offsetHeight) / 2
+    );
+  }
   camada.classList.add("is-open");
   screen();
 
@@ -246,16 +316,24 @@ export function openActions(ev: MenuEvent, actions: MenuAction[]): void {
   const onKey = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
       e.preventDefault();
+      // Solto num modal, o Esc fecha SÓ o balão — não o modal junto.
+      if (solto) e.stopPropagation();
       fechar();
     }
   };
+  // Rolou a lista atrás: o balão perde a âncora e some, em vez de ficar
+  // pairando sobre outro item. Rolar DENTRO dele (uma escolha longa) não conta.
+  const onScroll = (e: Event) => {
+    if (balao.contains(e.target as Node | null)) return;
+    fechar();
+  };
+  const ondeRola: Document | HTMLElement = solto ? doc : raiz;
   fechar = () => {
     doc.removeEventListener("keydown", onKey);
+    ondeRola.removeEventListener("scroll", onScroll, { capture: true });
     camada.remove();
   };
   camada.addEventListener("click", fechar);
   doc.addEventListener("keydown", onKey);
-  // Rolou a lista atrás: o balão perde a âncora e some, em vez de ficar
-  // pairando sobre outro item.
-  raiz.addEventListener("scroll", fechar, { capture: true, once: true });
+  ondeRola.addEventListener("scroll", onScroll, { capture: true });
 }

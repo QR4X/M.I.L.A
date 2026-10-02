@@ -35,8 +35,9 @@ import type {
 } from "obsidian";
 import type { AxxaSettings } from "../../main";
 import { PROVIDERS } from "../../core/providersMeta";
-import { EFFORT_LABELS, EFFORT_LEVELS } from "../../core/effort";
+import { EFFORT_ICONS, EFFORT_LABELS, EFFORT_LEVELS } from "../../core/effort";
 import { CHAT_MODES } from "../../core/session";
+import { MODULES } from "../modules";
 import { LOCALES } from "../../i18n";
 import { PERMISSION_LABELS } from "../../agent/permissions";
 import { ELEVEN_MODELS } from "../../providers/elevenlabs";
@@ -124,6 +125,41 @@ export const SPEECH_LANGS: [string, string][] = [
   ["ja", "日本語"],
 ];
 
+/** Uma opção de um menu de ESCOLHA (ver `escolha` abaixo e SettingsTab.paintPick). */
+export interface PickItem {
+  value: string;
+  label: string;
+  icon?: string;
+  /** Texto curto no lugar do ícone (o código de um idioma). */
+  glyph?: string;
+}
+
+/** Os modelos de ditado — o que os separa é rapidez contra precisão. */
+const STT_ICONS: Record<string, string> = {
+  "gpt-4o-mini-transcribe": "zap",
+  "gpt-4o-transcribe": "sparkles",
+  "whisper-1": "history",
+};
+
+/** As qualidades de leitura da OpenAI: com intenção, limpa, barata. */
+const TTS_ICONS: Record<string, string> = {
+  "gpt-4o-mini-tts": "sparkles",
+  "tts-1-hd": "gem",
+  "tts-1": "zap",
+};
+
+/** As da ElevenLabs: a melhor, a mais rápida, a mais rápida de todas. */
+const ELEVEN_ICONS: Record<string, string> = {
+  eleven_multilingual_v2: "sparkles",
+  eleven_turbo_v2_5: "fast-forward",
+  eleven_flash_v2_5: "zap",
+};
+
+/** "alloy" → "Alloy": o nome de uma voz é nome próprio. */
+function nomeProprio(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 /** A linha desenhada à mão. Pode devolver a limpeza (roda antes de redesenhar). */
 export type RowRender = (row: Setting, group: SettingGroup) => void | (() => void);
 
@@ -149,6 +185,9 @@ export interface SettingsUi {
   fetchModels(providerId: string): RowRender;
   catalog(providerId: string): RowRender;
   freeOffer: RowRender;
+  /** Menu de escolha com ícone, no lugar de um <select>. `items` é chamado a
+   *  cada desenho — listas que mudam (vozes, modelos) chegam frescas. */
+  pick(key: TextKey, items: () => PickItem[], tab: TabId): RowRender;
   assistantModel: RowRender;
   ttsProvider: RowRender;
   elevenKey: RowRender;
@@ -283,6 +322,24 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
     items.push(g);
   }
 
+  /**
+   * Menu de ESCOLHA com ícone — o balão do ⋯ das conversas no lugar do
+   * <select> nativo, que no Android abre a caixa do sistema (rádio, sem ícone,
+   * longe do que foi tocado). É uma linha `render`, então o nome precisa ser
+   * único no grupo (o 1.13 chaveia por ele): `shown` é o curto da tela.
+   */
+  function escolha(
+    at: Place,
+    name: string,
+    shown: string | null,
+    desc: string,
+    key: TextKey,
+    itens: () => PickItem[],
+    more: RowExtras = {}
+  ): SettingDefinition {
+    return custom(name, shown, desc, ui.pick(key, itens, at.tab), more);
+  }
+
   // ── a barra de abas: sempre à vista, sem cartão ──────────────────────────
   group(null, { cls: "axxa-set-flat axxa-set-navgroup" }, [
     { name: "", render: ui.nav, searchable: false },
@@ -380,33 +437,57 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
 
   // ── Chat ─────────────────────────────────────────────────────────────────
   const chat: Place = { tab: "chat" };
+  // Os menus desta aba são todos de ESCOLHA com ícone (ver `escolha`).
   group(chat, {}, [
-    dropdown(
+    escolha(
+      chat,
       "Provider",
+      null,
       "Which provider a new chat opens with.",
       "defaultProvider",
-      options(PROVIDERS.map((p) => [p.id, p.name] as const)),
+      () => PROVIDERS.map((p) => ({ value: p.id, label: p.name, icon: p.icon })),
       { aliases: ["default provider"] }
     ),
-    dropdown(
+    escolha(
+      chat,
       "Mode",
+      null,
       "Chat, Vault Q&A or Agent. Locks on the first message.",
       "defaultMode",
-      options(CHAT_MODES.map((m) => [m, m] as const)),
+      () =>
+        CHAT_MODES.map((m) => ({
+          value: m,
+          label: MODULES[m].label,
+          icon: MODULES[m].icon,
+        })),
       { aliases: ["modo"] }
     ),
-    dropdown(
+    escolha(
+      chat,
       "Effort",
+      null,
       "How hard the model works: length, agent turns, temperature.",
       "defaultEffort",
-      options(EFFORT_LEVELS.map((l) => [l, EFFORT_LABELS[l]] as const)),
+      () =>
+        EFFORT_LEVELS.map((l) => ({
+          value: l,
+          label: EFFORT_LABELS[l],
+          icon: EFFORT_ICONS[l],
+        })),
       { aliases: ["esforço", "reasoning"] }
     ),
-    dropdown(
+    escolha(
+      chat,
       "Language",
+      null,
       "Interface, chat errors — and the language the model answers in. The creation assistant follows it too.",
       "language",
-      options(LOCALES.map((l) => [l.id, l.label] as const)),
+      () =>
+        LOCALES.map((l) => ({
+          value: l.id,
+          label: l.label,
+          glyph: l.id.slice(0, 2).toUpperCase(),
+        })),
       { aliases: ["idioma", "língua", "portuguese", "português"] }
     ),
   ]);
@@ -455,18 +536,34 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       ui.hint("Dictation runs on OpenAI — add that key in Providers."),
       () => voiceOn() && !ui.hasCredential("openai")
     ),
-    dropdown(
+    escolha(
+      chat,
       "Ears",
+      null,
       "Mini is quick, cheap and gets normal speech right; the full one is better with names, accents and noise.",
       "voiceModel",
-      options(STT_MODELS.map((m) => [m, prettyModelName(m)] as const)),
+      () =>
+        STT_MODELS.map((m) => ({
+          value: m,
+          label: prettyModelName(m),
+          icon: STT_ICONS[m] ?? "ear",
+        })),
       { visible: voiceOn, aliases: ["transcription", "transcrição", "whisper"] }
     ),
-    dropdown(
+    escolha(
+      chat,
       "What you speak",
+      null,
       "Naming your language beats letting it guess — short takes are where guessing goes wrong.",
       "voiceLanguage",
-      options(SPEECH_LANGS),
+      // Vazio = deixa o modelo detectar: esse ganha um desenho, os idiomas
+      // ganham o código.
+      () =>
+        SPEECH_LANGS.map(([value, label]) =>
+          value
+            ? { value, label, glyph: value.toUpperCase() }
+            : { value, label, icon: "wand-sparkles" }
+        ),
       { visible: voiceOn, aliases: ["idioma", "language"] }
     ),
     toggle(
@@ -488,19 +585,36 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       ui.hint("Add your OpenAI key in Providers to hear anything."),
       () => openaiReads() && !ui.hasCredential("openai")
     ),
-    dropdown(
+    escolha(
+      chat,
       "Voice",
+      null,
       "Eleven of them. Hit Play sample to hear the one you picked.",
       "ttsVoice",
-      options(OPENAI_VOICES.map((v) => [v, v] as const)),
+      () =>
+        OPENAI_VOICES.map((v) => ({
+          value: v,
+          label: nomeProprio(v),
+          icon: "audio-lines",
+        })),
       { visible: openaiReads, aliases: ["voz"] }
     ),
-    dropdown(
+    // Duas "Quality" no mesmo grupo (OpenAI e ElevenLabs): linha `render` é
+    // chaveada pelo nome, então o nome da busca é o longo e a tela mostra o
+    // curto. De quebra, a busca deixou de achar duas linhas iguais.
+    escolha(
+      chat,
+      "OpenAI voice quality",
       "Quality",
       "gpt-4o-mini-tts reads with intention; tts-1 is the cheap classic; the HD one is the same voice, cleaner.",
       "ttsModel",
-      options(OPENAI_TTS_MODELS.map((m) => [m, m] as const)),
-      { visible: openaiReads }
+      () =>
+        OPENAI_TTS_MODELS.map((m) => ({
+          value: m,
+          label: m,
+          icon: TTS_ICONS[m] ?? "audio-lines",
+        })),
+      { visible: openaiReads, aliases: ["quality", "qualidade"] }
     ),
     custom(
       "Test OpenAI voice",
@@ -534,12 +648,19 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       ui.hint("No voices loaded yet — hit Fetch voices."),
       () => elevenReads() && s().elevenVoices.length === 0 && !!s().elevenApiKey
     ),
-    dropdown(
+    escolha(
+      chat,
+      "ElevenLabs voice quality",
       "Quality",
       "Multilingual sounds best; the faster ones answer sooner.",
       "elevenModel",
-      options(ELEVEN_MODELS.map((m) => [m.id, m.label] as const)),
-      { visible: elevenReads }
+      () =>
+        ELEVEN_MODELS.map((m) => ({
+          value: m.id,
+          label: m.label,
+          icon: ELEVEN_ICONS[m.id] ?? "audio-lines",
+        })),
+      { visible: elevenReads, aliases: ["quality", "qualidade"] }
     ),
     custom(
       "Test ElevenLabs voice",
