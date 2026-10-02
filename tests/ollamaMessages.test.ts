@@ -45,6 +45,59 @@ describe("toOllamaMessages — o histórico no formato do Ollama", () => {
   });
 });
 
+describe("toOllamaMessages — imagem anexada", () => {
+  // O conversor OpenAI põe o anexo em `content` como LISTA de partes, e o
+  // /api/chat só aceita string: o Ollama devolvia 400 ("json: cannot unmarshal
+  // array into Go struct field ChatRequest.messages.content of type string")
+  // a qualquer mensagem com imagem. Medido no Ollama local, com qwen3.5:9b: no
+  // formato abaixo ele responde "Red" pra um PNG vermelho.
+  const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/58BAwAI/AL+hc2rNAAAAABJRU5ErkJggg==";
+
+  it("o texto volta a ser string e a imagem vai em `images`, em base64 cru", () => {
+    const [msg] = toOllamaMessages([
+      {
+        role: "user",
+        content: "What color is this?",
+        attachments: [{ type: "image", dataUrl: `data:image/png;base64,${PNG}`, mimeType: "image/png" }],
+      },
+    ]) as Array<Record<string, unknown>>;
+    expect(msg).toEqual({ role: "user", content: "What color is this?", images: [PNG] });
+  });
+
+  it("várias imagens, todas em `images`; content nunca é lista", () => {
+    const [msg] = toOllamaMessages([
+      {
+        role: "user",
+        content: "Compare.",
+        attachments: [
+          { type: "image", dataUrl: `data:image/png;base64,${PNG}` },
+          { type: "image", dataUrl: `data:image/jpeg;base64,${PNG}` },
+        ],
+      },
+    ]) as Array<Record<string, unknown>>;
+    expect(typeof msg.content).toBe("string");
+    expect(msg.images).toEqual([PNG, PNG]);
+  });
+
+  it("link http não é imagem que dê pra mandar: cai, o texto fica", () => {
+    const [msg] = toOllamaMessages([
+      { role: "user", content: "Look.", attachments: [{ type: "image", dataUrl: "https://x.test/a.png" }] },
+    ]) as Array<Record<string, unknown>>;
+    expect(msg).toEqual({ role: "user", content: "Look." });
+  });
+
+  it("PDF o Ollama não lê: a parte cai e o content continua string", () => {
+    const [msg] = toOllamaMessages([
+      {
+        role: "user",
+        content: "Summarize.",
+        attachments: [{ type: "pdf", name: "a.pdf", dataUrl: "data:application/pdf;base64,JVBERi0=" }],
+      },
+    ]) as Array<Record<string, unknown>>;
+    expect(msg).toEqual({ role: "user", content: "Summarize." });
+  });
+});
+
 describe("o corpo que sai pro /api/chat na segunda volta", () => {
   afterEach(() => vi.unstubAllGlobals());
 

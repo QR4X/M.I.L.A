@@ -209,6 +209,10 @@ const ENTRIES_BY_PROVIDER: Record<string, CapsEntry[]> = {
     { prefix: "llama3.3", caps: { vision: false, tools: true, streaming: true, free: true } },
     { prefix: "qwen2.5-vl", caps: { vision: true, tools: true, streaming: true, free: true } },
     { prefix: "qwen2.5", caps: { vision: false, tools: true, streaming: true, free: true } },
+    // O qwen3.5 lê imagem: o `/api/show` do Ollama lista "vision" (e "tools")
+    // nele. Sem esta linha ele caía no prefixo "qwen3" e o botão de anexar
+    // imagem ficava apagado.
+    { prefix: "qwen3.5", caps: { vision: true, tools: true, streaming: true, free: true } },
     { prefix: "qwen3", caps: { vision: false, tools: true, streaming: true, free: true } },
     { prefix: "mistral-large", caps: { vision: false, tools: true, streaming: true, free: true } },
     { prefix: "mistral", caps: { vision: false, tools: false, streaming: true, free: true } },

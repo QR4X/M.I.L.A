@@ -81,6 +81,12 @@ interface MensagemOpenAI {
  *   - `content` nunca vai `null` numa mensagem do assistente.
  *   - a resposta da ferramenta leva `tool_name`, que é como o Ollama liga o
  *     resultado à chamada (ele não usa `tool_call_id`).
+ * E uma quarta, a da IMAGEM: o conversor OpenAI põe o anexo em `content` como
+ * lista de partes (`text` + `image_url` com data URL), e o `/api/chat` só
+ * aceita `content` string — recusava com 400 ("cannot unmarshal array into …
+ * content of type string") qualquer mensagem com imagem, em modelo de visão
+ * ou não. Aqui o texto volta a ser string e as imagens vão em `images`, em
+ * base64 cru (sem o `data:…;base64,`). PDF o Ollama não lê: a parte cai.
  */
 export function toOllamaMessages(messages: ProviderRequest["messages"]): unknown[] {
   const nomePorId = new Map<string, string>();
@@ -109,8 +115,39 @@ export function toOllamaMessages(messages: ProviderRequest["messages"]): unknown
       const nome = m.tool_call_id ? nomePorId.get(m.tool_call_id) : undefined;
       return { role: "tool", content: m.content, ...(nome ? { tool_name: nome } : {}) };
     }
+    if (Array.isArray(m.content)) {
+      const partes = m.content as ParteOpenAI[];
+      const texto = partes
+        .filter((p) => p.type === "text" && typeof p.text === "string")
+        .map((p) => p.text as string)
+        .join("\n\n");
+      const imagens = partes
+        .filter((p) => p.type === "image_url")
+        .map((p) => base64DaDataUrl(p.image_url?.url ?? ""))
+        .filter((b) => b !== "");
+      return {
+        role: m.role,
+        content: texto,
+        ...(imagens.length > 0 ? { images: imagens } : {}),
+      };
+    }
     return m;
   });
+}
+
+interface ParteOpenAI {
+  type?: string;
+  text?: unknown;
+  image_url?: { url?: string };
+}
+
+/** `data:image/png;base64,AAAA` → `AAAA` (o que o Ollama quer). Sem o
+ *  prefixo, o texto já é o base64; um link http não é imagem que dê pra
+ *  mandar e vira "". */
+function base64DaDataUrl(url: string): string {
+  const virgula = url.indexOf(",");
+  if (url.startsWith("data:")) return virgula >= 0 ? url.slice(virgula + 1) : "";
+  return /^https?:/i.test(url) ? "" : url;
 }
 
 /**
