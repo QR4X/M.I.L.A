@@ -1,0 +1,131 @@
+name: Bug report
+description: Something in AXXA Agent is broken or behaves unexpectedly.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. AXXA Agent is built by one person, so a clear, reproducible report gets fixed fastest.
+        Questions and ideas belong in [Discussions](https://github.com/axxalab/axxa-agent/discussions).
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched the existing issues and this is not a duplicate.
+          required: true
+        - label: I am on the latest AXXA Agent version and I restarted Obsidian.
+          required: true
+        - label: I removed API keys and private note content from everything I paste below.
+          required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options:
+        - Android phone
+        - Android tablet
+        - iPhone
+        - iPad
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and OS version (mobile only)
+      placeholder: "Pixel 8, Android 16 / iPhone 15, iOS 26"
+  - type: input
+    id: obsidian-version
+    attributes:
+      label: Obsidian version
+      description: Settings > General > Current version.
+      placeholder: "1.11.4"
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: AXXA Agent version
+      description: Settings > Community plugins > AXXA Agent. Say if it is a BRAT beta.
+      placeholder: "0.9.20"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it happen?
+      options:
+        - Chat
+        - Vault Q&A (RAG / indexing)
+        - Agent (tools, confirmations)
+        - Composer / keyboard / fullscreen
+        - Voice (dictation or Listen)
+        - Image generation
+        - Projects / Skills
+        - Usage and cost
+        - Settings
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider
+      multiple: true
+      options:
+        - OpenAI
+        - Anthropic
+        - Google Gemini
+        - OpenRouter
+        - NVIDIA NIM
+        - Ollama
+        - ElevenLabs
+        - Not provider-related
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      placeholder: "Sonnet 4.6, gemini-2.5-flash, llama3.1:8b ..."
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a new chat in Agent mode
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console errors
+      description: Desktop - Ctrl+Shift+I (Cmd+Option+I on macOS), Console tab, copy red lines mentioning axxa. Mobile - a screenshot of the error notice is enough.
+      render: shell
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or screen recording
+      description: Drag files here. On mobile, a short screen recording helps most with layout and keyboard bugs.
+  - type: checkboxes
+    id: isolation
+    attributes:
+      label: Isolation (optional)
+      options:
+        - label: The bug still happens with all other community plugins disabled.

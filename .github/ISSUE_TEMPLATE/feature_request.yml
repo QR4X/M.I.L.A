@@ -1,0 +1,63 @@
+name: Feature request
+description: Suggest a concrete improvement. Early or vague ideas fit better in Discussions > Ideas.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One feature per request, please. If you are still exploring an idea, start in [Discussions > Ideas](https://github.com/axxalab/axxa-agent/discussions/categories/ideas).
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and Discussions for this request.
+          required: true
+        - label: This is a single feature that would help other users, not only my setup.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Chat
+        - Vault Q&A (RAG)
+        - Agent and tools
+        - Providers and models
+        - Mobile experience
+        - Projects / Skills
+        - Usage and cost
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform it matters on
+      options:
+        - Mobile
+        - Desktop
+        - Both
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or workarounds you tried
+  - type: textarea
+    id: context
+    attributes:
+      label: Extra context
+      description: Screenshots, mockups, links to other plugins that do it well.
