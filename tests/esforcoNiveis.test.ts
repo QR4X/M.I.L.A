@@ -59,6 +59,14 @@ describe("os sliders do editor de nível", () => {
     expect(paradasCom(tokens, 512)).toBe(tokens.paradas);
   });
 
+  it("cada ajuste tem o seu desenho na frente do nome — e nenhum repete", () => {
+    const icones = CAMPOS_DE_ESFORCO.map((c) => c.icone);
+    for (const c of CAMPOS_DE_ESFORCO) expect(c.icone, c.key).toMatch(/^[a-z0-9-]+$/);
+    expect(new Set(icones).size).toBe(icones.length);
+    // o ↺ (rotate-ccw) é o "voltar ao padrão": desenho de linha não pode ser ele
+    expect(icones).not.toContain("rotate-ccw");
+  });
+
   it("a parte do contexto só aparece com a resposta sem teto, logo abaixo dela", () => {
     const reserva = campo("contextReservePercent");
     expect(reserva.quando!({ ...DEFAULT_EFFORT_CONFIGS.max })).toBe(true);

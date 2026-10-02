@@ -5241,6 +5241,19 @@ body.is-mobile .axxa-settings-root button.axxa-pick {
   min-height: 24px;
 }
 
+/* O desenho de cada ajuste, na frente do nome: cinza, e na cor de destaque
+   quando o valor foi mudado — a mesma cor do trilho preenchido. */
+.axxa-effort-modal .axxa-esf-ico {
+  --icon-size: 16px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+.axxa-effort-modal .axxa-esf-linha.is-custom .axxa-esf-ico {
+  color: var(--text-accent);
+}
+
 .axxa-effort-modal .axxa-esf-nome {
   flex: 1 1 auto;
   min-width: 0;
@@ -5274,6 +5287,20 @@ body.is-mobile .axxa-settings-root button.axxa-pick {
 
 .axxa-effort-modal .axxa-esf-linha.is-custom .axxa-esf-volta {
   visibility: visible;
+}
+
+/* TODO slider do plugin só anda pelo BOTÃO (pedido do Rafael): rolando a
+   tela, o dedo que encosta no trilho não pode mudar a configuração. O trilho
+   não recebe toque — o toque passa pra quem está embaixo e a rolagem segue —,
+   só o botão recebe, e mudar é pegar e arrastar. Teclado continua valendo
+   (setas, Home/End). Slider novo leva a classe `axxa-slider`; o teste
+   tests/sliderSoBotao.test.ts reprova o que vier sem ela. */
+input[type="range"].axxa-slider {
+  pointer-events: none;
+}
+
+input[type="range"].axxa-slider::-webkit-slider-thumb {
+  pointer-events: auto;
 }
 
 /* O app.css dá 100px de largura a todo range; aqui ele é a linha inteira. A

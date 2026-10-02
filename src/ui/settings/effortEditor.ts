@@ -34,6 +34,8 @@ export interface CampoDeEsforco {
   name: string;
   /** A explicação: vai no `title` da linha (e no leitor de tela). */
   desc: string;
+  /** O desenho na frente do nome — acha-se a linha de relance, sem ler. */
+  icone: string;
   tipo: "numero" | "chave";
   min?: number;
   max?: number;
@@ -64,6 +66,7 @@ const plural = (n: number, um: string, varios: string) => (n === 1 ? `1 ${um}` :
 export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
   {
     key: "maxTokens",
+    icone: "message-square-text",
     name: "Reply length",
     desc: "How long a reply can get, in tokens. No cap = up to the share of context below.",
     tipo: "numero",
@@ -77,6 +80,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
   },
   {
     key: "contextReservePercent",
+    icone: "pie-chart",
     name: "Share of context",
     desc: "With no cap on the reply, how much of the model's window it can use — the rest is left for the prompt.",
     tipo: "numero",
@@ -88,6 +92,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
   },
   {
     key: "temperature",
+    icone: "thermometer",
     name: "Temperature",
     desc: "Randomness: low is precise, high is creative. Provider default = don't send it.",
     tipo: "numero",
@@ -98,6 +103,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
   },
   {
     key: "agentMaxTurns",
+    icone: "footprints",
     name: "Agent turns",
     desc: "How many tool rounds the Agent can take before stopping. No cap = only the loop guard stops it.",
     tipo: "numero",
@@ -111,6 +117,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
   },
   {
     key: "toolRetryOnError",
+    icone: "wrench",
     name: "Tool retries",
     desc: "Retries for tools that fail for a passing reason (network, timeout, locked file). A wrong path is never retried.",
     tipo: "numero",
@@ -121,6 +128,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
   },
   {
     key: "loopDetectionWindow",
+    icone: "shield",
     name: "Loop guard",
     desc: "How many identical tool calls in a row make the Agent stop and rethink.",
     tipo: "numero",
@@ -131,12 +139,14 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
   },
   {
     key: "parallelToolCalls",
+    icone: "split",
     name: "Run tools in parallel",
     desc: "When the Agent asks for several tools at once, run them together (faster).",
     tipo: "chave",
   },
   {
     key: "vaultTopK",
+    icone: "files",
     name: "Vault Q&A notes",
     desc: "How many notes Vault Q&A brings in as context.",
     tipo: "numero",
@@ -147,6 +157,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
   },
   {
     key: "vaultExcerptChars",
+    icone: "type",
     name: "Characters per note",
     desc: "How much of each of those notes goes in.",
     tipo: "numero",
@@ -380,6 +391,7 @@ export class EffortLevelModal extends Modal {
    *  continua encostado na ponta direita, alinhado com o fim do slider. */
   private topo(pai: HTMLElement, campo: CampoDeEsforco, padraoVisivel: string) {
     const topo = pai.createDiv({ cls: "axxa-esf-topo" });
+    setIcon(topo.createSpan({ cls: "axxa-esf-ico" }), campo.icone);
     topo.createSpan({ cls: "axxa-esf-nome", text: campo.name });
     const volta = topo.createEl("button", {
       cls: "axxa-esf-volta clickable-icon",
@@ -404,7 +416,8 @@ export class EffortLevelModal extends Modal {
     // sua (ver paradasCom) e continua alcançável depois de mexer.
     const paradas = paradasCom(campo, salvo() ?? padrao);
     const slider = linha.createEl("input", {
-      cls: "slider axxa-esf-slider",
+      // `axxa-slider`: só anda pelo botão (ver o CSS) — todo slider do plugin.
+      cls: "slider axxa-slider axxa-esf-slider",
       attr: {
         type: "range",
         min: "0",
