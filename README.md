@@ -26,8 +26,8 @@
 - **An agent that asks first.** It creates, edits, moves and deletes notes through a small set of tools. Changes wait for your OK, deletes go to your trash, and moves rewrite your `[[links]]`.
 - **Made for your phone.** Designed for the Obsidian mobile drawer first: the composer follows the keyboard, there is an optional fullscreen mode, and the agent works on the phone too.
 - **Six providers, your keys.** OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM and local Ollama. Keys live in your OS keychain.
-- **Small and fast.** `main.js` is about 440 KB, smaller than each of the 12 most-downloaded AI plugins (0.56 to 14.6 MB, median about 3.8 MB, measured October 2026).
-- **Everything is Markdown.** Chats, skills and cost reports are files in your vault, and a usage dashboard shows what you spend by provider, model and day.
+- **Small and fast.** `main.js` is under 500 KB, smaller than each of the 12 most-downloaded AI plugins (0.56 to 14.6 MB, median about 3.8 MB, measured October 2026).
+- **Everything is Markdown.** Chats, skills and cost reports are files in your vault, and a usage dashboard shows what you spend by provider, model and day, and what's left today on each free tier.
 
 <p align="center">
   <img src="assets/screenshots/ask-your-vault.jpg" width="260" alt="Vault Q&A: an answer citing the meeting note">
@@ -130,6 +130,7 @@ Per Obsidian's developer policies, in plain terms:
   - the embedding provider (Vault Q&A): the text of your notes while the index is built, and the images too if you pick an image-capable embedding model, plus each search query;
   - OpenAI's transcription API: your voice recordings, when you dictate;
   - OpenAI or ElevenLabs: the text of an answer, when you press Listen;
+  - OpenRouter's key endpoint (`openrouter.ai/api/v1/key`), with your OpenRouter key, when you fetch OpenRouter's models or open Usage: it only reads your key's free-request quota, credit left and today's spend;
   - NVIDIA's public model catalog (`api.ngc.nvidia.com`), when you fetch NIM's model list: a search for the models NVIDIA marks *Free Endpoint*, so the list can tell which ones are really free. No key and nothing of yours goes with it.
 
   There is no telemetry and nothing is sent to us. Answers are rendered as Markdown, so an image link inside an answer is loaded from wherever it points.
@@ -169,7 +170,7 @@ Only what goes to the provider you chose: your messages, what you attach, and th
 <details>
 <summary><b>Which models are free?</b></summary>
 
-Each provider has its own rule, and the model list in Settings shows the limit next to each free model.
+Each provider has its own rule. The model list in Settings shows the limit next to each free model, and **Usage › Left today** shows what's left today.
 
 - **Google Gemini:** the free tier covers the Flash models (2.5 and 3.x, including Lite, Live and TTS), 2.5 Pro, embeddings and Gemma, on a project without billing turned on. In exchange, Google may use what you send to improve its products. Image generation (Nano Banana included), 3.1 Pro preview, Veo and Lyria are paid only.
 - **OpenRouter:** models priced at zero, tagged `free · 50/day`. They share 20 requests a minute and 50 a day per key, or 1,000 a day once the account has bought $10 in credits. A price of zero in the catalog isn't enough: Google's Lyria shows 0 but bills per clip, so it isn't marked free.
@@ -195,6 +196,7 @@ Use the [bug report form](https://github.com/axxalab/axxa-agent/issues/new?templ
 
 - **Effort** (Low to Max) scales how hard the model works: max tokens, agent turn limits, temperature, parallel tool calls, retries, and how much of your vault goes into context. Every level is tunable in Settings.
 - **Usage** reads your saved chats and estimates spend in USD by provider, model, mode and day, with a 30-day heatmap. Export the report as PDF, Markdown or HTML.
+- **Left today**, at the top of Usage, shows what's left on each free tier and when it resets: OpenRouter's free requests, read live from your key (so they count every app that uses it); OpenAI's data-sharing tokens and Gemini's free-tier requests, counted by AXXA on this device (Google doesn't publish Gemini's limits, so you type each model's limit from AI Studio); and NVIDIA NIM's requests today, which have no daily cap. The count is a local log that never leaves your device.
 </details>
 
 ## Roadmap

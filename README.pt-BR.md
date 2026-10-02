@@ -28,8 +28,8 @@
 - **Um agente que pergunta antes.** Ele cria, edita, move e apaga notas por um conjunto pequeno de ferramentas. As mudanças esperam o seu OK, o que é apagado vai pra lixeira e mover reescreve os seus `[[links]]`.
 - **Feito pro celular.** Desenhado primeiro pra gaveta do Obsidian no celular: o composer acompanha o teclado, há um modo tela cheia opcional, e o agente funciona no celular também.
 - **Seis provedores, suas chaves.** OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM e Ollama local. As chaves ficam no cofre do sistema.
-- **Pequeno e rápido.** O `main.js` tem uns 440 KB, menor que cada um dos 12 plugins de IA mais baixados (de 0,56 a 14,6 MB, mediana de 3,8 MB, medido em outubro de 2026).
-- **Tudo é Markdown.** Conversas, skills e relatórios de custo são arquivos no seu vault, e um painel de uso mostra o gasto por provedor, modelo e dia.
+- **Pequeno e rápido.** O `main.js` tem menos de 500 KB, menor que cada um dos 12 plugins de IA mais baixados (de 0,56 a 14,6 MB, mediana de 3,8 MB, medido em outubro de 2026).
+- **Tudo é Markdown.** Conversas, skills e relatórios de custo são arquivos no seu vault, e um painel de uso mostra o gasto por provedor, modelo e dia, e o que sobra hoje em cada cota grátis.
 
 <p align="center">
   <img src="assets/screenshots/ask-your-vault.jpg" width="260" alt="Vault Q&A: uma resposta citando a nota da reunião">
@@ -132,6 +132,7 @@ Pelas políticas de desenvolvedor do Obsidian, em linguagem direta:
   - o provedor de embedding (Vault Q&A): o texto das suas notas enquanto o índice é montado — e as imagens também, se você escolher um modelo de embedding que aceita imagem — e cada busca;
   - a API de transcrição da OpenAI: as suas gravações de voz, quando você dita;
   - a OpenAI ou a ElevenLabs: o texto de uma resposta, quando você toca em Listen;
+  - o endereço da chave do OpenRouter (`openrouter.ai/api/v1/key`), com a sua chave do OpenRouter, quando você busca os modelos do OpenRouter ou abre o Usage: ele só lê a cota de pedidos grátis da chave, o crédito que sobra e o gasto de hoje;
   - o catálogo público de modelos da NVIDIA (`api.ngc.nvidia.com`), quando você busca a lista de modelos do NIM: uma busca pelos modelos que a NVIDIA marca *Free Endpoint*, pra lista saber quais são grátis de verdade. Sem chave, e nada seu vai junto.
 
   Não há telemetria e nada é enviado pra nós. As respostas são renderizadas como Markdown, então um link de imagem dentro de uma resposta é carregado de onde ele aponta.
@@ -171,7 +172,7 @@ Só o que vai pro provedor que você escolheu: suas mensagens, o que você anexa
 <details>
 <summary><b>Quais modelos são grátis?</b></summary>
 
-Cada provedor tem a sua regra, e a lista de modelos nas Settings mostra o limite ao lado de cada modelo grátis.
+Cada provedor tem a sua regra. A lista de modelos nas Settings mostra o limite ao lado de cada modelo grátis, e **Usage › Left today** mostra o que sobra hoje.
 
 - **Google Gemini:** a cota grátis cobre os modelos Flash (2.5 e 3.x, inclusive Lite, Live e TTS), o 2.5 Pro, os embeddings e o Gemma, num projeto sem cobrança ativada. Em troca, o Google pode usar o que você manda pra melhorar os produtos dele. Geração de imagem (Nano Banana incluído), 3.1 Pro preview, Veo e Lyria são só pagos.
 - **OpenRouter:** modelos com preço zero, marcados `free · 50/day`. Eles dividem 20 pedidos por minuto e 50 por dia por chave, ou 1.000 por dia depois que a conta compra US$ 10 em créditos. Preço zero no catálogo não basta: o Lyria do Google aparece com 0 mas cobra por clipe, então não é marcado como grátis.
@@ -197,6 +198,7 @@ Use o [formulário de bug](https://github.com/axxalab/axxa-agent/issues/new?temp
 
 - **Effort** (Low a Max) regula o quanto o modelo trabalha: tokens máximos, limite de voltas do agente, temperatura, chamadas de ferramenta em paralelo, novas tentativas e quanto do vault entra no contexto. Cada nível é ajustável em Settings.
 - **Usage** lê as conversas salvas e estima o gasto em dólar por provedor, modelo, modo e dia, com um mapa de 30 dias. O relatório exporta em PDF, Markdown ou HTML.
+- **Left today**, no topo do Usage, mostra o que sobra hoje em cada cota grátis e quando ela volta: os pedidos grátis do OpenRouter, lidos ao vivo da sua chave (então contam qualquer app que use a chave); os tokens da OpenAI pelo compartilhamento de dados e os pedidos do tier grátis do Gemini, contados pelo AXXA neste aparelho (o Google não publica os limites do Gemini, então você digita o de cada modelo a partir do AI Studio); e os pedidos de hoje no NVIDIA NIM, que não tem teto diário. A contagem é um registro local que nunca sai do aparelho.
 </details>
 
 ## Roadmap
