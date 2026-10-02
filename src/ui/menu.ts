@@ -134,6 +134,33 @@ export interface MenuOptions {
   escolha?: boolean;
 }
 
+/**
+ * Pra que lado a ESCOLHA das settings abre, e até que altura. Ela sai de
+ * dentro do botão que a abriu (pedido do Rafael: "como se todos estivessem na
+ * mesma lista"): mesma largura, colada nele, sem vão — o vão é o que fazia
+ * parecer outro controle. Abre pra baixo se couber inteira; senão, pro lado
+ * com mais espaço, e rola por dentro.
+ *
+ * Só o lado e o teto: a borda que encosta no botão fica presa na dele (`top`
+ * abrindo pra baixo, `bottom` pra cima), então a altura da lista nunca mexe
+ * no encaixe. Coordenadas de TELA (as do getBoundingClientRect).
+ */
+export function ladoDaEscolha(params: {
+  ancora: Pick<Caixa, "top" | "bottom">;
+  alturaDaTela: number;
+  /** A altura que a lista teria inteira. */
+  altura: number;
+}): { sentido: "baixo" | "cima"; maxHeight: number } {
+  const { ancora, alturaDaTela, altura } = params;
+  const embaixo = alturaDaTela - MARGEM - ancora.bottom;
+  const emCima = ancora.top - MARGEM;
+  const sentido = altura <= embaixo || embaixo >= emCima ? "baixo" : "cima";
+  return {
+    sentido,
+    maxHeight: Math.max(0, Math.floor(sentido === "baixo" ? embaixo : emCima)),
+  };
+}
+
 export function openActions(
   ev: MenuEvent,
   actions: MenuAction[],
@@ -178,12 +205,6 @@ export function openActions(
     cls: opts.escolha ? "axxa-pop is-pick" : "axxa-pop",
     attr: { role: "menu" },
   });
-  if (opts.escolha && ancoraEl) {
-    balao.setCssStyles({
-      minWidth: `${Math.round(ancoraEl.getBoundingClientRect().width)}px`,
-    });
-  }
-
   let fechar = () => {};
 
   /** Cria o botão JÁ dentro de `pai` — o createEl do Obsidian anexa. */
@@ -267,17 +288,37 @@ export function openActions(
     // própria camada vale até se um ancestral do modal mudar a referência do
     // `fixed`.
     const base = camada.getBoundingClientRect();
-    // A ESCOLHA nunca cobre o botão que a abriu: a lista vai pro lado com mais
-    // espaço (embaixo, se couber inteira) e rola dentro dele. Sem isto, onze
-    // vozes não cabiam nem em cima nem embaixo, e o balão encostava no topo da
-    // tela por cima do próprio botão.
-    if (opts.escolha && r) {
-      balao.setCssStyles({ maxHeight: "" });
-      const embaixo = win.innerHeight - r.bottom - VAO - MARGEM;
-      const emCima = r.top - VAO - MARGEM;
-      const espaco =
-        balao.offsetHeight <= embaixo ? embaixo : Math.max(embaixo, emCima);
-      balao.setCssStyles({ maxHeight: `${Math.max(120, Math.floor(espaco))}px` });
+    // A ESCOLHA sai de dentro do botão: mesma largura, colada nele, pro lado
+    // com espaço (ver ladoDaEscolha). O botão ganha a classe do lado em que a
+    // lista abriu, pra os cantos dos dois se juntarem num cartão só.
+    if (opts.escolha && r && ancoraEl) {
+      // Mede já na largura final e com o fio de 1px do encontro (os dois
+      // lados põem o mesmo), pra a altura medida ser a que ela vai ter.
+      balao.addClass("is-down");
+      balao.removeClass("is-up");
+      balao.setCssStyles({ width: `${r.width}px`, maxHeight: "" });
+      const { sentido, maxHeight } = ladoDaEscolha({
+        ancora: r,
+        alturaDaTela: win.innerHeight,
+        altura: balao.offsetHeight,
+      });
+      const baixo = sentido === "baixo";
+      balao.toggleClass("is-down", baixo);
+      balao.toggleClass("is-up", !baixo);
+      ancoraEl.toggleClass("is-open-down", baixo);
+      ancoraEl.toggleClass("is-open-up", !baixo);
+      // A borda do encontro fica PRESA na do botão: `top` abrindo pra baixo,
+      // `bottom` pra cima — aí a altura da lista não mexe no encaixe. E nada
+      // de arredondar: no celular as caixas têm fração de pixel, e meio pixel
+      // de vão já desenha um risco entre os dois.
+      balao.setCssStyles({
+        left: `${r.left - base.left}px`,
+        top: baixo ? `${r.bottom - base.top}px` : "auto",
+        bottom: baixo ? "auto" : `${base.bottom - r.top}px`,
+        maxHeight: `${maxHeight}px`,
+        transformOrigin: baixo ? "top center" : "bottom center",
+      });
+      return;
     }
     const ancora = r ?? {
       left: (ev.clientX ?? 0) - 1,
@@ -333,6 +374,7 @@ export function openActions(
   fechar = () => {
     doc.removeEventListener("keydown", onKey);
     ondeRola.removeEventListener("scroll", onScroll, { capture: true });
+    ancoraEl?.removeClass("is-open-down", "is-open-up");
     camada.remove();
   };
   camada.addEventListener("click", fechar);

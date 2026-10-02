@@ -5114,8 +5114,12 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
    enorme, bolinhas de rádio, nenhum ícone, no meio da tela, longe do que foi
    tocado. Este botão tem a cara do select do Obsidian (as MESMAS variáveis:
    altura, canto, fundo e hover de dropdown) com o ícone da opção na frente, e
-   abre o balão do ⋯ das conversas, ancorado nele (ver menu.ts). */
-.axxa-settings-root button.axxa-pick {
+   abre o balão do ⋯ das conversas, ancorado nele (ver menu.ts).
+   Com `.setting-item-control` no seletor: no celular o app.css tem
+   `.is-phone .modal .setting-item-control button { padding: 10px }` (três
+   classes), que ganhava das duas daqui — o texto do botão saía 6px antes das
+   linhas da lista, e as colunas não batiam. */
+.axxa-settings-root .setting-item-control button.axxa-pick {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
@@ -5142,6 +5146,16 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
 /* No celular o select do Obsidian ocupa a linha toda; o botão também. */
 body.is-mobile .axxa-settings-root button.axxa-pick {
   width: 100%;
+}
+
+/* Aberta a escolha, o botão é a primeira linha da lista: o canto do lado
+   dela fica reto, e o outro acompanha o canto da lista (ver .axxa-pop.is-pick). */
+.axxa-settings-root button.axxa-pick.is-open-down {
+  border-radius: var(--axxa-r) var(--axxa-r) 0 0;
+}
+
+.axxa-settings-root button.axxa-pick.is-open-up {
+  border-radius: 0 0 var(--axxa-r) var(--axxa-r);
 }
 
 .axxa-settings-root .axxa-pick-ico {
@@ -7090,16 +7104,57 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-sheet-actions {
   opacity: 1;
 }
 
-/* O balão de ESCOLHA (as settings): a largura vem do botão que o abriu (o
-   JS põe o `min-width`), e a lista rola quando passa da tela — uma lista de
-   modelos não cabe em balão nenhum. O `menu` das ações continua sem rolar. */
+/* O balão de ESCOLHA (os menus das settings) é a CONTINUAÇÃO do botão que o
+   abriu (ver ladoDaEscolha): a largura dele (o JS põe, e um nome comprido
+   trunca), colado nele, e as linhas com as COLUNAS do botão — ícone e texto
+   começam onde os dele começam, na mesma altura e letra. Aberto, botão e
+   lista fecham um cartão só: o canto do lado em que a lista abriu fica reto
+   nos dois (o .is-open-* do .axxa-pick). A altura vem do JS: o espaço do
+   lado em que ela abre; passou disso, rola por dentro. */
 .axxa-pop-layer .axxa-pop.is-pick {
-  /* Nunca mais largo que a tela (um nome de voz enorme trunca, não vaza). A
-     altura vem do JS: o espaço do lado em que ele abre. */
-  max-width: calc(100% - 20px);
+  max-width: none;
   max-height: calc(100% - 20px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding: 0;
+  border: 0;
+  border-radius: var(--axxa-r);
+  background-color: var(--dropdown-background);
+}
+
+/* Sombra só do lado de fora: do lado do botão ela cairia em cima dele. */
+.axxa-pop-layer .axxa-pop.is-pick.is-down {
+  border-top: 1px solid var(--axxa-hairline);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  box-shadow: 0 16px 28px -12px rgba(0, 0, 0, 0.28);
+}
+
+.axxa-pop-layer .axxa-pop.is-pick.is-up {
+  border-bottom: 1px solid var(--axxa-hairline);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow: 0 -16px 28px -12px rgba(0, 0, 0, 0.28);
+}
+
+/* As colunas do botão (.axxa-pick): 16 à esquerda, ícone de 22, vão de 8,
+   a altura e a letra do input. */
+.axxa-pop-layer .axxa-pop.is-pick button.axxa-pop-item {
+  min-height: var(--input-height);
+  padding: 0 var(--size-4-3) 0 var(--size-4-4);
+  gap: var(--size-4-2);
+  border-radius: 0;
+  font-size: var(--font-ui-small);
+}
+
+.axxa-pop-layer .axxa-pop.is-pick .axxa-pop-ico {
+  width: 22px;
+  height: 22px;
+}
+
+.axxa-pop-layer .axxa-pop.is-pick .axxa-pop-ico svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* O código de um idioma no lugar do ícone ("EN", "PT"): mesma caixa dos

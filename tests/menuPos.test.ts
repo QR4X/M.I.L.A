@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { posicaoDoBalao, type Caixa } from "../src/ui/menu";
+import { ladoDaEscolha, posicaoDoBalao, type Caixa } from "../src/ui/menu";
 
 // Esta conta já nasceu errada duas vezes, sempre pelo mesmo motivo: ela mistura
 // DOIS retângulos. As coordenadas de saída são da camada, que é `absolute`
@@ -119,5 +119,40 @@ describe("posicaoDoBalao", () => {
       balao: BALAO,
     });
     expect(r).toEqual({ x: 230, y: 136, origem: "top right" });
+  });
+});
+
+describe("ladoDaEscolha (os menus das settings)", () => {
+  // A lista sai de DENTRO do botão: mesma largura, colada nele (sem vão),
+  // como se o botão fosse a primeira linha dela. Daqui saem o lado e o teto;
+  // a borda do encontro o menu.ts prende na do botão.
+  const TELA = 900; // o celular de 412×900
+
+  it("cabendo embaixo: desce, com teto no fim da tela", () => {
+    expect(ladoDaEscolha({ ancora: { top: 300, bottom: 344 }, alturaDaTela: TELA, altura: 200 })).toEqual({
+      sentido: "baixo",
+      maxHeight: 546, // 900 − 10 de margem − 344
+    });
+  });
+
+  it("cabendo embaixo, desce mesmo com mais espaço em cima", () => {
+    const r = ladoDaEscolha({ ancora: { top: 600, bottom: 644 }, alturaDaTela: TELA, altura: 200 });
+    expect(r.sentido).toBe("baixo"); // 246 embaixo bastam; em cima há 590
+  });
+
+  it("sem espaço embaixo e mais em cima: sobe, com teto no topo da tela", () => {
+    const r = ladoDaEscolha({ ancora: { top: 700, bottom: 744 }, alturaDaTela: TELA, altura: 494 });
+    expect(r).toEqual({ sentido: "cima", maxHeight: 690 });
+  });
+
+  it("não cabe em lado nenhum: vai pro maior e rola por dentro", () => {
+    const r = ladoDaEscolha({ ancora: { top: 430, bottom: 474 }, alturaDaTela: TELA, altura: 2000 });
+    expect(r).toEqual({ sentido: "cima", maxHeight: 420 }); // 420 em cima > 416 embaixo
+  });
+
+  it("caixa com fração de pixel (celular): o teto nunca passa do espaço", () => {
+    const r = ladoDaEscolha({ ancora: { top: 798.6, bottom: 842.6 }, alturaDaTela: TELA, altura: 485 });
+    expect(r.sentido).toBe("cima");
+    expect(r.maxHeight).toBe(788); // floor(798.6 − 10): pra cima, passaria da margem
   });
 });
