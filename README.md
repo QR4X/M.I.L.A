@@ -1,430 +1,212 @@
-# AXXA Agent
+<h1 align="center">AXXA Agent</h1>
 
-> **Your AI workspace, native to Obsidian.** Chat, ask your vault, and let an agent act on your notes — across 6 LLM providers, with your own API keys. Mobile-first.
+<p align="center">
+  <a href="https://community.obsidian.md/plugins/axxa-agent"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json&query=%24%5B%22axxa-agent%22%5D.downloads&label=downloads&logo=obsidian&color=7C3AED" alt="Obsidian downloads"></a>
+  <a href="https://github.com/axxalab/axxa-agent/releases/latest"><img src="https://img.shields.io/github/v/release/axxalab/axxa-agent?label=version&color=6c5ce7" alt="Latest release"></a>
+  <a href="#faq"><img src="https://img.shields.io/badge/desktop%20%2B%20mobile-supported-success" alt="Desktop and mobile"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-green" alt="GPL-3.0"></a>
+</p>
 
-[![Version](https://img.shields.io/github/v/release/axxalab/axxa-agent?label=version&color=6c5ce7)](https://github.com/axxalab/axxa-agent/releases/latest)
-[![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
-[![Obsidian](https://img.shields.io/badge/Obsidian-1.11.4%2B-7c3aed)](https://obsidian.md)
-[![Mobile](https://img.shields.io/badge/mobile-supported-success)](#)
+<p align="center"><b>English</b> · <a href="README.pt-BR.md">Português (Brasil)</a></p>
 
-> **Install it from inside Obsidian:** Settings → Community plugins → Browse →
-> search **AXXA Agent**. Free, and everything in this release stays free.
+<p align="center">
+  <a href="https://community.obsidian.md/plugins/axxa-agent"><img src="https://img.shields.io/badge/Add%20to%20Obsidian-7c3aed?logo=obsidian&logoColor=white&style=for-the-badge" alt="Add to Obsidian"></a>
+</p>
 
-AXXA Agent turns Obsidian into a full AI workspace. It feels like a native feature, not a bolted-on panel: a chat lives in the right sidebar (a drawer on mobile), talks to the model of your choice, and — when you let it — reads, searches, and edits the notes in your vault. Bring your own keys, pick any of six providers, and keep every conversation as plain Markdown inside your vault.
+<p align="center"><b>Chat, ask your vault, and let an agent edit your notes, on your phone as well as your desktop.</b><br>Six providers, your own API keys, every conversation saved as Markdown.</p>
 
-> 🇧🇷 **Versão em português** mais abaixo → [Pular para PT-BR](#-axxa-agent-português).
+<p align="center"><img src="assets/demo/hero.gif" width="900" alt="A real recording on the Obsidian mobile layout: a question about the vault, then an answer that cites the notes it came from"></p>
 
----
+<p align="center"><a href="#install">Install</a> · <a href="#quick-start">Quick start</a> · <a href="#privacy-and-data">Privacy</a> · <a href="#faq">FAQ</a> · <a href="https://github.com/axxalab/axxa-agent/discussions">Discussions</a></p>
 
-## ✨ Highlights
+## What it does
 
-- **A tenth of the size.** `main.js` is **425 KB** (136 KB gzipped). The whole
-  plugin — six providers, local RAG, an agent with tools, voice, image
-  generation — fits in less than half a megabyte.
-- **3 modes, one panel** — Chat, Vault Q&A (RAG over your notes), and Agent
-  (tool-calling on your files).
-- **6 providers, bring your own key** — OpenAI, Anthropic, Google Gemini,
-  OpenRouter, Nvidia NIM, and local Ollama. Switch freely; your keys go to your
-  OS keychain, never to `data.json` and never to us.
-- **Talk to your vault** — local semantic search with hybrid keyword + vector
-  ranking and wikilink-graph awareness. 8 embedding models across 4 providers,
-  free options included.
-- **An agent that acts** — create, read, edit, move and delete notes through a
-  permissioned tool layer. Deletes go to your trash, moves rewrite your
-  `[[links]]`, and destructive actions always ask first.
-- **Projects and Skills** — group chats around a set of notes and instructions;
-  save prompts as `.md` files that become slash-commands.
-- **Real cost tracking** — spend in USD by provider, model, mode and day, with a
-  chart of tokens over time and a report you can save as a note.
-- **Everything is Markdown** — chats, skills and generated media are `.md` files
-  in your vault. Portable, versionable, yours.
-- **Mobile-first** — designed for the Obsidian mobile drawer *first*, not ported
-  to it: keyboard-aware layout, edge-to-edge composer, hold-to-record audio,
-  haptics, optional fullscreen.
+- **Three modes, one panel.** Chat, Vault Q&A over your notes, and an Agent that works on your files.
+- **Answers that cite your notes.** Vault Q&A runs hybrid search (keyword + vector, re-ranked by your links) and cites the notes it used as wikilinks you can open.
+- **An agent that asks first.** It creates, edits, moves and deletes notes through a small set of tools. Changes wait for your OK, deletes go to your trash, and moves rewrite your `[[links]]`.
+- **Made for your phone.** Designed for the Obsidian mobile drawer first: the composer follows the keyboard, there is an optional fullscreen mode, and the agent works on the phone too.
+- **Six providers, your keys.** OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM and local Ollama. Keys live in your OS keychain.
+- **Small and fast.** `main.js` is about 440 KB, smaller than each of the 12 most-downloaded AI plugins (0.56 to 14.6 MB, median about 3.8 MB, measured October 2026).
+- **Everything is Markdown.** Chats, skills and cost reports are files in your vault, and a usage dashboard shows what you spend by provider, model and day.
 
-### 📸 Screenshots
+<p align="center">
+  <img src="assets/screenshots/ask-your-vault.jpg" width="260" alt="Vault Q&A: an answer citing the meeting note">
+  <img src="assets/screenshots/agent-asks-first.jpg" width="260" alt="The agent asks before moving a note">
+  <img src="assets/screenshots/providers.jpg" width="260" alt="Model picker with six providers">
+</p>
 
-| Home | Usage & cost | Agent |
-|---|---|---|
-| ![Home](assets/screenshots/01-home.jpg) | ![Usage](assets/screenshots/02-usage.jpg) | ![Agent](assets/screenshots/03-agent.jpg) |
+<details>
+<summary>More screenshots</summary>
+<p align="center">
+  <img src="assets/screenshots/usage.jpg" width="260" alt="Usage dashboard with tokens by model">
+  <img src="assets/screenshots/home.jpg" width="260" alt="Home: recent chats and the three modes">
+</p>
+</details>
 
-| Model picker | Projects | Skills |
-|---|---|---|
-| ![Models](assets/screenshots/04-models.jpg) | ![Projects](assets/screenshots/05-projects.jpg) | ![Skills](assets/screenshots/06-skills.jpg) |
+## Install
 
-<p align="center"><img src="assets/screenshots/07-usage-light.jpg" width="320" alt="Light theme"></p>
+Requires Obsidian **1.11.4** or newer, on desktop or mobile, and either an API key for one provider or a local Ollama server.
 
----
+1. Open the [AXXA Agent page in the community directory](https://community.obsidian.md/plugins/axxa-agent) and choose **Add to Obsidian**, or in Obsidian go to **Settings → Community plugins → Browse** and search for **AXXA Agent**.
+2. Select **Install**, then **Enable**.
+3. Open it from the ribbon icon or the command palette (**AXXA Agent: Open**).
 
-## 💰 Pricing: this release is free. All of it. Forever.
+### Beta builds (BRAT)
 
-**Every feature you can see in this app today is free, with no tier, no account
-and no license key — and it stays that way.** Nothing listed above or shown in
-those screenshots will ever move behind a paywall.
+Test builds are published as GitHub pre-releases. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat), add `axxalab/axxa-agent`, and BRAT keeps you on the latest beta. Betas can break; the community directory always serves the stable release.
 
-If paid options appear later, they will be **new, additional** things built on
-top — never a lock placed on something that already worked for free. You bring
-your own API keys and pay your provider directly; the plugin takes no cut and
-has no hosted service in the middle.
+<details>
+<summary>Manual install</summary>
 
----
-
-## 🎯 Built like a product, not a panel
-
-Most AI plugins for this ecosystem ship somewhere between **4 and 5 MB** of
-JavaScript. This one is **425 KB** — under half a megabyte, with six providers,
-local RAG, an agent with tools, voice and image generation inside it.
-
-That number is not a bragging right, it is a constraint that shaped everything:
-
-- **Obsidian Sync refuses any single file over 5 MB.** A plugin that sits a few
-  kilobytes under that ceiling has nowhere left to grow. This one sits at 8% of
-  it.
-- **On a phone, size is startup time.** That megabyte is parsed on every single
-  launch, on hardware far slower than the laptop it was built on.
-- **Nothing here loads before the app does.** Registration happens on load; the
-  index, the model cache and the skills are read after Obsidian's interface is
-  already on screen.
-
-### The interface is the feature
-
-This is not a chat box bolted onto a sidebar. Every screen was drawn, measured
-and corrected against the real Obsidian stylesheet, on a 375-pixel phone, in
-both themes:
-
-- **Designed phone-first, not ported.** The composer tracks the software
-  keyboard as it opens; sheets resize with it; there is an optional fullscreen
-  mode that hands the whole screen to the conversation.
-- **Contrast is measured, not eyeballed.** Every text and icon was composited
-  over its real translucent background and checked against WCAG — 4.5:1 for
-  text, 3:1 for icons — in light and dark.
-- **One vocabulary everywhere.** The same card, the same sheet, the same pill,
-  the same proportion ring. Model names read the way you say them ("Sonnet 4.6",
-  not `claude-sonnet-4-6`).
-- **It uses your theme.** Every colour is a mix of Obsidian's own variables, so
-  the plugin inherits whatever theme and accent you already chose, instead of
-  painting its own brand over your vault.
-- **Empty states do their job.** No screen ever just disappears; it stays and
-  says why it is empty.
-
-Everything above is in the screenshots. None of it is a mockup.
-
----
-
-## 🔒 Privacy & local-first
-
-AXXA Agent is built for the Obsidian ethos — **your notes are yours**.
-
-- **Everything stays in your vault.** Chats, generated media, and skills are plain `.md` files on disk. Nothing is uploaded to us.
-- **No telemetry, no tracking, no accounts.** The plugin phones home to *nobody*. The only network calls are to the providers you chose (with your own key) and to any web page you ask it to fetch — see [Disclosures](#disclosures).
-- **Bring your own key — keys never leave your device.** They live in your OS keychain (secure storage), used only to call the provider you picked.
-- **Works fully offline with Ollama.** Run local models with zero data leaving your machine — chat, RAG, and the agent all work air-gapped.
-- **Cite & open your notes.** Vault answers cite the source notes as clickable `[[wikilinks]]` that open the real note.
-
-> Start free, no credit card: Gemini's free tier, OpenRouter's free models, or local Ollama.
-
----
-
-## 🚀 Installation
-
-### From Obsidian (recommended, once published)
-
-1. Open **Settings → Community plugins**.
-2. Make sure **Restricted mode** is off.
-3. Click **Browse**, search for **AXXA Agent**, and install.
-4. **Enable** the plugin. Open it from the ribbon icon or the command palette (**"AXXA Agent: Open"**).
-
-### Manual installation
-
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](../../releases).
-2. Copy them into your vault at `<vault>/.obsidian/plugins/axxa-agent/`.
+1. Download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/axxalab/axxa-agent/releases/latest).
+2. Copy them into `<vault>/.obsidian/plugins/axxa-agent/`.
 3. Reload Obsidian and enable the plugin in **Settings → Community plugins**.
+</details>
 
-> **Requires** Obsidian **1.11.4+** (for OS-level secret storage of API keys). Works on desktop and mobile.
+## Quick start
 
----
+1. Open **Settings → AXXA Agent → Providers**.
+2. Add a key for one provider ([where to get one](#providers)), or set your Ollama server address (usually `http://localhost:11434`).
+3. Start a chat from the home screen, pick a mode, and send.
 
-## ⚡ Quick start
+**Free ways to start:** Google Gemini's free tier, OpenRouter's free models, or a local model through Ollama, which needs no key and no account. The first message locks the provider, model and mode for that conversation.
 
-1. Open the plugin and go to **Settings → Providers**.
-2. Pick a provider and paste your API key (see the [provider table](#-providers) for where to get one). Ollama needs only a local endpoint — no key.
-3. Open a new chat: choose **provider → model → mode → effort** on the starter screen.
-4. Type and send. Your conversation is saved automatically as Markdown in your vault.
-
-That's it. The first message **locks** the provider, model, and mode for that conversation, so a chat stays consistent end-to-end. New settings apply to new chats.
-
----
-
-## 🧠 The three modes
+## The three modes
 
 | Mode | What it does |
 |---|---|
-| **Chat** | Classic conversational AI with streaming responses, Markdown rendering, and code blocks with copy buttons. No vault access. |
-| **Vault Q&A** | Retrieval-augmented chat grounded in *your* notes. Local semantic search finds the relevant passages and feeds them to the model as context. |
-| **Agent** | The model can use tools to act on your vault — search, list, read, create, edit, move, delete files and folders — under a permission system with confirmations for destructive actions. |
+| **Chat** | A conversation with the model you pick: streaming answers, Markdown, code blocks with copy buttons. No vault access unless you turn it on. |
+| **Vault Q&A** | Answers grounded in your notes. Search finds the relevant passages and the answer cites them. |
+| **Agent** | The model uses tools on your vault: search, list, read, create, edit, move and delete notes and folders, with confirmations. |
 
----
+<details>
+<summary>How Vault Q&A searches</summary>
 
-## 🔌 Providers
+- Hybrid search: semantic similarity plus keyword (BM25) ranking, re-ranked with your vault's link graph.
+- 8 embedding models across 4 providers: OpenAI (`text-embedding-3-small/large`, `ada-002`), Gemini (`gemini-embedding-001`, `text-embedding-004`), NVIDIA NIM (`nv-embedqa-e5-v5`, `llama-3.2-nv-embedqa-1b-v2`) and OpenRouter's free Nemotron VL.
+- The index is stored in your vault and updates incrementally, only for changed files. Without an embedding model (or offline), search falls back to keywords.
+</details>
 
-All providers use **BYOK** (bring your own key). You only need a key for the provider(s) you actually use.
+## Providers
 
-| Provider | Type | Get a key |
-|---|---|---|
-| **OpenAI** | Cloud | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
-| **Anthropic (Claude)** | Cloud | [console.anthropic.com](https://console.anthropic.com/) |
-| **Google Gemini** | Cloud | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| **OpenRouter** | Cloud proxy (many models) | [openrouter.ai/keys](https://openrouter.ai/keys) |
-| **Nvidia NIM** | Cloud | [build.nvidia.com](https://build.nvidia.com/) |
-| **Ollama** | Local (no key) | [ollama.com](https://ollama.com/) — set your local endpoint in Settings |
+All providers use your own key. You only need one.
 
-Each provider's model list can be fetched live from its API, and the UI shows per-model capability badges (vision, tools, streaming, free tier, image/audio/video generation) so you always know what a model can do in a given mode. An **incompatibility banner** warns you (and suggests a swap) if a model can't do what the current mode needs.
+| Provider | Type | Free option | Get a key |
+|---|---|---|---|
+| **OpenAI** | Cloud | No | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| **Anthropic (Claude)** | Cloud | No | [console.anthropic.com](https://console.anthropic.com/) |
+| **Google Gemini** | Cloud | Free tier | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| **OpenRouter** | Cloud, many models | Free models | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| **NVIDIA NIM** | Cloud | Free credits | [build.nvidia.com](https://build.nvidia.com/) |
+| **Ollama** | Local, no key | Free | [ollama.com](https://ollama.com/), then set the server address in Settings |
 
----
+Model lists come live from each provider. Badges show what each model can do (vision, tools, free tier, image or audio generation), and a banner warns you when a model can't do what the current mode needs.
 
-## 🔎 Vault Q&A & RAG
+## Agent safety
 
-AXXA builds a **local** semantic index of your vault — nothing is uploaded except the text sent to your chosen embedding API.
+The agent uses eight tools: `vault_search`, `vault_list`, `vault_read`, `vault_create`, `vault_edit`, `vault_move`, `vault_delete` and `vault_create_folder`. Three permission levels decide what it can do without asking:
 
-- **8 embedding models** across **4 providers**: OpenAI (`text-embedding-3-small/large`, `ada-002`), Gemini (`gemini-embedding-001`, `text-embedding-004`), Nvidia NIM (`nv-embedqa-e5-v5`, `llama-3.2-nv-embedqa-1b-v2`), and OpenRouter's free multimodal Nemotron VL — so you can run RAG even without a paid key.
-- **Hybrid search** combines semantic similarity with keyword (BM25) ranking, then re-ranks using your vault's wikilink graph.
-- **Structural chunking** preserves heading breadcrumbs and note context (title, tags, aliases, links).
-- **Selectable quantization** (precision → minimal) trades index size for memory, the same way Effort trades depth for speed.
-- **Incremental indexing** re-embeds only changed files (detected by hash) and is mobile-safe — it won't blow up memory on phones.
+- **Ask** (default): every change waits for your OK.
+- **Vault**: creates, edits and moves run on their own; deletes still ask.
+- **YOLO**: everything runs on its own except deletes, which always ask.
 
----
+File paths are sandboxed to your vault, and the confirmation shows exactly what will change.
 
-## 🛠️ Agent mode & safety
+## Privacy and data
 
-The Agent can operate on your vault through a small, explicit set of tools: `vault_search`, `vault_list`, `vault_read`, `vault_create`, `vault_edit`, `vault_move`, `vault_delete`, and `vault_create_folder`.
+- **No telemetry, no account, nothing sent to us.** Requests go only to the providers you configure and to web pages you ask it to read.
+- **Keys stay on your device** in your OS keychain (Obsidian's `secretStorage`), never in `data.json`, so they don't travel through Sync or backups.
+- **Your notes leave the device only to the provider you chose**, as part of a conversation or the Vault Q&A index. The index itself is stored in your vault.
+- **Offline with Ollama.** Chat and the agent run fully on your machine with a local model; Vault Q&A then searches by keyword, because the embedding models are cloud services.
 
-Three permission levels control how much it can do without asking:
-
-- **Ask** — confirm every action that changes files *(default, safest)*.
-- **Vault** — auto-approve create/edit/move; still confirm deletes.
-- **YOLO** — auto-approve everything *except* irreversible deletes, which **always** ask.
-
-All file paths are sandboxed (no path traversal), and a confirmation dialog shows you exactly what the agent wants to do before any destructive change.
-
----
-
-## 💸 Usage & cost tracking
-
-A built-in **Usage** dashboard reads your saved chats and estimates real spend in **USD**, broken down by provider, model, mode, and day (with a 30-day heatmap). Export the report as **PDF, Markdown, or HTML**. Token counts are tracked per conversation as you chat.
-
----
-
-## 🎚️ Effort
-
-A single **Effort** selector (Low → Max) scales how hard the model works: max tokens, agent turn limits, temperature, parallel tool calls, retry behavior, and how much of your vault gets pulled into context. Every parameter is tunable per level in Settings.
-
----
-
-## 🔐 Privacy & network use
-
-AXXA Agent is **bring-your-own-key** and stores everything locally. Specifically:
-
-- **Your API keys** are stored in your operating system's secure storage (Obsidian's `secretStorage` / OS keychain) — **not** in the plugin's `data.json`, so they don't leak through Obsidian Sync or vault backups. They're sent **only** to the corresponding provider's official API endpoint. *(Legacy keys from older versions are migrated automatically on first load.)*
-- **Network requests** go only to the AI providers you choose (OpenAI, Anthropic, Google, OpenRouter, Nvidia, ElevenLabs, or your local Ollama) and to web pages you explicitly ask it to fetch. The full list of what is sent is under [Disclosures](#disclosures).
-- **Vault content** leaves your device only to the provider you chose, as part of your conversations or of the Vault Q&A index. The index itself is stored locally in your vault.
-- **No telemetry, no analytics, no tracking.** AXXA does not phone home.
-- **Chats, generated media, and settings** are saved as plain files inside your vault.
-
-When you use a third-party provider, your data is subject to **that provider's** terms and privacy policy. Review them before sending sensitive content.
+When you use a third-party provider, its own terms and privacy policy apply.
 
 ### Disclosures
 
 Per Obsidian's developer policies, in plain terms:
 
-- **Network use.** Requests go only to the AI providers you configure — OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM, ElevenLabs (optional, read-aloud voices) and your own Ollama endpoint — and to any web page you ask it to fetch with **+ › Link**. What each one receives:
+- **Network use.** Requests go only to the AI providers you configure (OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM, ElevenLabs for optional read-aloud voices, and your own Ollama endpoint) and to any web page you ask it to fetch with **+ › Link**. What each one receives:
   - the chat provider: your messages, the notes, files, images, PDFs and web pages you attach, and the vault excerpts described under *Automatic context*;
-  - the embedding provider (Vault Q&A): the text of your notes while the index is built — and the images too, if you pick an image-capable embedding model — plus each search query;
+  - the embedding provider (Vault Q&A): the text of your notes while the index is built, and the images too if you pick an image-capable embedding model, plus each search query;
   - OpenAI's transcription API: your voice recordings, when you dictate;
   - OpenAI or ElevenLabs: the text of an answer, when you press Listen.
 
   There is no telemetry and nothing is sent to us. Answers are rendered as Markdown, so an image link inside an answer is loaded from wherever it points.
-
-  **Why the plugin uses `fetch`.** Obsidian recommends its own `requestUrl` for network requests, and AXXA uses it everywhere it can. But `requestUrl` returns the whole response at once — it cannot stream — and streaming is what makes an answer appear as it is written (and what lets **Stop** actually stop the model). So chat replies from OpenAI, Anthropic, Gemini, OpenRouter and Ollama stream through the browser's `fetch`, in a single helper (`fetchStream` in `src/providers/_shared.ts`); NVIDIA NIM streams through Node's `https` on desktop. That helper calls it as `window.fetch` — the very same function as `fetch` (the bare name is just a shortcut to it). Obsidian's review linter only checks the bare name, so it no longer flags this call; we would rather say so here than let the review read as "no `fetch`". If streaming can't connect (for example, blocked by CORS on mobile), the plugin falls back to `requestUrl` and shows the answer in one piece.
 - **Accounts and payment.** The plugin is free, but it needs your own key for at least one provider (Ollama, running locally, needs none). Most providers bill API usage per token; some offer free models or quotas.
-- **Vault enumeration.** The plugin reads your vault's file list (Obsidian's `getMarkdownFiles` / `getFiles`) to build the Vault Q&A index, for the keyword half of vault search (Vault Q&A, Agent context and the agent's `vault_search`), for the note picker (**+ › Notes**, `[[` mentions and project sources) and — only if you turn on *Let it see your note names*, off by default — so the creation assistant can suggest notes for a project. The list itself stays on your device, with three exceptions: in that last case the paths of up to 300 recent notes (never their content) go to the assistant's model; in Agent mode the `vault_list` tool sends the names of the files in a folder (the vault root included) to the chat model, without asking; and `vault_search` sends the paths and excerpts of the notes it finds.
+- **Vault enumeration.** The plugin reads your vault's file list (Obsidian's `getMarkdownFiles` / `getFiles`) to build the Vault Q&A index, for the keyword half of vault search (Vault Q&A, Agent context and the agent's `vault_search`), for the note picker (**+ › Notes**, `[[` mentions and project sources) and, only if you turn on *Let it see your note names* (off by default), so the creation assistant can suggest notes for a project. The list itself stays on your device, with three exceptions: in that last case the paths of up to 300 recent notes (never their content) go to the assistant's model; in Agent mode the `vault_list` tool sends the names of the files in a folder (the vault root included) to the chat model, without asking; and `vault_search` sends the paths and excerpts of the notes it finds.
 - **Automatic context.** In Vault Q&A and Agent conversations, a per-chat vault switch starts **on**: excerpts of the notes that match your message are sent with it to the chat provider. In Chat it starts **off**.
-- **Files read and written.** Chats and the Vault Q&A index are saved inside your vault, in the hidden `.axxa/` folder by default. When you ask for them, exports go to `axxa-ai/exports/`, usage reports to `axxa-ai/reports/` and skills to `axxa-ai/skills/`. In Agent mode the model can read any text file in your vault and create, edit, move and delete notes and folders through its tools. Changes ask for confirmation according to the permission level you set — and **Approve all** in that dialog stops asking for reversible changes until the session ends — but deletes always ask.
+- **Files read and written.** Chats and the Vault Q&A index are saved inside your vault, in the hidden `.axxa/` folder by default. When you ask for them, exports go to `axxa-ai/exports/`, usage reports to `axxa-ai/reports/` and skills to `axxa-ai/skills/`. In Agent mode the model can read any text file in your vault and create, edit, move and delete notes and folders through its tools. Changes ask for confirmation according to the permission level you set (and **Approve all** in that dialog stops asking for reversible changes until the session ends), but deletes always ask.
 
----
+<details>
+<summary>Why the plugin uses <code>fetch</code>, and the one Node API it touches</summary>
 
-## 🗺️ Roadmap
+Obsidian recommends its own `requestUrl` for network requests, and AXXA uses it everywhere it can. But `requestUrl` returns the whole response at once and cannot stream, and streaming is what makes an answer appear as it is written (and what lets **Stop** actually stop the model). So chat replies from OpenAI, Anthropic, Gemini, OpenRouter and Ollama stream through the browser's `fetch`, in a single helper (`fetchStream` in `src/providers/_shared.ts`). That helper calls it as `window.fetch`, the very same function as `fetch` (the bare name is just a shortcut to it). Obsidian's review linter only checks the bare name, so it no longer flags this call; we would rather say so here than let the review read as "no `fetch`". If streaming can't connect (for example, blocked by CORS on mobile), the plugin falls back to `requestUrl` and shows the answer in one piece.
 
-- **Now:** validation & stabilization across all 6 providers; real screenshots. (Skills as `.md` and Projects already shipped.)
-- **Next:** PDFs on Gemini/NIM/Ollama; Coder mode with diff previews; Portuguese UI.
-- **Later:** MCP connectors (Notion, Linear, GitHub, …); optional Premium (cross-device sync, automatic media transcription).
+The NVIDIA NIM provider asks Electron for Node's `https` to stream on desktop ([`nim.ts`](src/providers/nim.ts)). It is gated behind `Platform.isMobile`, wrapped in try/catch, checked for shape, and falls back to `requestUrl`; on mobile that branch is never reached.
+</details>
 
----
+## FAQ
 
-## 💜 Support
+<details>
+<summary><b>Is it free?</b></summary>
 
-If AXXA Agent helps your workflow, consider [supporting development](https://axxa.lab/support). Built by **Axxa Lab**.
+Yes. Every feature in the plugin today is free, with no tier, no account and no license key, and it stays that way. If paid options appear later, they will be new things built on top, never a lock on something that already worked. You pay your AI provider directly; the plugin takes no cut.
+</details>
 
----
+<details>
+<summary><b>Does the agent work on mobile?</b></summary>
 
-## 📄 License
+Yes. Chat, Vault Q&A and the agent with its confirmations all run in the Obsidian mobile app. Cloud providers work anywhere; Ollama runs on a computer, so using it from a phone needs an Ollama server the phone can reach.
+</details>
 
-**GPL-3.0-or-later** — see [LICENSE](LICENSE).
+<details>
+<summary><b>What leaves my device?</b></summary>
 
-You can use this plugin for anything, including at work, and you can fork and
-modify it. What the licence asks is that if you distribute a modified version,
-you ship its source under the same terms. It protects the work from being taken
-private; it asks nothing of you for simply using it.
+Only what goes to the provider you chose: your messages, what you attach, and the note excerpts that Vault Q&A and the agent use. Nothing goes to us. The full list is under [Disclosures](#disclosures).
+</details>
 
-Bundled third-party material (the provider logos, from
-[lobe-icons](https://github.com/lobehub/lobe-icons), MIT) is credited in
-[NOTICE.md](NOTICE.md).
+<details>
+<summary><b>Which models are free?</b></summary>
 
-**Node APIs:** the NVIDIA NIM provider asks Electron for `https` to stream on
-desktop ([`nim.ts`](src/providers/nim.ts)). It is gated behind `Platform.isMobile`,
-wrapped in try/catch, checked for shape, and falls back to Obsidian's
-`requestUrl` — on mobile that branch is never reached.
+Gemini's free tier, OpenRouter's free models (marked in the model picker), NVIDIA NIM's free credits, and any local model through Ollama.
+</details>
 
-[GPL-3.0-or-later](LICENSE) © 2026 Axxa Lab.
+<details>
+<summary><b>Can I keep other AI plugins installed?</b></summary>
 
----
----
+Yes. AXXA runs in its own panel, its styles are scoped to that panel, and it doesn't depend on or replace other plugins.
+</details>
 
-# 🇧🇷 AXXA Agent (Português)
+<details>
+<summary><b>How do I report a bug?</b></summary>
 
-> **Seu workspace de IA, nativo no Obsidian.** Converse, pergunte ao seu vault e deixe um agente agir nas suas notas — em 6 provedores de LLM, com suas próprias chaves. Mobile-first.
+Use the [bug report form](https://github.com/axxalab/axxa-agent/issues/new?template=bug_report.yml). Your platform, Obsidian version and the steps to reproduce make it much faster to fix. Questions go to [Discussions](https://github.com/axxalab/axxa-agent/discussions).
+</details>
 
-O AXXA Agent transforma o Obsidian num workspace de IA completo. Parece uma feature nativa, não um painel colado: o chat fica na sidebar direita (drawer no mobile), fala com o modelo que você escolher e — quando você permite — lê, busca e edita as notas do seu vault. Use suas próprias chaves, escolha entre seis provedores, e guarde cada conversa como Markdown puro dentro do vault.
+<details>
+<summary><b>More: effort, usage and cost</b></summary>
 
-## ✨ Destaques
+- **Effort** (Low to Max) scales how hard the model works: max tokens, agent turn limits, temperature, parallel tool calls, retries, and how much of your vault goes into context. Every level is tunable in Settings.
+- **Usage** reads your saved chats and estimates spend in USD by provider, model, mode and day, with a 30-day heatmap. Export the report as PDF, Markdown or HTML.
+</details>
 
-- **3 modos, um painel** — Chat, Vault Q&A (RAG sobre suas notas) e Agente (tool-calling nos seus arquivos).
-- **6 provedores, com sua própria chave** — OpenAI, Anthropic (Claude), Google Gemini, OpenRouter, Nvidia NIM e Ollama local. Troque à vontade; suas chaves não saem do seu aparelho.
-- **Converse com o vault** — busca semântica local (RAG) com ranqueamento híbrido (palavra-chave + vetor) e consciência do grafo de wikilinks. 8 modelos de embedding em 4 provedores, incluindo opções gratuitas.
-- **Um agente que age** — criar, ler, editar, mover e deletar notas por uma camada de ferramentas com permissões. Ações destrutivas sempre pedem confirmação.
-- **Anexe imagens, notas e PDFs** — o PDF vai direto pro modelo no Claude, nos modelos classe GPT-4o e no OpenRouter. Onde o modelo não lê PDF, o plugin avisa em vez de fingir.
-- **Geração de imagem** — gere imagens direto no chat (OpenAI e Gemini) e salve no vault com metadados.
-- **Controle de custo real** — painel de Uso estima o gasto em USD por provedor, modelo, modo e dia, com export em PDF / Markdown / HTML.
-- **Tudo é Markdown** — conversas, mídia gerada e skills viram arquivos `.md` no seu vault. Portátil, versionável, seu.
-- **Mobile-first** — feito pro drawer do Obsidian mobile primeiro: composer edge-to-edge, gravação de áudio segurando (transcrita e enviada junto com a mensagem), háptico, layout que respeita o teclado, wake-lock de tela durante a geração.
-- **Interface em inglês** — a UI do plugin é em inglês (este README também está em português). A UI em PT-BR está no roadmap.
+## Roadmap
 
-## 💰 Preço: esta versão é gratuita. Inteira. Para sempre.
+- **Now:** stability across all six providers, and the agent with local Ollama models.
+- **Next:** PDFs on Gemini, NIM and Ollama; a Coder mode with diff previews; a Portuguese interface.
+- **Later:** MCP connectors (Notion, Linear, GitHub); optional paid extras such as cross-device sync and automatic media transcription.
 
-**Tudo que este app faz hoje é grátis — sem plano, sem conta, sem chave de
-licença — e continua assim.** Nada do que está nas telas acima vai passar a ser
-pago depois.
+Ideas and votes live in [Discussions › Ideas](https://github.com/axxalab/axxa-agent/discussions/categories/ideas).
 
-Se um dia existirem opções pagas, serão coisas **novas**, construídas por cima —
-nunca um cadeado colocado em algo que já funcionava de graça. Você usa a sua
-própria chave de API e paga direto ao provedor: o plugin não fica com nada no
-meio e não tem serviço hospedado nenhum.
+## Feedback and community
 
----
+- Found a bug? [Report it](https://github.com/axxalab/axxa-agent/issues/new?template=bug_report.yml).
+- Have a question? [Ask in Discussions](https://github.com/axxalab/axxa-agent/discussions).
+- Built a useful skill? Skills are `.md` files, so share yours in Discussions.
+- If AXXA helps you, a star on GitHub helps other people find it.
 
-## 🎯 Feito como produto, não como painel
+## License
 
-A maioria dos plugins de IA deste ecossistema entrega entre **4 e 5 MB** de
-JavaScript. Este tem **425 KB** — menos de meio megabyte, com seis provedores,
-RAG local, um agente com ferramentas, voz e geração de imagem dentro.
+**GPL-3.0-or-later**, see [LICENSE](LICENSE). Use it for anything, including at work, and fork it freely; if you distribute a modified version, ship its source under the same terms. The provider logos come from [lobe-icons](https://github.com/lobehub/lobe-icons) (MIT) and are credited in [NOTICE.md](NOTICE.md).
 
-O número não é vaidade, é a restrição que desenhou o resto: o Obsidian Sync
-recusa arquivo acima de 5 MB, e no celular cada megabyte é tempo de abertura,
-toda vez. Aqui nada pesado carrega antes da interface do Obsidian aparecer.
-
-### A interface é a funcionalidade
-
-Não é uma caixa de chat parafusada numa barra lateral. Cada tela foi desenhada,
-**medida** e corrigida contra a folha de estilo real do Obsidian, num telefone
-de 375 pixels, nos dois temas:
-
-- **Pensado para o celular primeiro**, não portado: o composer acompanha o
-  teclado enquanto ele sobe, as folhas se ajustam junto, e há um modo tela cheia
-  opcional que entrega o aparelho inteiro para a conversa.
-- **Contraste medido, não no olho.** Cada texto e ícone foi composto sobre o
-  fundo translúcido real dele e conferido contra a WCAG — 4,5:1 para texto,
-  3:1 para ícone — no claro e no escuro.
-- **Um vocabulário só.** O mesmo cartão, a mesma folha, a mesma pílula, o mesmo
-  anel de proporção. E modelo se chama como você fala ("Sonnet 4.6", não
-  `claude-sonnet-4-6`).
-- **Usa o seu tema.** Toda cor é mistura das variáveis do próprio Obsidian: o
-  plugin herda o tema e o acento que você já escolheu em vez de pintar a marca
-  dele por cima do seu vault.
-- **Vazio também é tela.** Nenhuma seção simplesmente some — ela fica e diz por
-  que está vazia.
-
-Tudo isso está nos prints. Nada ali é maquete.
-
----
-
-## 🚀 Instalação
-
-**Pela loja do Obsidian (recomendado):** Settings → Community plugins → Browse → busque **AXXA Agent** → Install → Enable.
-
-**Manual:** baixe `main.js`, `manifest.json` e `styles.css` da [última release](../../releases) e copie pra `<vault>/.obsidian/plugins/axxa-agent/`. Recarregue o Obsidian e ative o plugin.
-
-> **Requer** Obsidian **1.11.4+** (pra guardar as chaves no cofre seguro do SO). Funciona em desktop e mobile.
-
-## ⚡ Começo rápido
-
-1. Abra o plugin e vá em **Settings → Providers**.
-2. Escolha um provedor e cole sua chave de API (veja a [tabela de provedores](#-providers) pra onde gerar). Ollama precisa só de um endpoint local — sem chave.
-3. Abra um chat novo: escolha **provedor → modelo → modo → effort** na tela inicial.
-4. Digite e envie. A conversa é salva automaticamente como Markdown no seu vault.
-
-A primeira mensagem **trava** provedor, modelo e modo daquela conversa, mantendo o chat consistente do início ao fim. Configurações novas valem pra chats novos.
-
-## 🧠 Os três modos
-
-| Modo | O que faz |
-|---|---|
-| **Chat** | IA conversacional clássica com respostas em streaming, render de Markdown e blocos de código com botão de copiar. Sem acesso ao vault. |
-| **Vault Q&A** | Chat com RAG ancorado nas *suas* notas. A busca semântica local encontra os trechos relevantes e os passa ao modelo como contexto. |
-| **Agente** | O modelo usa ferramentas pra agir no vault — buscar, listar, ler, criar, editar, mover, deletar arquivos e pastas — sob um sistema de permissões com confirmação pra ações destrutivas. |
-
-## 🔐 Privacidade & uso de rede
-
-O AXXA é **BYOK** (suas próprias chaves) e guarda tudo localmente:
-
-- **Suas chaves** ficam no armazenamento seguro do sistema operacional (o `secretStorage` do Obsidian / keychain do SO) — **não** no `data.json` do plugin, então não vazam por Obsidian Sync nem backup do vault. São enviadas **apenas** pra API oficial do provedor correspondente. *(Chaves legadas de versões antigas são migradas automaticamente no primeiro load.)*
-- **Requisições de rede** vão só pros provedores de IA que você escolher (OpenAI, Anthropic, Google, OpenRouter, Nvidia, ElevenLabs ou seu Ollama local) e pras páginas da web que você pedir pra buscar. A lista completa do que é enviado está em [Declarações](#declarações).
-- **Conteúdo do vault** sai do aparelho só pro provedor que você escolheu, nas suas conversas ou no índice do Vault Q&A. O índice em si fica salvo localmente no vault.
-- **Sem telemetria, sem analytics, sem rastreio.** O AXXA não "liga pra casa".
-
-Ao usar um provedor terceiro, seus dados ficam sujeitos aos termos e à política de privacidade **daquele provedor**. Revise antes de enviar conteúdo sensível.
-
-### Declarações
-
-Pelas políticas de desenvolvedor do Obsidian, em linguagem direta:
-
-- **Uso de rede.** As requisições vão só pros provedores de IA que você configurar — OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM, ElevenLabs (opcional, vozes da leitura) e o seu Ollama — e pras páginas da web que você pedir pra buscar no **+ › Link**. O que cada um recebe:
-  - o provedor do chat: as suas mensagens, as notas, arquivos, imagens, PDFs e páginas que você anexa, e os trechos do vault descritos em *Contexto automático*;
-  - o provedor de embedding (Vault Q&A): o texto das suas notas enquanto o índice é montado — e as imagens também, se você escolher um modelo de embedding que aceita imagem — e cada busca;
-  - a API de transcrição da OpenAI: as suas gravações de voz, quando você dita;
-  - a OpenAI ou a ElevenLabs: o texto de uma resposta, quando você toca em Listen.
-
-  Não há telemetria e nada é enviado pra nós. As respostas são renderizadas como Markdown, então um link de imagem dentro de uma resposta é carregado de onde ele aponta.
-
-  **Por que o plugin usa `fetch`.** O Obsidian recomenda o `requestUrl` dele pras requisições de rede, e o AXXA usa ele em tudo que dá. Mas o `requestUrl` devolve a resposta inteira de uma vez — não faz streaming —, e é o streaming que faz a resposta aparecer enquanto é escrita (e que faz o **Stop** parar o modelo de verdade). Por isso as respostas do chat da OpenAI, Anthropic, Gemini, OpenRouter e Ollama chegam pelo `fetch` do navegador, num único ponto (`fetchStream` em `src/providers/_shared.ts`); o NVIDIA NIM faz streaming pelo `https` do Node no desktop. Esse ponto chama `window.fetch` — exatamente a mesma função que `fetch` (o nome solto é só um atalho pra ela). O linter da revisão do Obsidian só confere o nome solto, então deixou de acusar essa chamada; preferimos dizer isso aqui a deixar a revisão parecer "sem `fetch`". Se o streaming não conseguir conectar (por exemplo, barrado por CORS no celular), o plugin cai no `requestUrl` e mostra a resposta inteira de uma vez.
-- **Contas e pagamento.** O plugin é gratuito, mas precisa da sua chave de pelo menos um provedor (o Ollama, rodando local, não precisa). A maioria cobra o uso da API por token; alguns oferecem modelos ou cotas gratuitas.
-- **Listagem do vault.** O plugin lê a lista de arquivos do vault (o `getMarkdownFiles` / `getFiles` do Obsidian) pra montar o índice do Vault Q&A, pra metade por palavra-chave da busca no vault (Vault Q&A, contexto do Agent e a ferramenta `vault_search` do agente), pro seletor de notas (**+ › Notes**, menções `[[` e fontes de projeto) e — só se você ligar *Let it see your note names*, que vem desligado — pra assistente de criação sugerir notas pra um projeto. A lista fica no aparelho, com três exceções: nesse último caso os caminhos de até 300 notas recentes (nunca o conteúdo) vão pro modelo da assistente; no modo Agent a ferramenta `vault_list` manda os nomes dos arquivos de uma pasta (a raiz inclusive) pro modelo do chat, sem perguntar; e a `vault_search` manda os caminhos e trechos das notas que acha.
-- **Contexto automático.** Nas conversas de Vault Q&A e Agent, um interruptor de vault por conversa nasce **ligado**: trechos das notas que combinam com a sua mensagem vão junto dela pro provedor do chat. No Chat ele nasce **desligado**.
-- **Arquivos lidos e gravados.** As conversas e o índice do Vault Q&A ficam dentro do vault, na pasta oculta `.axxa/` por padrão. Quando você pede, exportações vão pra `axxa-ai/exports/`, relatórios de uso pra `axxa-ai/reports/` e skills pra `axxa-ai/skills/`. No modo Agent o modelo pode ler qualquer arquivo de texto do vault e criar, editar, mover e apagar notas e pastas pelas ferramentas dele. Mudanças pedem confirmação conforme o nível de permissão escolhido — e o **Approve all** dessa confirmação deixa de perguntar pelas mudanças reversíveis até o fim da sessão —, mas apagar sempre pergunta.
-
-## 📄 Licença
-
-**GPL-3.0-or-later** — veja o [LICENSE](LICENSE).
-
-Você pode usar este plugin pra qualquer coisa, inclusive no trabalho, e pode
-forkar e modificar. O que a licença pede é que, se você **distribuir** uma
-versão modificada, publique o código dela nos mesmos termos. Ela protege o
-trabalho de ser fechado por terceiros; de quem só usa, não pede nada.
-
-Material de terceiros embutido (os logos dos provedores, do
-[lobe-icons](https://github.com/lobehub/lobe-icons), MIT) está creditado no
-[NOTICE.md](NOTICE.md).
-
-[GPL-3.0-or-later](LICENSE) © 2026 Axxa Lab.
-
----
-
-*Built with 💜 by Axxa Lab · Feito com 💜 pela Axxa Lab*
+© 2026 AXXA Lab.
