@@ -40,6 +40,7 @@ import { limparCamposMortos } from "./core/settingsLegado";
 import { EMBEDDING_PROVIDERS, somarDescobertos } from "./rag/descobertos";
 import { chatIndexSignature } from "./core/chatIndex";
 import { revisarOllamaPadrao } from "./core/ollamaPadrao";
+import { definirGratisConhecidos } from "./usage/pricing";
 import { LOCALES } from "./i18n";
 
 /** Resultado do último teste de credencial de um provider. */
@@ -639,7 +640,10 @@ export default class AxxaPlugin extends Plugin {
         ? await p.freeQuota(this.providerCredential(providerId))
         : null;
       if (cota) (this.settings.freeQuota ??= {})[providerId] = { ...cota, at: Date.now() };
-      if (livres.length) (this.settings.freeModels ??= {})[providerId] = livres;
+      if (livres.length) {
+        (this.settings.freeModels ??= {})[providerId] = livres;
+        definirGratisConhecidos(providerId, livres);
+      }
       if (cota || livres.length) await this.saveSettings();
     } catch (err) {
       console.error("[axxa] não consegui listar os modelos grátis:", err);
@@ -765,6 +769,12 @@ export default class AxxaPlugin extends Plugin {
 
     // Embeddings descobertos (fetch anterior) → registro global do RAG.
     this.refreshDiscoveredEmbeddings();
+
+    // Os grátis de verdade do último fetch → o painel de uso: custo zero só
+    // pra eles (o NIM, por exemplo, não é grátis no resto).
+    for (const [provider, ids] of Object.entries(this.settings.freeModels ?? {})) {
+      definirGratisConhecidos(provider, ids);
+    }
 
     // "Hot" dos modelos a partir do uso local — fire-and-forget (não bloqueia).
     void this.refreshLocalUsageHot();

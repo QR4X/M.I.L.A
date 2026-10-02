@@ -31,6 +31,10 @@ import {
   fetchStream,
 } from "./_shared";
 import type { RespostaNoFio } from "./_shared";
+import { ehGratisNoOpenRouter, ehPrecoZero, type EntradaOpenRouter } from "./gratisOpenRouter";
+// A regra mora em gratisOpenRouter.ts (o cache do catálogo usa a mesma);
+// daqui ela segue exportada pra quem já importava deste módulo.
+export { ehGratisNoOpenRouter, ehPrecoZero };
 
 // ---- O que o OpenRouter devolve (ver a nota em _shared.ts) ---------------
 // O chat fala OpenAI-compatible. O catálogo tem preço junto, e é por ele —
@@ -38,14 +42,6 @@ import type { RespostaNoFio } from "./_shared";
 
 interface ModeloOpenRouter {
   id?: unknown;
-  pricing?: Record<string, unknown>;
-  architecture?: { output_modalities?: unknown };
-  description?: unknown;
-}
-
-/** Uma entrada do catálogo, só com o que a gente lê. */
-export interface EntradaOpenRouter {
-  id: string;
   pricing?: Record<string, unknown>;
   architecture?: { output_modalities?: unknown };
   description?: unknown;
@@ -329,41 +325,6 @@ export function cotaGratisDaChave(json: unknown): { limit: number; remaining?: n
   }
   if (typeof d.is_free_tier === "boolean") return { limit: d.is_free_tier ? 50 : 1000 };
   return null;
-}
-
-/**
- * Grátis DE VERDADE no OpenRouter.
- *
- * A variante `:free` é a grátis declarada, e vale. Sem o sufixo, preço zero
- * não basta: modelo que gera áudio ou imagem cobra por ITEM — o Lyria do
- * Google custa US$ 0,04 por clipe e US$ 0,08 por música —, um preço que o
- * catálogo não põe em campo nenhum (prompt e completion vêm "0", até nos
- * detalhes do endpoint); ele só aparece na descrição. Então, sem sufixo, só
- * conta quando TODO preço é zero, a saída é só texto e a descrição não cita
- * preço.
- */
-export function ehGratisNoOpenRouter(m: EntradaOpenRouter): boolean {
-  if (m.id.toLowerCase().endsWith(":free")) return true;
-  if (!ehPrecoZero(m.pricing)) return false;
-  const precos = Object.values(m.pricing ?? {}).filter(
-    (v) => typeof v === "string" || typeof v === "number"
-  );
-  if (!precos.every((v) => Number(v) === 0)) return false;
-  const saida = m.architecture?.output_modalities;
-  const soTexto = !Array.isArray(saida) || saida.every((s) => s === "text");
-  const citaPreco = typeof m.description === "string" && /\$\s?\d/.test(m.description);
-  return soTexto && !citaPreco;
-}
-
-export function ehPrecoZero(pricing: unknown): boolean {
-  const p = pricing as Record<string, unknown> | undefined;
-  if (!p) return false;
-  const zero = (v: unknown) => {
-    if (typeof v !== "string" && typeof v !== "number") return false;
-    const n = Number(v);
-    return Number.isFinite(n) && n === 0;
-  };
-  return zero(p.prompt) && zero(p.completion);
 }
 
 export function isRelevantOpenRouterModel(id: string): boolean {

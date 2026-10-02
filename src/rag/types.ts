@@ -127,16 +127,17 @@ export const EMBEDDING_MODELS: EmbeddingModelSpec[] = [
     dim: 768,
     maxInputTokens: 2048,
     pricePerMillion: 0,
-    free: true,
   },
   // ── Nvidia NIM (endpoint OpenAI-compat /v1/embeddings; usa input_type) ──
+  // Nenhum dos dois é Free Endpoint no catálogo da NVIDIA (out/2026) — o
+  // único embedding grátis do NIM é o nemotron-3-embed-1b, que o fetch
+  // descobre. O grátis de verdade vem da lista do fetch, não daqui.
   {
     provider: "nim",
     model: "nvidia/nv-embedqa-e5-v5",
     dim: 1024,
     maxInputTokens: 512,
     pricePerMillion: 0,
-    free: true,
   },
   {
     provider: "nim",
@@ -144,7 +145,6 @@ export const EMBEDDING_MODELS: EmbeddingModelSpec[] = [
     dim: 2048,
     maxInputTokens: 8192,
     pricePerMillion: 0,
-    free: true,
   },
   // ── OpenAI legacy ──
   {
@@ -205,10 +205,10 @@ export function inferEmbeddingSpec(
   const supportsImage = /(\bvl\b|vision|multimodal|embed-vl)/.test(id);
   const supportsDimensions =
     id.includes("text-embedding-3") || id.includes("gemini-embedding");
-  const free =
-    provider === "nim" ||
-    (provider === "openrouter" && id.includes(":free")) ||
-    id.includes("004");
+  // Só a variante :free do OpenRouter é grátis declarada. O NIM não é grátis
+  // em todo modelo (só os Free Endpoint, que vêm da lista do fetch), e o
+  // grátis do Gemini é do tier da conta — a tela decide os dois.
+  const free = provider === "openrouter" && id.includes(":free");
 
   return {
     provider,

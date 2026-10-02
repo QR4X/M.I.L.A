@@ -45,8 +45,10 @@ describe("inferEmbeddingSpec", () => {
     expect(vl.discovered).toBe(true);
     expect(vl.supportsImage).toBe(true);
     expect(vl.free).toBe(true);
-    // NIM é tratado como free
-    expect(inferEmbeddingSpec("nim", "vendor/embed-x").free).toBe(true);
+    // NIM NÃO é grátis em todo modelo (só os Free Endpoint, pela lista do
+    // fetch); o Gemini é do tier da conta — nenhum dos dois é "free" daqui.
+    expect(inferEmbeddingSpec("nim", "vendor/embed-x").free).toBeUndefined();
+    expect(inferEmbeddingSpec("gemini", "text-embedding-004").free).toBeUndefined();
   });
 });
 

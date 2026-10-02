@@ -119,10 +119,13 @@ describe("OpenRouter: a cota diária dos grátis na chave", () => {
 });
 
 describe("grátis de verdade e a etiqueta", () => {
-  it("a lista do fetch vale sobre o nome: :free sem preço zero não é; sem :free com preço zero é", () => {
+  it("sem :free, a lista do fetch decide (preço zero de verdade); com :free, é a grátis declarada", () => {
     const livres = ["vendor/promo-model", "meta-llama/llama-3.3-70b-instruct:free"];
     expect(gratisDeVerdade("vendor/promo-model", livres, false)).toBe(true);
-    expect(gratisDeVerdade("other/thing:free", livres, true)).toBe(false);
+    expect(gratisDeVerdade("vendor/paid-model", livres, true)).toBe(false); // o palpite não vence a lista
+    // :free é a variante grátis que o próprio OpenRouter declara (em out/2026,
+    // nenhuma :free tinha preço) — inclusive a dos embeddings, fora da lista
+    expect(gratisDeVerdade("other/thing:free", livres, false)).toBe(true);
   });
 
   it("sem lista (ninguém buscou), vale o palpite", () => {

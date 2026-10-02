@@ -13,6 +13,7 @@
 // curado no baseline.
 
 import { requestUrl } from "obsidian";
+import { ehGratisNoOpenRouter } from "./gratisOpenRouter";
 
 /** Specs enriquecidas de um modelo (vindas do fetch — OpenRouter por ora). */
 export interface EnrichedModelInfo {
@@ -193,10 +194,22 @@ function toEnriched(raw: OpenRouterModel): EnrichedModelInfo {
   const output = perMillion(raw.pricing?.completion);
   const imgRaw = parseFloat(raw.pricing?.image ?? "");
   // v0.1.228: separa "preço zero confirmado" de "preço desconhecido (null)".
-  // free só quando ambos são 0 reais; se algum for null → "unknown".
+  // 0.9.22: zero por token não basta — o Lyria (música) vem "0" e cobra por
+  // clipe. "free" só pela regra de gratisOpenRouter.ts; zero sem ela é
+  // "unknown" (o preço existe, só não está em campo nenhum).
+  const gratis =
+    typeof raw.id === "string" &&
+    ehGratisNoOpenRouter({
+      id: raw.id,
+      pricing: raw.pricing,
+      architecture: raw.architecture,
+      description: raw.description,
+    });
   const tier: "free" | "paid" | "unknown" =
     input === 0 && output === 0
-      ? "free"
+      ? gratis
+        ? "free"
+        : "unknown"
       : input === null || output === null
         ? "unknown"
         : "paid";

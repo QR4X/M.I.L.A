@@ -137,15 +137,12 @@ const PRICES_BY_PROVIDER: Record<string, PricingEntry[]> = {
   ],
 
   // ─────────────────────────── Nvidia NIM ────────────────────────────────
-  // NIM hosted: 1k créditos free, depois pago. Não tem pricing público
-  // granular por modelo — todos consomem "créditos NIM" do mesmo pool.
-  // Assumimos 0 pra free tier (até 1k créditos / cota mensal).
+  // Grátis no NIM é só o que a NVIDIA marca "Free Endpoint" (20 dos 81 da API
+  // em out/2026), e esses vêm da lista do fetch (ver definirGratisConhecidos).
+  // O resto não tem preço público por modelo: custo desconhecido, não zero —
+  // até a 0.9.21 todo modelo do NIM saía "free" e custando US$ 0 no painel.
   nim: [
-    // Image gen — créditos NIM cobram por inferência, valor estimado
-    { prefix: "stabilityai/stable-diffusion-3", pricing: { inputPerMillion: null, outputPerMillion: null, imagePerCall: 0.02, tier: "free", asOf: "2026-06" } },
-    { prefix: "black-forest-labs/flux", pricing: { inputPerMillion: null, outputPerMillion: null, imagePerCall: 0.02, tier: "free", asOf: "2026-06" } },
-    // Chat LLM — free tier estimado em 0 (créditos NIM)
-    { prefix: "", pricing: { inputPerMillion: 0, outputPerMillion: 0, tier: "free", asOf: "2026-06" } },
+    { prefix: "", pricing: { inputPerMillion: null, outputPerMillion: null, tier: "unknown", asOf: "2026-10" } },
   ],
 
   // ─────────────────────────── Ollama (local) ────────────────────────────
@@ -159,12 +156,29 @@ const PRICES_BY_PROVIDER: Record<string, PricingEntry[]> = {
  * Retorna pricing do modelo dado o provider. Match por prefixo, ordem do array.
  * Retorna `null` em ambos os campos quando não encontra match.
  */
+/** Os grátis de verdade que o fetch descobriu, por provider (OpenRouter pelo
+ *  preço, NIM pela marca "Free Endpoint"). O plugin chama ao carregar as
+ *  settings e depois de cada fetch; a tabela abaixo não sabe disso sozinha. */
+const gratisConhecidos = new Map<string, Set<string>>();
+
+/** "_" e "." são o mesmo modelo (o catálogo da NVIDIA escreve "_"). */
+const normalizado = (id: string) => id.toLowerCase().replace(/_/g, ".");
+
+export function definirGratisConhecidos(provider: string, ids: readonly string[]): void {
+  gratisConhecidos.set(provider, new Set(ids.map(normalizado)));
+}
+
 export function getPricing(provider: string, model: string): ModelPricing {
   if (!model) return { inputPerMillion: null, outputPerMillion: null, tier: "unknown" };
   const entries = PRICES_BY_PROVIDER[provider];
   if (!entries) return { inputPerMillion: null, outputPerMillion: null, tier: "unknown" };
 
   const lower = model.toLowerCase();
+
+  // Grátis de verdade que o fetch confirmou: custo zero, seja qual for o nome.
+  if (gratisConhecidos.get(provider)?.has(normalizado(model))) {
+    return { inputPerMillion: 0, outputPerMillion: 0, tier: "free", asOf: "2026-10" };
+  }
 
   // Caso especial OpenRouter :free
   if (provider === "openrouter" && lower.endsWith(":free")) {

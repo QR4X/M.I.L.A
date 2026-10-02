@@ -57,6 +57,9 @@ export function gratisDeVerdade(
   livres: readonly string[] | undefined,
   palpite: boolean
 ): boolean {
+  // A variante ":free" do OpenRouter é a grátis declarada — inclusive a dos
+  // embeddings, que não vêm na lista do catálogo de chat.
+  if (/:free$/i.test(model)) return true;
   if (!livres || livres.length === 0) return palpite;
   const igual = (s: string) => s.toLowerCase().replace(/_/g, ".");
   const alvo = igual(model);

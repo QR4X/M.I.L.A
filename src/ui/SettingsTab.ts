@@ -50,7 +50,7 @@ import { escolherAssistente, ehFree } from "../assistant/model";
 import { getAllEmbeddingModels } from "../rag/types";
 import { deleteIndex } from "../rag/vectorIndex";
 import { getModelCapabilities } from "../providers/modelCapabilities";
-import { freeTag, gratisDeVerdade, type FreeTag } from "../usage/freeTag";
+import { freeTag, geminiTemTierGratis, gratisDeVerdade, type FreeTag } from "../usage/freeTag";
 import { openaiFreeTierForModel } from "../usage/freeTokens";
 import { buildModelCatalog, porFabricante, soltosPorFabricante } from "./modelCatalog";
 import { PROVIDERS_MULTI_FABRICANTE } from "../providers/vendors";
@@ -1524,8 +1524,18 @@ export class AxxaSettingsTab extends PluginSettingTab {
     const specs = getAllEmbeddingModels();
     this.pickButton(row, {
       items: specs.map((spec) => {
+        // O mesmo "grátis de verdade" da lista de modelos: a lista do fetch
+        // (NIM, OpenRouter) e o tier da conta no Gemini.
+        const gratis =
+          spec.provider === "gemini"
+            ? geminiTemTierGratis(spec.model)
+              ? "free tier"
+              : ""
+            : gratisDeVerdade(spec.model, s.freeModels?.[spec.provider], spec.free === true)
+              ? "free"
+              : "";
         const extras = [
-          spec.free ? "free" : "",
+          gratis,
           providerConfigured(this.plugin, spec.provider) ? "" : "needs key",
         ].filter(Boolean);
         return {

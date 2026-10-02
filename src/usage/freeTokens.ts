@@ -58,6 +58,9 @@ export function openaiFreeAllowance(
 export function openaiFreeTierForModel(model: string): "big" | "mini" | null {
   const m = (model || "").toLowerCase();
   if (MINI_MODELS.some((p) => m.startsWith(p))) return "mini";
+  // GPT-5.x novos (gpt-5.1-mini, gpt-5.2-nano…): sem isto o prefixo "gpt-5"
+  // abaixo os punha no balde dos GRANDES — 250k em vez de 2,5M por dia.
+  if (/^gpt-5(\.\d+)?-(mini|nano)/.test(m)) return "mini";
   if (BIG_MODELS.some((p) => m.startsWith(p))) return "big";
   return null;
 }

@@ -84,7 +84,7 @@ const ANTHROPIC_CARDS: CardEntry[] = [
 // ─────────────────────────────── Gemini ───────────────────────────────
 const GEMINI_CARDS: CardEntry[] = [
   // Image gen
-  { prefix: "gemini-2.5-flash-image", card: { category: "image-gen", description: "Nano Banana — Google's fast image gen. Up to 20 refs, conversational editing, character consistency. Free tier 500 img/day.", contextWindow: 32_000, goodFor: "Fast generation + editing, free tier" } },
+  { prefix: "gemini-2.5-flash-image", card: { category: "image-gen", description: "Nano Banana — Google's fast image gen. Up to 20 refs, conversational editing, character consistency. Paid only: about $0.039 per image (no free tier).", contextWindow: 32_000, goodFor: "Fast generation + editing" } },
   { prefix: "gemini-2.0-flash-exp-image", card: { category: "image-gen", description: "Earlier experimental image gen. Still works.", goodFor: "Experiments" } },
   { prefix: "imagen-4", card: { category: "image-gen", description: "Imagen 4 — premium quality for art/marketing.", goodFor: "Quality > speed" } },
   { prefix: "imagen-3", card: { category: "image-gen", description: "Imagen 3 — stable high quality. Good at photorealism.", goodFor: "Photorealism" } },
@@ -125,7 +125,7 @@ const OPENROUTER_CARDS: CardEntry[] = [
 // ─────────────────────────── Nvidia NIM ───────────────────────────
 const NIM_CARDS: CardEntry[] = [
   // Image gen
-  { prefix: "stabilityai/stable-diffusion-3", card: { category: "image-gen", description: "Stable Diffusion 3 Medium — classic image generation. NIM free tier.", goodFor: "Open image gen" } },
+  { prefix: "stabilityai/stable-diffusion-3", card: { category: "image-gen", description: "Stable Diffusion 3 Medium — classic image generation.", goodFor: "Open image gen" } },
   { prefix: "stabilityai/sdxl", card: { category: "image-gen", description: "SDXL — older image gen, still popular.", goodFor: "Cinematic style" } },
   { prefix: "black-forest-labs/flux", card: { category: "image-gen", description: "FLUX — premium-quality open-source image generation.", goodFor: "Open premium quality" } },
   // Chat
