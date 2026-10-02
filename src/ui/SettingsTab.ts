@@ -1076,9 +1076,11 @@ export class AxxaSettingsTab extends PluginSettingTab {
   /** Um `control` de texto desenhado como menu de escolha. Grava pelo MESMO
    *  caminho dos controles do Obsidian (writeValue), com os mesmos efeitos. */
   private paintPick(row: Setting, key: TextKey, items: () => PickItem[]): void {
+    const atual = this.readValue(key);
     this.pickButton(row, {
       items: items(),
-      value: String(this.readValue(key) ?? ""),
+      // Controle de texto lê string; qualquer outra coisa é "nada escolhido".
+      value: typeof atual === "string" ? atual : "",
       onPick: async (v) => {
         await this.writeValue(key, v);
         this.repaint(`pick:${key}`);

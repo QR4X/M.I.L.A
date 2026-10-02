@@ -179,7 +179,9 @@ export function openActions(
     attr: { role: "menu" },
   });
   if (opts.escolha && ancoraEl) {
-    balao.style.minWidth = `${Math.round(ancoraEl.getBoundingClientRect().width)}px`;
+    balao.setCssStyles({
+      minWidth: `${Math.round(ancoraEl.getBoundingClientRect().width)}px`,
+    });
   }
 
   let fechar = () => {};
@@ -270,12 +272,12 @@ export function openActions(
     // vozes não cabiam nem em cima nem embaixo, e o balão encostava no topo da
     // tela por cima do próprio botão.
     if (opts.escolha && r) {
-      balao.style.maxHeight = "";
+      balao.setCssStyles({ maxHeight: "" });
       const embaixo = win.innerHeight - r.bottom - VAO - MARGEM;
       const emCima = r.top - VAO - MARGEM;
       const espaco =
         balao.offsetHeight <= embaixo ? embaixo : Math.max(embaixo, emCima);
-      balao.style.maxHeight = `${Math.max(120, Math.floor(espaco))}px`;
+      balao.setCssStyles({ maxHeight: `${Math.max(120, Math.floor(espaco))}px` });
     }
     const ancora = r ?? {
       left: (ev.clientX ?? 0) - 1,
