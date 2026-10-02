@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { QUANT_ITENS, pendenciaDoIndice } from "../src/ui/settings/indice";
 import { QUANT_PROFILES } from "../src/rag/quant";
-import { isControlKey } from "../src/ui/settings/values";
+import { applyControl, DEFAULT_INDEX_PATH, isControlKey } from "../src/ui/settings/values";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import type { AxxaSettings } from "../src/main";
 
 // A precisão e os pedaços do índice do Vault Q&A voltaram pra tela (sumiram no
 // redesign da 0.4.0; o motor continuou lendo).
@@ -39,5 +42,24 @@ describe("o índice do Q&A: precisão e pedaços", () => {
     expect(pendenciaDoIndice(idx, { ragEmbeddingModel: "gemini-embedding-001" })).toBe(
       "Update the index to apply the new embedding model."
     );
+  });
+});
+
+describe("a pasta do índice", () => {
+  const s = () => ({ ragIndexPath: "x" }) as unknown as AxxaSettings;
+
+  it("vira campo na aba Vault, junto das outras pastas", () => {
+    expect(isControlKey("ragIndexPath")).toBe(true);
+    const tree = readFileSync(resolve(__dirname, "../src/ui/settings/tree.ts"), "utf8");
+    expect(tree).toMatch(/text\(\s*"Index folder",[\s\S]{0,400}"ragIndexPath"/);
+  });
+
+  it("barra na ponta sai; vazio volta pro padrão", () => {
+    const a = s();
+    applyControl(a, "ragIndexPath", " /meu/indice/ ");
+    expect(a.ragIndexPath).toBe("meu/indice");
+    applyControl(a, "ragIndexPath", "   ");
+    expect(a.ragIndexPath).toBe(DEFAULT_INDEX_PATH);
+    expect(DEFAULT_INDEX_PATH).toBe(".axxa/index");
   });
 });

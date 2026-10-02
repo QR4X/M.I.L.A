@@ -49,6 +49,7 @@ const TEXT_KEYS = [
   "skillsPath",
   "agentPermissionLevel",
   "ragQuantProfile",
+  "ragIndexPath",
 ] as const;
 
 export type BoolKey = (typeof BOOL_KEYS)[number];
@@ -66,6 +67,8 @@ export function isControlKey(key: string): key is ControlKey {
 export const DEFAULT_CHATS_PATH = `${AXXA_HIDDEN}/chats`;
 /** Pasta dos skills quando o campo fica vazio. */
 export const DEFAULT_SKILLS_PATH = "axxa-ai/skills";
+/** Pasta do índice do Vault Q&A quando o campo fica vazio. */
+export const DEFAULT_INDEX_PATH = `${AXXA_HIDDEN}/index`;
 
 /** O valor que o CONTROLE mostra — nem sempre é o que está gravado. */
 export function readControl(s: AxxaSettings, key: ControlKey): boolean | string {
@@ -116,6 +119,11 @@ export function applyControl(
       return;
     case "skillsPath":
       s.skillsPath = v.trim() || DEFAULT_SKILLS_PATH;
+      return;
+    // A do índice vira caminho de arquivo (`<pasta>/embeddings.json`): uma
+    // barra na ponta faria `pasta//embeddings.json`.
+    case "ragIndexPath":
+      s.ragIndexPath = v.trim().replace(/^\/+|\/+$/g, "") || DEFAULT_INDEX_PATH;
       return;
     default:
       s[key as Exclude<TextKey, "openaiTier">] = v;

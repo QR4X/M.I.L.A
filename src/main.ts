@@ -765,10 +765,19 @@ export default class AxxaPlugin extends Plugin {
     // Skills (.md na pasta de skills) → slash-commands no composer.
     await this.reloadSkills();
 
-    // Carrega índice RAG do disco se já existe. Falhas são silenciosas —
-    // só significa que o user ainda não rodou "Indexar vault".
-    // No MOBILE, gateia por tamanho: um índice grande estoura o heap do WebView
-    // e derruba o Obsidian no parse (OOM). Acima do teto, pula → keyword. v0.1.198
+    await this.loadVectorIndex();
+  }
+
+  /**
+   * Carrega o índice RAG da pasta das settings — no load e quando a pasta muda
+   * nas settings. Sem índice lá, fica null: o Q&A cai na busca por palavra até
+   * alguém indexar. Falhas são silenciosas — só significa que o user ainda não
+   * rodou "Indexar vault".
+   * No MOBILE, gateia por tamanho: um índice grande estoura o heap do WebView
+   * e derruba o Obsidian no parse (OOM). Acima do teto, pula → keyword. v0.1.198
+   */
+  async loadVectorIndex(): Promise<void> {
+    this.vectorIndex = null;
     try {
       const mobileGuard = Platform.isMobile
         ? {

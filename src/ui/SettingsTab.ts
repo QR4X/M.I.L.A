@@ -144,6 +144,8 @@ export class AxxaSettingsTab extends PluginSettingTab {
   /** Provider cujo catálogo está sendo buscado agora (um de cada vez). */
   private fetchingFor: string | null = null;
   private fetchingVoices = false;
+  /** O recarregamento do índice espera a digitação da pasta parar. */
+  private timerDoIndice = 0;
   private hapticsOff: (() => void) | null = null;
 
   /** As linhas vivas, por nome (ver `slot`). */
@@ -273,6 +275,15 @@ export class AxxaSettingsTab extends PluginSettingTab {
       case "ragStreamShards":
         // A linha do índice avisa que falta atualizar pra valer.
         this.repaint("index");
+        break;
+      case "ragIndexPath":
+        // O campo grava a cada tecla, e carregar um índice é ler megabytes:
+        // o índice da pasta nova só é lido quando a digitação para.
+        this.repaint("index");
+        window.clearTimeout(this.timerDoIndice);
+        this.timerDoIndice = window.setTimeout(() => {
+          void this.plugin.loadVectorIndex().then(() => this.repaint("index"));
+        }, 800);
         break;
     }
   }

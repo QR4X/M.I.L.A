@@ -718,6 +718,15 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       "skillsPath",
       { aliases: ["pasta", "path"] }
     ),
+    // Era a única pasta do plugin sem campo: aparecia só como texto na linha
+    // do índice. Trocar não MOVE o índice (seria copiar megabytes no meio de
+    // uma digitação): a pasta nova começa vazia e a antiga fica onde estava.
+    text(
+      "Index folder",
+      "Where the Vault Q&A index lives. Changing it starts a fresh index there — the current one stays in the old folder, and switching back loads it again.",
+      "ragIndexPath",
+      { aliases: ["pasta", "path", "index", "índice", "rag", "embeddings"] }
+    ),
   ]);
 
   // ── Vault Q&A ────────────────────────────────────────────────────────────
