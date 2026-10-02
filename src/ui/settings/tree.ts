@@ -692,7 +692,7 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
     custom(
       "Embedding model",
       null,
-      "Needs the key of that model's provider. Without an index, Vault Q&A falls back to keyword search.",
+      "Needs the key of that model's provider. Without an index, Vault Q&A falls back to keyword search. Fetch models on a provider to list the embedding models your account has.",
       ui.embeddingModel,
       { aliases: ["embeddings", "rag", "modelo"] }
     ),

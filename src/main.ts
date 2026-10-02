@@ -37,6 +37,7 @@ import type {
   EffortLevel,
 } from "./core/effort";
 import { limparCamposMortos } from "./core/settingsLegado";
+import { EMBEDDING_PROVIDERS, somarDescobertos } from "./rag/descobertos";
 import { chatIndexSignature } from "./core/chatIndex";
 import { revisarOllamaPadrao } from "./core/ollamaPadrao";
 import { LOCALES } from "./i18n";
@@ -141,7 +142,8 @@ export interface AxxaSettings {
   elevenVoices: { id: string; name: string; category?: string }[];
   /** Feedback tátil nos toques (só no celular, e só onde o aparelho suporta). */
   hapticsEnabled: boolean;
-  /** Modelos de embedding descobertos via API, por provider (RAG). */
+  /** Modelos de embedding descobertos via API, por provider (RAG). O "Fetch
+   *  models" de cada provider grava aqui (ver plugin.scanEmbeddings). */
   discoveredEmbeddings: Record<string, string[]>;
   // ---- Sessão
   /**
@@ -590,6 +592,36 @@ export default class AxxaPlugin extends Plugin {
     return lista;
   }
 
+  /**
+   * Os modelos de EMBEDDING que a conta do provider oferece — o "Fetch models"
+   * de cada provider traz junto, como era até a 0.3.x. O redesign da 0.4.0
+   * perdeu esse caminho: o registro dos descobertos ficou só com o que versões
+   * antigas tinham salvo, e um modelo de embedding novo de um provider não
+   * aparecia no Q&A. Grava em `discoveredEmbeddings` (somando ao que já havia)
+   * e reconstrói o registro. Só os providers que o RAG usa; nunca lança —
+   * embedding é o extra da busca, não o motivo dela.
+   */
+  async scanEmbeddings(providerId: string): Promise<string[]> {
+    if (!EMBEDDING_PROVIDERS.includes(providerId)) return [];
+    const p = getProvider(providerId) as {
+      listEmbeddingModels?: (credential: string) => Promise<string[]>;
+    };
+    if (!p.listEmbeddingModels) return [];
+    let ids: string[] = [];
+    try {
+      ids = await p.listEmbeddingModels(this.providerCredential(providerId));
+    } catch {
+      return [];
+    }
+    if (ids.length === 0) return [];
+    const map = this.settings.discoveredEmbeddings ?? {};
+    map[providerId] = somarDescobertos(map[providerId], ids);
+    this.settings.discoveredEmbeddings = map;
+    this.refreshDiscoveredEmbeddings();
+    await this.saveSettings();
+    return ids;
+  }
+
   /** Atualiza a lista de grátis do provider. Silencioso: não saber quais são
    *  é pior que a lista velha, mas não é motivo pra derrubar o SCAN. */
   async scanFreeModels(providerId: string): Promise<void> {
@@ -795,7 +827,7 @@ export default class AxxaPlugin extends Plugin {
     const map = this.settings.discoveredEmbeddings ?? {};
     for (const [provider, ids] of Object.entries(map)) {
       // Só providers que o RAG suporta como fonte de embedding.
-      if (!["openai", "openrouter", "gemini", "nim"].includes(provider)) continue;
+      if (!EMBEDDING_PROVIDERS.includes(provider)) continue;
       for (const id of ids) {
         specs.push(inferEmbeddingSpec(provider as EmbeddingProvider, id));
       }

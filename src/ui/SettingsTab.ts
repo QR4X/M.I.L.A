@@ -673,11 +673,19 @@ export class AxxaSettingsTab extends PluginSettingTab {
     this.repaint(`fetch:${providerId}`);
     this.repaint(`catalog:${providerId}`);
     try {
-      const models = await this.plugin.scanModels(providerId);
+      // Os de EMBEDDING vêm na mesma ida (ver plugin.scanEmbeddings): eles
+      // alimentam a lista de modelos do Q&A. Nunca lançam.
+      const [models, embeds] = await Promise.all([
+        this.plugin.scanModels(providerId),
+        this.plugin.scanEmbeddings(providerId),
+      ]);
       this.catalog[providerId] = models;
+      if (embeds.length > 0) this.repaint("embedding");
       new Notice(
         models.length > 0
-          ? `${models.length} models found.`
+          ? embeds.length > 0
+            ? `${models.length} models found · ${embeds.length} for Vault Q&A embeddings.`
+            : `${models.length} models found.`
           : "No models returned — check the key or the endpoint."
       );
     } catch (err) {
