@@ -17,7 +17,7 @@
 
 <p align="center"><img src="assets/demo/hero.gif" width="900" alt="Gravação real no layout de celular do Obsidian: uma pergunta sobre o vault e uma resposta que cita as notas de onde veio"></p>
 
-<p align="center"><a href="#instalação">Instalar</a> · <a href="#começo-rápido">Começo rápido</a> · <a href="#privacidade-e-dados">Privacidade</a> · <a href="#perguntas-frequentes">Perguntas</a> · <a href="https://github.com/axxalab/axxa-agent/discussions">Discussions</a></p>
+<p align="center"><a href="https://agent.axxalab.com.br/pt/">Site</a> · <a href="#instalação">Instalar</a> · <a href="#começo-rápido">Começo rápido</a> · <a href="#privacidade-e-dados">Privacidade</a> · <a href="#perguntas-frequentes">Perguntas</a> · <a href="https://github.com/axxalab/axxa-agent/discussions">Discussions</a></p>
 
 > A interface do plugin é em inglês. A versão em português está no roadmap.
 

@@ -17,7 +17,7 @@
 
 <p align="center"><img src="assets/demo/hero.gif" width="900" alt="A real recording on the Obsidian mobile layout: a question about the vault, then an answer that cites the notes it came from"></p>
 
-<p align="center"><a href="#install">Install</a> · <a href="#quick-start">Quick start</a> · <a href="#privacy-and-data">Privacy</a> · <a href="#faq">FAQ</a> · <a href="https://github.com/axxalab/axxa-agent/discussions">Discussions</a></p>
+<p align="center"><a href="https://agent.axxalab.com.br">Website</a> · <a href="#install">Install</a> · <a href="#quick-start">Quick start</a> · <a href="#privacy-and-data">Privacy</a> · <a href="#faq">FAQ</a> · <a href="https://github.com/axxalab/axxa-agent/discussions">Discussions</a></p>
 
 ## What it does
 
