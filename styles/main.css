@@ -5230,8 +5230,7 @@ body.is-mobile .axxa-settings-root button.axxa-pick {
   flex-direction: column;
 }
 
-.axxa-effort-modal .axxa-esf-linha.is-hidden,
-.axxa-effort-modal .axxa-esf-pe.is-hidden {
+.axxa-effort-modal .axxa-esf-linha.is-hidden {
   display: none;
 }
 
@@ -5288,14 +5287,48 @@ body.is-mobile .axxa-settings-root button.axxa-pick {
   min-height: 36px;
 }
 
-.axxa-effort-modal .axxa-esf-pe {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--size-4-2);
+/* O "Restore" do nível: palavra e ícone no cabeçalho, encostado no X — o JS
+   mede o X (que muda por plataforma) e põe topo, altura e distância da borda.
+   Sem nada editado, ele fica apagado no lugar. */
+.axxa-effort-modal button.axxa-esf-restaurar {
+  position: absolute;
+  z-index: var(--layer-modal);
+  gap: var(--size-4-1);
+  padding: 0 var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
 }
 
-.axxa-effort-modal button.axxa-esf-restaurar {
-  font-size: var(--font-ui-small);
+.axxa-effort-modal button.axxa-esf-restaurar:hover:not(:disabled) {
+  color: var(--text-normal);
+}
+
+.axxa-effort-modal button.axxa-esf-restaurar:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.axxa-effort-modal .axxa-esf-restaurar-ico {
+  --icon-size: 14px;
+  display: inline-flex;
+}
+
+/* Sem o X onde ele sempre esteve, o Restore entra no fluxo do cabeçalho. */
+.axxa-effort-modal button.axxa-esf-restaurar.is-solto {
+  position: static;
+  margin-inline-start: auto;
+}
+
+/* O título começa na linha e para antes do Restore (o JS reserva o espaço
+   no cabeçalho): centrado, um "Extra high effort" encostava nele. */
+.modal.axxa-effort-modal .modal-title {
+  min-width: 0;
+  margin-inline: 0;
+  overflow: hidden;
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Seção de FAMÍLIA dentro do papel (GPT-5, o-series, Llama…). É um BOTÃO:

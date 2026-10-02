@@ -240,7 +240,9 @@ interface LinhaViva {
  *  ganha a cor do texto e um ↺ que devolve o de fábrica. */
 export class EffortLevelModal extends Modal {
   private linhas: LinhaViva[] = [];
-  private peEl: HTMLElement | null = null;
+  /** O "Restore" do cabeçalho, ao lado do X: devolve ESTE nível aos padrões
+   *  dele — cada nível tem os seus, e os outros ficam como estão. */
+  private restaurarEl: HTMLButtonElement | null = null;
 
   constructor(
     app: App,
@@ -255,6 +257,7 @@ export class EffortLevelModal extends Modal {
     this.modalEl.addClass("axxa-effort-modal");
     this.titleEl.setText(`${EFFORT_LABELS[this.level]} effort`);
     this.desenhar();
+    this.montarRestaurar();
   }
 
   onClose(): void {
@@ -274,7 +277,7 @@ export class EffortLevelModal extends Modal {
       valor
     );
     await this.plugin.saveSettings();
-    this.pintarPe();
+    this.pintarRestaurar();
   }
 
   /** Mostra só as linhas que valem com estes números (ver `quando`). */
@@ -295,27 +298,69 @@ export class EffortLevelModal extends Modal {
       );
     }
     this.mostrarDependentes(resolveEffortConfig(this.level, this.plugin.settings.effortConfigs));
-
-    // "Restaurar tudo" só existe quando há o que restaurar — na tela mínima,
-    // um botão sem efeito é altura jogada fora.
-    this.peEl = contentEl.createDiv({ cls: "axxa-esf-pe" });
-    const restaurar = this.peEl.createEl("button", {
-      cls: "axxa-esf-restaurar",
-      text: "Restore defaults",
-      attr: { type: "button" },
-    });
-    restaurar.addEventListener("click", () => void this.restaurarTudo());
-    this.pintarPe();
   }
 
-  private pintarPe(): void {
-    this.peEl?.toggleClass("is-hidden", !nivelEditado(this.plugin.settings.effortConfigs, this.level));
+  /**
+   * O "Restore": palavra e ícone no cabeçalho, encostado no X — não ocupa
+   * altura nenhuma. O X é do Obsidian e muda de lugar e tamanho por
+   * plataforma (44px a 12px da borda no Android, outro inset no iPhone, outro
+   * no computador), então o Restore é MEDIDO contra ele em vez de copiar
+   * números. E o título passa a parar antes dele: centrado, um "Extra high
+   * effort" encostava no Restore até num celular de 412px.
+   */
+  private montarRestaurar(): void {
+    const restaurar = this.modalEl.createEl("button", {
+      cls: "axxa-esf-restaurar clickable-icon",
+      attr: {
+        type: "button",
+        "aria-label": `Restore ${EFFORT_LABELS[this.level]}'s defaults`,
+      },
+    });
+    setIcon(restaurar.createSpan({ cls: "axxa-esf-restaurar-ico" }), "rotate-ccw");
+    restaurar.createSpan({ text: "Restore" });
+    restaurar.addEventListener("click", () => void this.restaurarTudo());
+    this.restaurarEl = restaurar;
+    this.pintarRestaurar();
+
+    const x = Array.from(this.modalEl.children).find(
+      (el): el is HTMLElement =>
+        el !== restaurar &&
+        (el.hasClass("modal-close-button") || el.hasClass("modal-header-button"))
+    );
+    if (!x) {
+      // Sem o X onde ele sempre esteve: o Restore entra no fluxo do cabeçalho
+      // em vez de flutuar num lugar chutado.
+      this.titleEl.parentElement?.appendChild(restaurar);
+      restaurar.addClass("is-solto");
+      return;
+    }
+    const rtl = this.modalEl.win.getComputedStyle(this.modalEl).direction === "rtl";
+    // Distância da borda do fim do modal até o começo do X.
+    const antesDoX = rtl ? x.offsetLeft + x.offsetWidth : this.modalEl.clientWidth - x.offsetLeft;
+    restaurar.setCssStyles({
+      top: `${x.offsetTop}px`,
+      height: `${x.offsetHeight}px`,
+      insetInlineEnd: `${antesDoX + 4}px`,
+    });
+    // O título para antes do Restore: o fim do cabeçalho fica reservado pros
+    // dois botões.
+    this.titleEl.parentElement?.setCssStyles({
+      paddingInlineEnd: `${antesDoX + 4 + restaurar.offsetWidth + 8}px`,
+    });
+  }
+
+  /** Sem nada editado, o Restore fica apagado — no lugar, sem sumir. */
+  private pintarRestaurar(): void {
+    if (this.restaurarEl) {
+      this.restaurarEl.disabled = !nivelEditado(this.plugin.settings.effortConfigs, this.level);
+    }
   }
 
   private async restaurarTudo(): Promise<void> {
+    const nome = EFFORT_LABELS[this.level];
     const ok = await new ConfirmModal(this.app, {
-      title: `Restore ${EFFORT_LABELS[this.level]} to its defaults?`,
-      body: "Every setting of this level goes back to the factory value.",
+      title: `Restore ${nome} to its defaults?`,
+      body: `Every setting of ${nome} goes back to ${nome}'s own defaults. The other levels keep theirs.`,
       confirmLabel: "Restore",
       danger: true,
     }).openAndWait();
@@ -324,10 +369,10 @@ export class EffortLevelModal extends Modal {
     delete resto[this.level];
     this.plugin.settings.effortConfigs = resto;
     await this.plugin.saveSettings();
-    new Notice(`${EFFORT_LABELS[this.level]} effort is back to defaults.`);
+    new Notice(`${nome} effort is back to its defaults.`);
     for (const l of this.linhas) l.repor();
     this.mostrarDependentes(DEFAULT_EFFORT_CONFIGS[this.level]);
-    this.pintarPe();
+    this.pintarRestaurar();
   }
 
   /** O cabeçalho comum: nome, o ↺ (escondido sem edição) e o valor. O ↺ vem
