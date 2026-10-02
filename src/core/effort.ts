@@ -33,12 +33,14 @@ export const EFFORT_ICONS: Record<EffortLevel, string> = {
   max: "flame",
 };
 
-export const EFFORT_DESCRIPTIONS: Record<EffortLevel, string> = {
-  low: "Fast and economical (≤512 tok · 5 turns)",
-  med: "Balanced (≤2k tok · 12 turns)",
-  high: "Detailed (≤6k tok · 25 turns)",
-  xhigh: "Deep (≤16k tok · 60 turns)",
-  max: "Relentless (up to 80% of context · 200 turns)",
+/** O jeito de cada nível em poucas palavras — o resto da descrição é número
+ *  (ver describeEffort). */
+export const EFFORT_TAGLINES: Record<EffortLevel, string> = {
+  low: "Fast and economical",
+  med: "Balanced",
+  high: "Detailed",
+  xhigh: "Deep",
+  max: "Relentless",
 };
 
 /**
@@ -227,3 +229,43 @@ export function effortToVaultLookup(
   const cfg = resolveEffortConfig(level, userConfigs);
   return { topK: cfg.vaultTopK, excerptChars: cfg.vaultExcerptChars };
 }
+
+/** 512 → "512", 2048 → "2k", 6000 → "6k", 1500 → "1.5k". */
+function tokensCurtos(n: number): string {
+  if (n < 1000) return String(n);
+  return `${Math.round(n / 100) / 10}k`;
+}
+
+/** "≤2k tok · 12 turns" — o que separa um nível do outro, com os números que
+ *  valem de verdade. */
+export function effortNumbers(cfg: EffortConfig): string {
+  const tok =
+    cfg.maxTokens === 0
+      ? `up to ${cfg.contextReservePercent}% of context`
+      : `≤${tokensCurtos(cfg.maxTokens)} tok`;
+  const voltas = cfg.agentMaxTurns === 0 ? "no turn cap" : `${cfg.agentMaxTurns} turns`;
+  return `${tok} · ${voltas}`;
+}
+
+/**
+ * A descrição de um nível com os números de agora: os de fábrica somados ao
+ * que a pessoa editou nas settings. Era um texto fixo — e com os níveis
+ * editáveis ele passaria a mentir sobre o que o nível faz.
+ */
+export function describeEffort(
+  level: string,
+  userConfigs?: Partial<Record<EffortLevel, Partial<EffortConfig>>>
+): string {
+  const lvl = isEffortLevel(level) ? level : "med";
+  return `${EFFORT_TAGLINES[lvl]} (${effortNumbers(resolveEffortConfig(lvl, userConfigs))})`;
+}
+
+/** As descrições de FÁBRICA (sem nada editado). Quem mostra o nível pra
+ *  pessoa usa describeEffort com as settings. */
+export const EFFORT_DESCRIPTIONS: Record<EffortLevel, string> = {
+  low: describeEffort("low"),
+  med: describeEffort("med"),
+  high: describeEffort("high"),
+  xhigh: describeEffort("xhigh"),
+  max: describeEffort("max"),
+};

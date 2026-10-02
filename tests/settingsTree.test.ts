@@ -59,6 +59,7 @@ function fakeUi(
     catalog: () => noop,
     freeOffer: noop,
     pick: () => noop,
+    effortLevel: () => noop,
     assistantModel: noop,
     ttsProvider: noop,
     elevenKey: noop,
@@ -309,6 +310,19 @@ describe("a aba Chat só tem menus de escolha com ícone", () => {
       ].sort()
     );
     expect(new Set(pegos.map((p) => p.tab))).toEqual(new Set(["chat", "rag"]));
+  });
+
+  it("os níveis de esforço têm uma linha cada, num grupo da aba Chat", () => {
+    const g = (tree.items as unknown as Group[]).find((x) => x.heading === "Effort levels");
+    expect(g).toBeTruthy();
+    expect(tree.places.get(g as object)?.tab).toBe("chat");
+    expect(g!.items.map((r) => r.name)).toEqual([
+      "Low effort level",
+      "Medium effort level",
+      "High effort level",
+      "Extra high effort level",
+      "Max effort level",
+    ]);
   });
 
   it("a aba Q&A ganhou a precisão e os pedaços do índice", () => {

@@ -35,7 +35,12 @@ import type {
 } from "obsidian";
 import type { AxxaSettings } from "../../main";
 import { PROVIDERS } from "../../core/providersMeta";
-import { EFFORT_ICONS, EFFORT_LABELS, EFFORT_LEVELS } from "../../core/effort";
+import {
+  EFFORT_ICONS,
+  EFFORT_LABELS,
+  EFFORT_LEVELS,
+  type EffortLevel,
+} from "../../core/effort";
 import { CHAT_MODES } from "../../core/session";
 import { MODULES } from "../modules";
 import { QUANT_ITENS } from "./indice";
@@ -189,6 +194,8 @@ export interface SettingsUi {
   /** Menu de escolha com ícone, no lugar de um <select>. `items` é chamado a
    *  cada desenho — listas que mudam (vozes, modelos) chegam frescas. */
   pick(key: TextKey, items: () => PickItem[], tab: TabId): RowRender;
+  /** A linha de um nível de esforço, que abre o editor dele. */
+  effortLevel(level: EffortLevel): RowRender;
   assistantModel: RowRender;
   ttsProvider: RowRender;
   elevenKey: RowRender;
@@ -492,6 +499,33 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       { aliases: ["idioma", "língua", "portuguese", "português"] }
     ),
   ]);
+
+  // O que cada nível de esforço FAZ — tokens, voltas do agente, temperatura,
+  // quanto do vault entra. O motor sempre leu isto (effortConfigs); a tela
+  // sumiu na 0.4.0 e voltou: uma linha por nível, que abre o editor dele.
+  group(
+    chat,
+    { heading: "Effort levels" },
+    EFFORT_LEVELS.map((l) =>
+      custom(
+        `${EFFORT_LABELS[l]} effort level`,
+        EFFORT_LABELS[l],
+        "",
+        ui.effortLevel(l),
+        {
+          aliases: [
+            "effort",
+            "esforço",
+            "tokens",
+            "temperature",
+            "temperatura",
+            "turns",
+            "agent",
+          ],
+        }
+      )
+    )
+  );
 
   group(chat, { heading: "Assistant" }, [
     custom("Assistant model", "Model", "", ui.assistantModel, {

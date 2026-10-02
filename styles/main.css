@@ -5186,6 +5186,27 @@ body.is-mobile .axxa-settings-root button.axxa-pick {
   height: 15px;
 }
 
+/* ── os níveis de esforço ──────────────────────────────────────────────
+   O desenho do nível na frente do nome (as mesmas barras do menu de Effort),
+   e o editor de cada nível (settings/effortEditor.ts), um modal do Obsidian. */
+.axxa-settings-root .axxa-effort-ico {
+  display: inline-flex;
+  margin-inline-end: var(--size-4-2);
+  color: var(--text-muted);
+  vertical-align: -3px;
+}
+
+.axxa-settings-root .axxa-effort-ico svg {
+  width: 17px;
+  height: 17px;
+}
+
+.axxa-effort-modal .axxa-effort-intro {
+  margin: 0 0 var(--size-4-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
 /* Seção de FAMÍLIA dentro do papel (GPT-5, o-series, Llama…). É um BOTÃO:
    abre e fecha a classe inteira. Zera a pintura que o app.css dá a `button`
    (`button:not(.clickable-icon)`, 0,1,1) — aqui ele é um título, não um

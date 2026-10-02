@@ -42,7 +42,7 @@ import {
 import {
   EFFORT_LEVELS,
   EFFORT_LABELS,
-  EFFORT_DESCRIPTIONS,
+  describeEffort,
   type EffortLevel,
 } from "../core/effort";
 import type { AIToolStep } from "../agent/types";
@@ -1454,7 +1454,7 @@ Open Settings › Providers to add it, then run the connection test.`,
               <SheetRow
                 key={l}
                 title={EFFORT_LABELS[l]}
-                note={EFFORT_DESCRIPTIONS[l]}
+                note={describeEffort(l, plugin.settings.effortConfigs)}
                 tag={l === plugin.settings.defaultEffort ? "Default" : undefined}
                 selected={l === cfg.effort}
                 onClick={() => {
@@ -1768,7 +1768,7 @@ Open Settings › Providers to add it, then run the connection test.`,
             <SheetRow
               key={l}
               title={EFFORT_LABELS[l]}
-              note={EFFORT_DESCRIPTIONS[l]}
+              note={describeEffort(l, plugin.settings.effortConfigs)}
               tag={l === plugin.settings.defaultEffort ? "Default" : undefined}
               selected={l === cfg.effort}
               onClick={() => {

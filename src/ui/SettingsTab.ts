@@ -78,6 +78,12 @@ import { openActions } from "./menu";
 import { modelLogo } from "../providers/modelLogo";
 import { putThumb, seedThumb, thumbOf, type Thumb } from "./settings/thumb";
 import { pendenciaDoIndice } from "./settings/indice";
+import {
+  EffortLevelModal,
+  nivelEditado,
+  resumoDoNivel,
+} from "./settings/effortEditor";
+import { EFFORT_ICONS, type EffortLevel } from "../core/effort";
 
 /** Frase do botão Test — curta, pra não virar conta. */
 const SAMPLE_LINE = "This is the voice that will read your answers out loud.";
@@ -300,6 +306,8 @@ export class AxxaSettingsTab extends PluginSettingTab {
       ),
       pick: (key, items, tab) =>
         this.slot(`pick:${key}`, tab, (row) => this.paintPick(row, key, items)),
+      effortLevel: (level) =>
+        this.slot(`effort:${level}`, "chat", (row) => this.paintEffortLevel(row, level)),
       assistantModel: this.slot("assistant", "chat", (row) =>
         this.paintAssistantModel(row)
       ),
@@ -1102,6 +1110,31 @@ export class AxxaSettingsTab extends PluginSettingTab {
         this.refreshVisibility();
       },
     });
+  }
+
+  // ── Os níveis de esforço ──────────────────────────────────────────────────
+
+  /** Uma linha por nível: o desenho dele, os números que valem agora e o
+   *  botão que abre o editor (settings/effortEditor.ts). */
+  private paintEffortLevel(row: Setting, level: EffortLevel): void {
+    const s = this.s;
+    // O repaint do slot só limpa os controles: sem tirar o ícone da vez
+    // anterior, cada edição somaria mais um na frente do nome. E o ícone nasce
+    // DENTRO do nome (createSpan do próprio elemento) — o global criaria no
+    // documento da janela principal, e no desktop as settings são outra janela.
+    row.nameEl.querySelector(".axxa-effort-ico")?.remove();
+    const ico = row.nameEl.createSpan({ cls: "axxa-effort-ico" });
+    setIcon(ico, EFFORT_ICONS[level]);
+    row.nameEl.prepend(ico);
+    const editado = nivelEditado(s.effortConfigs, level);
+    row.setDesc(resumoDoNivel(s.effortConfigs, level) + (editado ? " · edited" : ""));
+    row.addButton((b) =>
+      b.setButtonText("Edit").onClick(() => {
+        new EffortLevelModal(this.app, this.plugin, level, () =>
+          this.repaint(`effort:${level}`)
+        ).open();
+      })
+    );
   }
 
   // ── A assistente de criação ───────────────────────────────────────────────
