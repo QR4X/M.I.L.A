@@ -12,12 +12,14 @@
 // Sem teto conhecido não há barra — uma barra inventada seria dado inventado;
 // fica o número do dia, e no Gemini o botão pra pessoa trazer o teto dela.
 //
-// Compacta de propósito: cada linha diz só a conta ("238 of 250 used"), e o
-// que explica o número — de onde ele vem, o que não pega, quando vira — fica
-// atrás do ⓘ do provider. À vista, as explicações dobravam a altura da seção
-// e empurravam o resto da página pra fora da tela do celular.
+// Cada provider é um ACORDEÃO. Fechado, só as barras: o "quanto sobra" de
+// relance, sem uma palavra — a cor avisa quando está acabando. Aberto, o
+// texto: os nomes, quanto sobra, a conta ("238 of 250 used"), o teto e a
+// explicação de onde vem o número. O que fica aberto é lembrado por vault,
+// neste aparelho: é preferência de tela, não dado.
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import type { App } from "obsidian";
 import type AxxaPlugin from "../main";
 import { getProvider } from "../providers";
 import type { EstadoDaChave } from "../providers/openrouter";
@@ -33,6 +35,27 @@ import {
 } from "../usage/sobraDoDia";
 import { providerIcon } from "./ChatList";
 import { Icon } from "./Icon";
+
+/** Onde mora (no localStorage do vault) quais blocos ficaram abertos. */
+const CHAVE_ABERTOS = "axxa-left-today-open";
+
+function lerAbertos(app: App): Set<string> {
+  try {
+    const v: unknown = app.loadLocalStorage(CHAVE_ABERTOS);
+    return new Set(Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function gravarAbertos(app: App, abertos: Set<string>): void {
+  try {
+    app.saveLocalStorage(CHAVE_ABERTOS, abertos.size ? Array.from(abertos) : null);
+  } catch {
+    // Sem armazenamento (janela privada, cota cheia): a escolha vale até a
+    // tela fechar, e só.
+  }
+}
 
 /** Pedidos são poucos e contados um a um: "1,000", não "1.0k". Tokens são
  *  muitos, e o compacto é o que se lê ("238k"). */
@@ -53,6 +76,12 @@ function dinheiro(n: number): string {
   return `$${n.toFixed(2)}`;
 }
 
+/** O nome de um medidor na tela: o do app pro modelo ("Gemini 2.5 Flash"),
+ *  o rótulo pro resto ("Flagship models"). */
+function nomeDo(m: Medidor): string {
+  return m.modelo ? prettyModelName(m.modelo) : m.rotulo;
+}
+
 export function LeftToday({ plugin }: { plugin: AxxaPlugin }) {
   const s = plugin.settings;
 
@@ -62,6 +91,15 @@ export function LeftToday({ plugin }: { plugin: AxxaPlugin }) {
     const t = window.setInterval(() => setAgora(new Date()), 60_000);
     return () => window.clearInterval(t);
   }, []);
+
+  const [abertos, setAbertos] = useState(() => lerAbertos(plugin.app));
+  const alternar = (provider: string) => {
+    const novo = new Set(abertos);
+    if (novo.has(provider)) novo.delete(provider);
+    else novo.add(provider);
+    setAbertos(novo);
+    gravarAbertos(plugin.app, novo);
+  };
 
   // O OpenRouter conta os grátis da CHAVE (qualquer app que a use): pergunta
   // ao abrir a tela e quando a pessoa pede de novo.
@@ -110,6 +148,8 @@ export function LeftToday({ plugin }: { plugin: AxxaPlugin }) {
           <CartaoDoDia
             key={c.provider}
             c={c}
+            aberto={abertos.has(c.provider)}
+            onAlternar={() => alternar(c.provider)}
             onSalvarLimite={salvarLimite}
             atualizar={
               c.provider === "openrouter" && chaveOR
@@ -123,106 +163,141 @@ export function LeftToday({ plugin }: { plugin: AxxaPlugin }) {
   );
 }
 
-/** Um provider: o nome, o ⓘ e quando o dia dele vira; os medidores; e, com o
- *  ⓘ aberto, a explicação. */
+/** Um provider: o cabeçalho que abre e fecha; fechado, as barras; aberto, o
+ *  texto todo. */
 function CartaoDoDia({
   c,
+  aberto,
+  onAlternar,
   onSalvarLimite,
   atualizar,
 }: {
   c: Cartao;
+  aberto: boolean;
+  onAlternar: () => void;
   onSalvarLimite: (chave: string, n: number | null) => void;
   /** Só o OpenRouter: perguntar de novo à chave. */
   atualizar?: { lendo: boolean; ir: () => void };
 }) {
-  const [explicando, setExplicando] = useState(false);
-  const idNota = `axxa-left-nota-${c.provider}`;
+  const idCorpo = `axxa-left-${c.provider}`;
+  // Fechado, só o que tem barra: um modelo sem teto não tem o que desenhar.
+  const comBarra = c.medidores.filter((m) => fracaoQueSobra(m) != null);
   return (
-    <div className="axxa-left-prov">
-      <div className="axxa-left-head">
+    <div className={aberto ? "axxa-left-prov is-open" : "axxa-left-prov"}>
+      <button
+        type="button"
+        className="axxa-left-head"
+        aria-expanded={aberto}
+        aria-controls={idCorpo}
+        onClick={onAlternar}
+      >
         <span className="axxa-card-mark" aria-hidden="true">
           <Icon name={providerIcon(c.provider)} size={20} />
         </span>
         <span className="axxa-left-name">{c.nome}</span>
-        {c.nota && (
-          <button
-            type="button"
-            className="axxa-left-info"
-            aria-label={`About ${c.nome}'s numbers`}
-            aria-expanded={explicando}
-            aria-controls={idNota}
-            onClick={() => setExplicando((v) => !v)}
+        {aberto && (c.viraEm != null || c.semDia) && (
+          <span
+            className="axxa-left-reset"
+            title={c.viraOnde ? `Resets at ${c.viraOnde}` : undefined}
           >
-            <Icon name="info" />
-          </button>
+            {c.viraEm != null ? `resets in ${emQuanto(c.viraEm)}` : c.semDia}
+          </span>
         )}
-        <span
-          className="axxa-left-reset"
-          title={c.viraOnde ? `Resets at ${c.viraOnde}` : undefined}
-        >
-          {c.viraEm != null ? `resets in ${emQuanto(c.viraEm)}` : (c.semDia ?? "")}
+        <span className="axxa-left-chev" aria-hidden="true">
+          <Icon name="chevron-down" />
         </span>
-        {atualizar && (
-          <button
-            type="button"
-            className="axxa-icon-btn axxa-left-refresh"
-            aria-label="Ask OpenRouter again"
-            title="Ask OpenRouter again"
-            disabled={atualizar.lendo}
-            onClick={atualizar.ir}
-          >
-            <Icon name={atualizar.lendo ? "loader" : "refresh-cw"} />
-          </button>
-        )}
-      </div>
-      {explicando && c.nota && (
-        <p className="axxa-left-note" id={idNota} role="note">
-          {c.nota}
-          {c.link && (
-            <>
-              {" "}
-              <a
-                className="axxa-left-link"
-                href={c.link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {c.link.rotulo}
-              </a>
-            </>
+      </button>
+
+      {aberto ? (
+        <div className="axxa-left-body" id={idCorpo}>
+          {c.vazio && <p className="axxa-left-note">{c.vazio}</p>}
+          {c.medidores.map((m) => (
+            <LinhaDoMedidor
+              key={m.id}
+              m={m}
+              ajuda={c.link}
+              atualizar={m.id === "openrouter-free" ? atualizar : undefined}
+              onSalvarLimite={onSalvarLimite}
+            />
+          ))}
+          {c.credito && <LinhaDoCredito credito={c.credito} />}
+          {c.nota && (
+            <p className="axxa-left-note">
+              {c.nota}
+              {c.link && (
+                <>
+                  {" "}
+                  <a
+                    className="axxa-left-link"
+                    href={c.link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {c.link.rotulo}
+                  </a>
+                </>
+              )}
+            </p>
           )}
-        </p>
+        </div>
+      ) : (
+        comBarra.length > 0 && (
+          // Tocar nas barras também abre — o botão de verdade (pro teclado e
+          // pro leitor de tela) é o cabeçalho, logo acima.
+          <div className="axxa-left-bars" id={idCorpo} onClick={onAlternar}>
+            {comBarra.map((m) => (
+              <Barra key={m.id} m={m} />
+            ))}
+          </div>
+        )
       )}
-      {c.vazio && <p className="axxa-left-note">{c.vazio}</p>}
-      {c.medidores.map((m) => (
-        <LinhaDoMedidor
-          key={m.id}
-          m={m}
-          ajuda={c.link}
-          onSalvarLimite={onSalvarLimite}
-        />
-      ))}
-      {c.credito && <LinhaDoCredito credito={c.credito} />}
     </div>
   );
 }
 
 /**
- * Um medidor: o nome e o que sobra na linha de cima, a barra embaixo (só com
- * teto conhecido), e a conta no pé — "238 of 250 requests used".
+ * A barra de um medidor — a mesma fechado (sozinha) e aberto (na linha). O
+ * nível (quase no fim, acabou) mora NELA: fechado, ela é o único aviso. O
+ * leitor de tela ouve o número que o olho não vê.
+ */
+function Barra({ m }: { m: Medidor }) {
+  const f = fracaoQueSobra(m);
+  if (f == null || m.limite == null || m.restante == null) return null;
+  const n = nivel(m);
+  const texto = `${nomeDo(m)}: ${numero(m.restante, m.unidade)} of ${numero(m.limite, m.unidade)} left`;
+  return (
+    <span
+      className={n ? `axxa-left-bar is-${n}` : "axxa-left-bar"}
+      role="meter"
+      aria-valuemin={0}
+      aria-valuemax={m.limite}
+      aria-valuenow={m.restante}
+      aria-label={texto}
+      title={texto}
+    >
+      <span className="axxa-left-fill" style={{ "--axxa-left": f } as CSSProperties} />
+    </span>
+  );
+}
+
+/**
+ * Um medidor aberto: o nome e o que sobra na linha de cima, a barra embaixo
+ * (só com teto conhecido), e a conta no pé — "238 of 250 requests used".
  */
 function LinhaDoMedidor({
   m,
   ajuda,
+  atualizar,
   onSalvarLimite,
 }: {
   m: Medidor;
   /** Onde a pessoa acha o teto que vai informar (o AI Studio). */
   ajuda?: { rotulo: string; url: string };
+  /** Os grátis do OpenRouter: perguntar de novo à chave. */
+  atualizar?: { lendo: boolean; ir: () => void };
   onSalvarLimite: (chave: string, n: number | null) => void;
 }) {
-  const nome = m.modelo ? prettyModelName(m.modelo) : m.rotulo;
-  const f = fracaoQueSobra(m);
+  const nome = nomeDo(m);
   const n = nivel(m);
   const valor =
     m.restante != null
@@ -239,29 +314,28 @@ function LinhaDoMedidor({
     <div className={n ? `axxa-left-row is-${n}` : "axxa-left-row"}>
       <span className="axxa-left-row-name">{nome}</span>
       <span className="axxa-left-row-value">{valor}</span>
-      {f != null && m.limite != null && m.restante != null && (
-        <span
-          className="axxa-left-bar"
-          role="meter"
-          aria-valuemin={0}
-          aria-valuemax={m.limite}
-          aria-valuenow={m.restante}
-          aria-label={`${nome}: ${valor} of ${numero(m.limite, m.unidade)}`}
-        >
-          <span
-            className="axxa-left-fill"
-            style={{ "--axxa-left": f } as CSSProperties}
-          />
-        </span>
-      )}
+      <Barra m={m} />
       {pe && <span className="axxa-left-row-sub">{pe}</span>}
-      {m.limiteEditavel && (
+      {m.limiteEditavel ? (
         <EditorDeLimite
           atual={m.limite}
           nome={nome}
           ajuda={ajuda}
           onSalvar={(v) => onSalvarLimite(m.limiteEditavel!, v)}
         />
+      ) : (
+        atualizar && (
+          <button
+            type="button"
+            className="axxa-home-filter is-accent axxa-left-action"
+            aria-label="Ask OpenRouter again"
+            disabled={atualizar.lendo}
+            onClick={atualizar.ir}
+          >
+            <Icon name={atualizar.lendo ? "loader" : "refresh-cw"} size={14} />
+            <span>{atualizar.lendo ? "Asking…" : "Refresh"}</span>
+          </button>
+        )
       )}
     </div>
   );

@@ -1916,10 +1916,11 @@ body.theme-dark {
 
 /* ── o que sobra hoje ──────────────────────────────────────────────────
    A seção do topo da página de Uso (ver LeftToday.tsx): um cartão de lista,
-   um bloco por provider. O bloco abre com o logo e o nome — o mesmo brasão
-   do cartão de conversa — e os medidores ficam RECUADOS até a coluna do
-   nome: a hierarquia (provider › modelo) se lê pelo alinhamento, sem um
-   título a mais. */
+   um bloco por provider. Cada bloco é um ACORDEÃO: fechado, o cabeçalho e as
+   barras — o "quanto sobra" de relance, sem uma palavra; aberto, o texto
+   (nomes, valores, a conta, o teto, a explicação). Os medidores ficam
+   RECUADOS até a coluna do nome: a hierarquia (provider › modelo) se lê pelo
+   alinhamento, sem um título a mais. */
 .axxa-root .axxa-left-prov {
   display: flex;
   flex-direction: column;
@@ -1931,20 +1932,36 @@ body.theme-dark {
   border-top: 1px solid var(--axxa-hairline);
 }
 
-.axxa-root .axxa-left-head {
+/* O cabeçalho É o botão de abrir e fechar: a linha inteira, alvo grande pro
+   dedo. Sem cara de botão — o app.css dá a todo <button> fundo, sombra,
+   altura fixa e padding, e nada disso cabe numa linha de lista. */
+.axxa-root button.axxa-left-head {
   display: flex;
   align-items: center;
   gap: var(--axxa-2);
+  width: 100%;
   min-width: 0;
-  /* A altura do botão de perguntar de novo (o do OpenRouter), pra o bloco
-     com ele e o bloco sem ele começarem do mesmo jeito. */
+  height: auto;
   min-height: var(--axxa-tap);
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--text-normal);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-/* O nome NÃO estica: quem empurra o relógio pra ponta é o ⓘ (a margem
-   automática dele), colado no nome como no editor de esforço. */
+.axxa-root button.axxa-left-head:hover {
+  background-color: transparent;
+  box-shadow: none;
+}
+
 .axxa-root .axxa-left-name {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -1954,45 +1971,53 @@ body.theme-dark {
   font-weight: var(--font-semibold);
 }
 
-/* O ⓘ do provider: abre a explicação do número logo abaixo do cabeçalho,
-   empurrando os medidores (um balão por cima seria cortado pela borda do
-   cartão, que recorta o que passa dela). Muted, não faint: mora num cartão.
-   Sem ⓘ (cartão sem explicação), quem empurra o relógio é ele mesmo. */
-.axxa-root button.axxa-left-info {
-  --icon-size: 14px;
-  flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
-  margin-inline-end: auto;
-  padding: 0;
-  background-color: transparent;
-  box-shadow: none;
-  color: var(--text-muted);
-}
-
-.axxa-root button.axxa-left-info:hover {
-  background-color: transparent;
-  color: var(--text-normal);
-}
-
-.axxa-root button.axxa-left-info[aria-expanded="true"] {
-  color: var(--text-accent);
-}
-
 /* Quando o dia DELE vira — cada provider vira num fuso, e "em 9h" poupa a
-   conta de fuso de quem lê. Muted: mora num cartão. */
+   conta de fuso de quem lê. Só com o bloco aberto: é texto. Muted: mora num
+   cartão. */
 .axxa-root .axxa-left-reset {
   flex: 0 0 auto;
-  margin-inline-start: auto;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-/* O botão mora na ponta da linha do nome; o vão do cabeçalho já separa. */
-.axxa-root .axxa-left-refresh {
-  margin: calc(var(--axxa-1) * -1) calc(var(--axxa-1) * -1) calc(var(--axxa-1) * -1) 0;
+/* A seta do acordeão, a mesma da lista de modelos das settings: pra baixo
+   aberto, pro lado fechado. */
+.axxa-root .axxa-left-chev {
+  --icon-size: 16px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  transition: transform 140ms ease;
+}
+
+.axxa-root .axxa-left-prov:not(.is-open) .axxa-left-chev {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .axxa-root .axxa-left-chev {
+    transition: none;
+  }
+}
+
+/* Fechado: só as barras, empilhadas na coluna do nome. Tocar nelas também
+   abre — é onde o olho (e o dedo) já está. */
+.axxa-root .axxa-left-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: calc(28px + var(--axxa-2));
+  cursor: pointer;
+}
+
+/* Aberto: o texto todo. */
+.axxa-root .axxa-left-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--axxa-2);
 }
 
 /* Um medidor: nome e valor em cima, a barra no meio (inteira), a conta e a
@@ -2046,11 +2071,18 @@ body.theme-dark {
   background-color: var(--interactive-accent);
 }
 
-/* Perto do fim (≤ 10%) a barra avisa; no zero, o NÚMERO avisa — a barra
-   vazia já não tem cor pra mostrar. A palavra ("0 left") vem junto: cor
-   nunca é o único sinal. */
-.axxa-root .axxa-left-row.is-baixo .axxa-left-fill {
+/* Perto do fim (≤ 10%) a barra avisa — e com o bloco fechado ela é o ÚNICO
+   aviso, então o nível mora na barra, não na linha. No zero a barra fica
+   vazia; aberto, o NÚMERO avisa, e a palavra ("0 left") vem junto: cor nunca
+   é o único sinal. */
+.axxa-root .axxa-left-bar.is-baixo .axxa-left-fill {
   background-color: var(--text-warning, #e0a030);
+}
+
+/* Fechado, a barra zerada não teria cor nenhuma pra mostrar: o trilho é que
+   avisa. */
+.axxa-root .axxa-left-bar.is-fim {
+  background-color: color-mix(in srgb, var(--text-error) 30%, transparent);
 }
 
 .axxa-root .axxa-left-row.is-baixo .axxa-left-row-value {
@@ -2070,6 +2102,7 @@ body.theme-dark {
 }
 
 .axxa-root .axxa-left-action {
+  --icon-size: 14px;
   grid-column: 2;
   justify-self: end;
 }
@@ -2096,8 +2129,8 @@ body.theme-dark {
   font-variant-numeric: tabular-nums;
 }
 
-/* O rodapé do bloco: de onde vem o número e o que ele não conta. Recuado
-   como os medidores — é deles que ele fala. */
+/* A explicação do bloco (de onde vem o número, o que ele não conta) e o
+   "por que está vazio". Recuada como os medidores — é deles que ela fala. */
 .axxa-root .axxa-left-note {
   margin: 0;
   padding-left: calc(28px + var(--axxa-2));
