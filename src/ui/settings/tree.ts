@@ -491,11 +491,13 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       "Interface, chat errors — and the language the model answers in. The creation assistant follows it too.",
       "language",
       () =>
-        LOCALES.map((l) => ({
-          value: l.id,
-          label: l.label,
-          glyph: l.id.slice(0, 2).toUpperCase(),
-        })),
+        LOCALES.map((l) =>
+          // O Auto não é um idioma: ganha o desenho de "idiomas", e os de
+          // verdade o código (EN, PT).
+          l.id === "auto"
+            ? { value: l.id, label: l.label, icon: "languages" }
+            : { value: l.id, label: l.label, glyph: l.id.slice(0, 2).toUpperCase() }
+        ),
       { aliases: ["idioma", "língua", "portuguese", "português"] }
     ),
   ]);

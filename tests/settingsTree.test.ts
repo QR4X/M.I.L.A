@@ -365,9 +365,10 @@ describe("a aba Chat só tem menus de escolha com ícone", () => {
     expect(modo.itens.map((i) => i.label)).toEqual(["Chat", "Vault Q&A", "Agent"]);
   });
 
-  it("idiomas usam o código no lugar do ícone", () => {
+  it("idiomas usam o código no lugar do ícone (o Auto, o desenho de idiomas)", () => {
     const lang = pegos.find((p) => p.key === "language")!;
-    expect(lang.itens.map((i) => i.glyph)).toEqual(["EN", "PT"]);
+    expect(lang.itens.map((i) => i.glyph)).toEqual([undefined, "EN", "PT"]);
+    expect(lang.itens[0].icon).toBe("languages");
   });
 });
 

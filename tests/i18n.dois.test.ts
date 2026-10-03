@@ -78,7 +78,11 @@ describe("getTranslations", () => {
     expect(getTranslations("")).toBe(EN_US);
   });
 
-  it("a lista de idiomas tem os dois, e só os dois", () => {
-    expect(LOCALES.map((l) => l.id)).toEqual(["en-us", "pt-br"]);
+  it("a lista tem o Auto (segue o Obsidian) e os dois idiomas, e só eles", () => {
+    expect(LOCALES.map((l) => l.id)).toEqual(["auto", "en-us", "pt-br"]);
+  });
+
+  it("o Auto entrega o dicionário do idioma do Obsidian (o stub diz inglês)", () => {
+    expect(getTranslations("auto")).toBe(EN_US);
   });
 });
