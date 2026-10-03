@@ -219,6 +219,7 @@ Ideias e votos ficam em [Discussions › Ideas](https://github.com/axxalab/axxa-
 - Tem uma pergunta? [Pergunte no Discussions](https://github.com/axxalab/axxa-agent/discussions).
 - Fez uma skill útil? Skills são arquivos `.md`, então compartilhe a sua no Discussions.
 - Se o AXXA te ajuda, uma estrela no GitHub ajuda outras pessoas a acharem ele.
+- Quer apoiar com dinheiro? [Patrocine no GitHub](https://github.com/sponsors/rafaelpsyik), por mês ou uma vez só. Não libera nada: tudo continua grátis. Outros jeitos de ajudar estão na [página de apoio](https://agent.axxalab.com.br/pt/apoiar).
 
 ## Licença
 
