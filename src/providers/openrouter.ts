@@ -63,6 +63,15 @@ import { getModelCapabilities } from "./modelCapabilities";
 
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_MODELS_ENDPOINT = "https://openrouter.ai/api/v1/models";
+/** Os modelos de embedding moram aqui desde 2026 (fora do catálogo geral). */
+const OPENROUTER_EMBEDDING_MODELS_ENDPOINT = "https://openrouter.ai/api/v1/embeddings/models";
+
+/** O endereço da próxima página de uma listagem do OpenRouter, se houver. */
+export function proximaPagina(json: unknown): string | null {
+  const next = (json as { links?: { next?: unknown } } | null)?.links?.next;
+  return typeof next === "string" && /^https:\/\/openrouter\.ai\//.test(next) ? next : null;
+}
+
 /** A chave (limites, créditos, cota dos grátis). */
 const OPENROUTER_KEY_ENDPOINT = "https://openrouter.ai/api/v1/key";
 
@@ -296,18 +305,37 @@ export class OpenRouterProvider implements Provider {
 
   /** Modelos de EMBEDDING do catálogo (pro RAG). Mantém os :free (o embedding
    *  multimodal da NVIDIA no OpenRouter é :free). Graceful: [] em erro/no-key. */
+  /**
+   * Os modelos de EMBEDDING. Eles têm endereço próprio desde 2026
+   * (`/api/v1/embeddings/models`) e saíram do catálogo geral — pelo caminho
+   * antigo o fetch voltava sem nenhum. Ali todos são de embedding, então não
+   * se filtra por nome (`baai/bge-m3` não tem "embed" no nome). Paginado:
+   * segue o `links.next` por algumas páginas. Se o endereço novo falhar,
+   * tenta o antigo, filtrando pelo nome.
+   */
   async listEmbeddingModels(apiKey: string): Promise<string[]> {
     if (!apiKey || !apiKey.trim()) return [];
+    const headers = { Authorization: `Bearer ${apiKey.trim()}`, ...APP_HEADERS };
     try {
-      const res = await requestUrl({
-        url: OPENROUTER_MODELS_ENDPOINT,
-        method: "GET",
-        headers: { Authorization: `Bearer ${apiKey.trim()}`, ...APP_HEADERS },
-        throw: false,
-      });
+      const ids: string[] = [];
+      let url: string | null = OPENROUTER_EMBEDDING_MODELS_ENDPOINT;
+      for (let pagina = 0; url && pagina < 5; pagina++) {
+        const res = await requestUrl({ url, method: "GET", headers, throw: false });
+        if (res.status < 200 || res.status >= 300) break;
+        ids.push(...modelosDo(res.json).map((m) => m.id));
+        url = proximaPagina(res.json);
+      }
+      if (ids.length > 0) return [...new Set(ids)].sort();
+    } catch {
+      // cai no caminho antigo
+    }
+    try {
+      const res = await requestUrl({ url: OPENROUTER_MODELS_ENDPOINT, method: "GET", headers, throw: false });
       if (res.status < 200 || res.status >= 300) return [];
-      const all = modelosDo(res.json).map((m) => m.id);
-      return all.filter(isEmbeddingModelId).sort();
+      return modelosDo(res.json)
+        .map((m) => m.id)
+        .filter(isEmbeddingModelId)
+        .sort();
     } catch {
       return [];
     }
