@@ -223,16 +223,33 @@ export interface ModelFullInfo {
 export function prettyModelName(id: string): string {
   let s = (id || "").trim();
   if (s.includes("/")) s = s.slice(s.lastIndexOf("/") + 1); // vendor/model → model
-  if (s.includes(":")) s = s.slice(0, s.indexOf(":")); // tira tag tipo :latest
+  // A tag do Ollama sai (":latest", ":q4_K_M")… menos quando é o TAMANHO
+  // (":3b", ":0.6b"): aí é ela que diz qual dos modelos da família é este.
+  let tamanhoDaTag = "";
+  if (s.includes(":")) {
+    const tag = s.slice(s.indexOf(":") + 1);
+    s = s.slice(0, s.indexOf(":"));
+    if (/^\d+(\.\d+)?[bm]$/i.test(tag)) tamanhoDaTag = tag;
+  }
   s = s.replace(/^(claude-|models-)/, "");
-  s = s.replace(/(\d)-(\d)/g, "$1.$2"); // versões: 4-8 → 4.8
+  // Versões: 4-8 → 4.8. Mas NÃO quando o lado direito é um tamanho (o "11b"
+  // de llama-3.2-11b, o "27b" de gemma-3-27b): juntar fazia "Llama 3.2.11b".
+  s = s.replace(/(\d)-(\d+)(?![\d.]*[a-z])/gi, "$1.$2");
   s = s.replace(/[-_]/g, " ").trim();
-  return s
-    .split(/\s+/)
-    .map((w) => {
-      if (/^gpt$/i.test(w)) return "GPT";
-      if (/^\d/.test(w)) return w; // números de versão / 4o
-      return w.charAt(0).toUpperCase() + w.slice(1);
-    })
-    .join(" ");
+  const palavras = s.split(/\s+/).map((w) => {
+    if (/^gpt$/i.test(w)) return "GPT";
+    // Tamanho em parâmetros: 11b → 11B, 135m → 135M, 8x7b → 8x7B, a22b → A22B
+    if (/^\d+(\.\d+)?[bmk]$/i.test(w) || /^\d+x\d+(\.\d+)?b$/i.test(w)) {
+      return w.slice(0, -1) + w.slice(-1).toUpperCase();
+    }
+    if (/^a\d+(\.\d+)?b$/i.test(w)) return w.toUpperCase();
+    if (/^it$/i.test(w)) return "IT"; // "instruction tuned", como o Google escreve
+    if (/^\d/.test(w)) return w; // números de versão / 4o
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  });
+  if (tamanhoDaTag) {
+    const tam = tamanhoDaTag.slice(0, -1) + tamanhoDaTag.slice(-1).toUpperCase();
+    if (!palavras.includes(tam)) palavras.push(tam);
+  }
+  return palavras.join(" ");
 }
