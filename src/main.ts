@@ -48,7 +48,8 @@ import { ProviderError } from "./providers/base";
 import { esquecerDesfazeres } from "./agent/undo";
 import { registrarComandosDoEditor } from "./editor/comandos";
 import { esquecerPedidos } from "./editor/ponte";
-import { LOCALES } from "./i18n";
+import { LOCALES, resolverIdioma } from "./i18n";
+import { definirIdiomaDaInterface } from "./i18n/tr";
 
 /** Resultado do último teste de credencial de um provider. */
 export interface ProviderStatus {
@@ -298,7 +299,9 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   defaultMode: "chat",
   defaultEffort: "med",
   effortConfigs: {},
-  language: "en-us",
+  // Quem instala agora começa no idioma do Obsidian; quem já tinha o
+  // data.json fica com o que estava gravado.
+  language: "auto",
   // Dado do app vai pra pasta OCULTA (ver core/vaultPaths.ts): o Obsidian
   // ignora pasta com ponto, então conversa some da busca, do explorador e do
   // grafo. Skills NÃO vão: skill é nota que a pessoa escreve, e escondida ela
@@ -833,7 +836,7 @@ export default class AxxaPlugin extends Plugin {
               // Só avisa UMA vez por dispositivo — senão o Notice volta a cada
               // onload enquanto o índice continuar grande. v0.1.228
               if (this.settings.ragMobileSkipNoticeShown) return;
-              const en = this.settings.language === "en-us";
+              const en = resolverIdioma(this.settings.language) === "en-us";
               new Notice(
                 en
                   ? `RAG index too large for mobile (${mb.toFixed(0)} MB) — semantic search is off here to avoid a crash. Use desktop or shrink the index.`
@@ -1254,7 +1257,7 @@ export default class AxxaPlugin extends Plugin {
 
     if (leaf) void workspace.revealLeaf(leaf);
     else {
-      const en = this.settings.language === "en-us";
+      const en = resolverIdioma(this.settings.language) === "en-us";
       new Notice(
         en
           ? "Couldn't open the AXXA panel — try toggling the right sidebar."
@@ -1374,7 +1377,8 @@ export default class AxxaPlugin extends Plugin {
     // explicaria por quê. Um valor que não conhecemos cai no inglês na hora de
     // traduzir (ver i18n/index.ts), então não precisa ser consertado aqui.
     if (!LOCALES.some((l) => l.id === this.settings.language))
-      this.settings.language = "en-us";
+      this.settings.language = "auto";
+    definirIdiomaDaInterface(resolverIdioma(this.settings.language));
     // O Ollama não vem mais ligado de fábrica. Quem herdou o endereço padrão
     // gravado e nunca usou o Ollama volta pro vazio — uma vez só: a marca vai
     // pro disco na próxima gravação, e daí um localhost digitado de propósito
@@ -1563,7 +1567,7 @@ export default class AxxaPlugin extends Plugin {
       // que deu certo — aí é um problema novo.
       if (!this.avisoDeSaveDado) {
         this.avisoDeSaveDado = true;
-        const en = this.settings.language === "en-us";
+        const en = resolverIdioma(this.settings.language) === "en-us";
         new Notice(
           en
             ? "AXXA could not save your settings — the change is active now but will be lost when you reopen Obsidian. Check the vault's disk space and permissions."
@@ -1573,6 +1577,9 @@ export default class AxxaPlugin extends Plugin {
       }
       return;
     }
+    // O idioma da interface muda ANTES de avisar: quem re-renderiza já pega
+    // o texto novo.
+    definirIdiomaDaInterface(resolverIdioma(this.settings.language));
     // Avisa quem tá escutando (ex.: AxxaApp pra re-renderizar com novo idioma)
     this.settingsListeners.forEach((cb) => {
       try {

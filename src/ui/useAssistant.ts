@@ -8,6 +8,7 @@
 // ou uma frase dizendo por que não deu.
 
 import { useCallback, useMemo } from "react";
+import { resolverIdioma } from "../i18n";
 import type AxxaPlugin from "../main";
 import { getProvider } from "../providers";
 import {
@@ -59,7 +60,7 @@ function icones(curtos: readonly string[]): string[] {
 export function useAssistant(plugin: AxxaPlugin) {
   const s = plugin.settings;
   /** O idioma do app — e o único em que ela responde (ver prompt.ts). */
-  const idioma = idiomaDoApp(s.language);
+  const idioma = idiomaDoApp(resolverIdioma(s.language));
 
   const alvo = useMemo(
     () =>

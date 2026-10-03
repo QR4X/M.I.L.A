@@ -27,7 +27,7 @@ import {
 } from "../store/chat";
 import { getProvider } from "../providers";
 import { modeloSalvoPara } from "./modeloPadrao";
-import { getTranslations } from "../i18n";
+import { getTranslations, resolverIdioma } from "../i18n";
 import {
   saveChat,
   loadChat,
@@ -734,7 +734,7 @@ export class ChatSession {
     console.error("[axxa] não consegui gravar a conversa:", err);
     if (this.avisoDeGravacaoDado) return;
     this.avisoDeGravacaoDado = true;
-    const en = this.plugin.settings.language === "en-us";
+    const en = resolverIdioma(this.plugin.settings.language) === "en-us";
     new Notice(
       en
         ? "AXXA could not save this chat to your vault — what you see here is not on disk yet. Check the vault's disk space and permissions."

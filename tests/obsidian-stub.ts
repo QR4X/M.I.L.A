@@ -63,6 +63,10 @@ export class TFolder {}
 export class Component {}
 export const MarkdownRenderer = { render: async () => {} };
 export function setIcon(): void {}
+// O idioma do Obsidian (o "auto" da interface segue ele).
+export function getLanguage(): string {
+  return "en";
+}
 // Mutável nos testes: por padrão "desktop"; vire isMobile=true pra testar o
 // caminho mobile (ex: arquivo de índice separado).
 export const Platform = { isMobile: false };

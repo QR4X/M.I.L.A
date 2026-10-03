@@ -10,6 +10,7 @@
 //   notice(t.settings.modelSetNotice(modelName));
 
 import { createContext, useContext } from "react";
+import { getLanguage } from "obsidian";
 import { EN_US, type Translations } from "./en-us";
 import { PT_BR } from "./pt-br";
 
@@ -19,9 +20,28 @@ export type { Translations } from "./en-us";
  *  e a assistente de criação leem daqui, pra não haver um terceiro por
  *  descuido (ver assistant/prompt.ts: idiomaDoApp). */
 export const LOCALES = [
+  { id: "auto", label: "Same as Obsidian" },
   { id: "en-us", label: "English" },
   { id: "pt-br", label: "Português (Brasil)" },
 ] as const;
+
+/**
+ * O idioma de verdade: "auto" segue o do Obsidian (português em qualquer
+ * variante vira pt-BR, o resto inglês); o resto é o que a pessoa escolheu.
+ */
+export function resolverIdioma(locale: string): "en-us" | "pt-br" {
+  if (locale === "pt-br" || locale === "en-us") return locale;
+  if (locale === "auto") {
+    let doObsidian = "en";
+    try {
+      doObsidian = getLanguage() || "en";
+    } catch {
+      // Obsidian antigo sem getLanguage: inglês.
+    }
+    return /^pt/i.test(doObsidian) ? "pt-br" : "en-us";
+  }
+  return "en-us";
+}
 
 const DICIONARIOS: Record<string, Translations> = {
   "en-us": EN_US,
@@ -36,7 +56,7 @@ const DICIONARIOS: Record<string, Translations> = {
  * digitado errado não pode derrubar o app.
  */
 export function getTranslations(locale: string): Translations {
-  return DICIONARIOS[locale] ?? EN_US;
+  return DICIONARIOS[resolverIdioma(locale)] ?? EN_US;
 }
 
 /** Context React — AxxaApp envolve toda a árvore com o locale ativo. */
