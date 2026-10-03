@@ -18,6 +18,7 @@
 
 import { useEffect, useRef } from "react";
 import { Icon } from "./Icon";
+import { tr } from "../i18n/tr";
 
 export function SearchField({
   value,
@@ -73,7 +74,7 @@ export function SearchField({
         </span>
         {procurando && found !== undefined && (
           <span className="axxa-search-found">
-            {found === 1 ? "1 found" : `${found} found`}
+            {found === 1 ? tr("1 found") : tr("{n} found", { n: found })}
           </span>
         )}
       </button>
@@ -97,8 +98,8 @@ export function SearchField({
               quebrada também, com o aviso de que ali virou busca literal.
               Trocar o número pelo aviso deixava a pessoa sem saber se achou
               alguma coisa. */}
-          {invalid ? "literal · " : ""}
-          {found === 1 ? "1 found" : `${found} found`}
+          {invalid ? `${tr("literal")} · ` : ""}
+          {found === 1 ? tr("1 found") : tr("{n} found", { n: found })}
         </span>
       )}
     </label>

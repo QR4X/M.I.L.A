@@ -69,13 +69,14 @@ import { PROVIDERS } from "../core/providersMeta";
 import { prettyModelName } from "../providers/modelDescriptions";
 import { modelLogo } from "../providers/modelLogo";
 import { LeftToday } from "./LeftToday";
+import { marca, tr } from "../i18n/tr";
 
 /** Janelas do período, em dias (0 = tudo). O id é o número em texto. */
 const PERIODOS = [
-  { id: "0", label: "All time" },
-  { id: "7", label: "7 days" },
-  { id: "30", label: "30 days" },
-  { id: "90", label: "90 days" },
+  { id: "0", label: marca("All time") },
+  { id: "7", label: marca("7 days") },
+  { id: "30", label: marca("30 days") },
+  { id: "90", label: marca("90 days") },
 ];
 
 /** Quantas conversas a lista do topo mostra. */
@@ -87,9 +88,9 @@ const BUSCA_A_PARTIR = 8;
 
 /** Como o passo do gráfico se chama na tela. */
 const PASSO: Record<Passo, string> = {
-  day: "Daily",
-  week: "Weekly",
-  month: "Monthly",
+  day: marca("Daily"),
+  week: marca("Weekly"),
+  month: marca("Monthly"),
 };
 
 /** Os filtros de lista: o que cada dimensão marca, como se chama e se desenha. */
@@ -141,14 +142,17 @@ export function UsageView({
     titulo: string;
     /** O título da lista inteira ("Models"). */
     plural: string;
+    /** O campo de busca da lista inteira ("Search models"). */
+    busca: string;
     ops: Opcao[];
     nome: (id: string) => string;
     icone: (id: string) => string;
   }> = [
     {
       chave: "providers",
-      titulo: "Provider",
-      plural: "Providers",
+      titulo: tr("Provider"),
+      plural: tr("Providers"),
+      busca: tr("Search providers"),
       ops: porProvider,
       nome: (id) => PROVIDERS.find((p) => p.id === id)?.name ?? id,
       icone: providerIcon,
@@ -157,16 +161,18 @@ export function UsageView({
     // provider chama; no resto do app ele é "Sonnet 4.6".
     {
       chave: "models",
-      titulo: "Model",
-      plural: "Models",
+      titulo: tr("Model"),
+      plural: tr("Models"),
+      busca: tr("Search models"),
       ops: porModelo,
       nome: prettyModelName,
       icone: modelLogo,
     },
     {
       chave: "modes",
-      titulo: "Mode",
-      plural: "Modes",
+      titulo: tr("Mode"),
+      plural: tr("Modes"),
+      busca: tr("Search modes"),
       ops: porModo,
       nome: moduleLabel,
       icone: moduleIcon,
@@ -203,14 +209,16 @@ export function UsageView({
   // continuam valendo nele. Sem isto, os números da folha não batem com
   // nada que a pessoa consiga apontar.
   const escopo = [
-    f.days === 0 ? "All time" : `Last ${f.days} days`,
+    f.days === 0 ? tr("All time") : tr("Last {n} days", { n: f.days }),
     ...dimensoes
       .filter((d) => d.chave !== lista)
       .flatMap((d) => f[d.chave].map(d.nome)),
     contagem(aggLista.total.chats),
     mLista === "cost"
       ? formatUsdRounded(aggLista.total.cost)
-      : `${formatCompact(aggLista.total.tokensIn + aggLista.total.tokensOut)} tokens`,
+      : tr("{n} tokens", {
+          n: formatCompact(aggLista.total.tokensIn + aggLista.total.tokensOut),
+        }),
   ];
 
   const verTodos = (d: Dimensao) => {
@@ -230,13 +238,13 @@ export function UsageView({
         f.days,
         plugin.settings.chatsPath
       );
-      new Notice(`Report saved: ${r.path}`);
+      new Notice(tr("Report saved: {path}", { path: r.path }));
     } catch (err) {
       console.error("[axxa] salvar report falhou:", err);
       new Notice(
-        `Could not save the report: ${
-          err instanceof Error ? err.message : String(err)
-        }`
+        tr("Could not save the report: {error}", {
+          error: err instanceof Error ? err.message : String(err),
+        })
       );
     } finally {
       setSalvando(false);
@@ -256,12 +264,12 @@ export function UsageView({
         <button
           type="button"
           className="axxa-icon-btn"
-          aria-label="Back"
+          aria-label={tr("Back")}
           onClick={onBack}
         >
           <Icon name="arrow-left" />
         </button>
-        <span className="axxa-brand axxa-topbar-brand">Usage</span>
+        <span className="axxa-brand axxa-topbar-brand">{tr("Usage")}</span>
         {/* O relatório é a SAÍDA desta tela, e mora na barra, como o "New"
             das folhas: ele cria uma nota, e no app accent é o que cria.
             Flutuando embaixo, ele cobria justamente a lista que a pessoa
@@ -269,13 +277,13 @@ export function UsageView({
         <button
           type="button"
           className="axxa-topbar-action axxa-topbar-end"
-          aria-label="Save this report as a note"
-          title="Save this report as a note"
+          aria-label={tr("Save this report as a note")}
+          title={tr("Save this report as a note")}
           disabled={salvando || vazio}
           onClick={() => void salvarRelatorio()}
         >
           <Icon name={salvando ? "loader" : "file-down"} size={18} />
-          <span>{salvando ? "Saving…" : "Report"}</span>
+          <span>{salvando ? tr("Saving…") : tr("Report")}</span>
         </button>
       </header>
 
@@ -288,16 +296,16 @@ export function UsageView({
         {/* O período é a régua de tudo o que vem DEPOIS dele — o total, a
             média, os modelos e a lista mudam com ele. */}
         <Segmented
-          options={PERIODOS}
+          options={PERIODOS.map((p) => ({ ...p, label: tr(p.label) }))}
           value={String(f.days)}
-          label="Period"
+          label={tr("Period")}
           // Período é UM: duas janelas ao mesmo tempo não querem dizer nada.
           onChange={(id) => setF({ ...f, days: Number(id) })}
         />
 
         {/* A resposta da pergunta que a pessoa acabou de fazer com o
             recorte. */}
-        <section className="axxa-usage is-hero" aria-label="Totals">
+        <section className="axxa-usage is-hero" aria-label={tr("Totals")}>
           <span className="axxa-usage-meta">
             <span className="axxa-usage-big">
               {m === "cost"
@@ -305,12 +313,12 @@ export function UsageView({
                 : formatCompact(agg.total.tokensIn + agg.total.tokensOut)}
             </span>
             <span className="axxa-usage-unit">
-              {m === "cost" ? "spent" : "tokens"}
+              {m === "cost" ? tr("spent") : tr("tokens")}
             </span>
             {m === "cost" && agg.total.hasUnknownCost && (
               <span
                 className="axxa-usage-approx"
-                title="Some models have no public price — this is a floor"
+                title={tr("Some models have no public price — this is a floor")}
               >
                 +
               </span>
@@ -319,7 +327,7 @@ export function UsageView({
           {/* Quantas conversas, e ONDE elas caíram: "All time" sozinho não
               diz se o total é de um mês ou de dois anos. */}
           <span className="axxa-usage-sub">
-            {agg.total.chats === 1 ? "1 chat" : `${agg.total.chats} chats`}
+            {contagem(agg.total.chats)}
             {!vazio && (
               <>
                 <span className="axxa-usage-sep">·</span>
@@ -332,19 +340,19 @@ export function UsageView({
                 pro modelo, o que DESCE volta dele. */}
             <Modulo
               icone="arrow-up-from-line"
-              rotulo="Sent"
+              rotulo={tr("Sent")}
               valor={formatCompact(agg.total.tokensIn)}
-              unidade="tokens"
+              unidade={tr("tokens")}
             />
             <Modulo
               icone="arrow-down-to-line"
-              rotulo="Received"
+              rotulo={tr("Received")}
               valor={formatCompact(agg.total.tokensOut)}
-              unidade="tokens"
+              unidade={tr("tokens")}
             />
             <Modulo
               icone="message-circle"
-              rotulo="Per chat"
+              rotulo={tr("Per chat")}
               valor={
                 media == null
                   ? "—"
@@ -352,7 +360,7 @@ export function UsageView({
                     ? formatUsdRounded(media)
                     : formatCompact(Math.round(media))
               }
-              unidade={m === "cost" ? "avg" : "tokens"}
+              unidade={m === "cost" ? tr("avg") : tr("tokens")}
             />
           </div>
         </section>
@@ -377,12 +385,12 @@ export function UsageView({
                  mesma frase duas vezes na mesma tela ensina a não ler
                  nenhuma das duas. */
               chats.length === 0
-                ? "Your tokens land here as you chat."
+                ? tr("Your tokens land here as you chat.")
                 : agg.total.chats === 0
-                  ? "Nothing to plot yet."
+                  ? tr("Nothing to plot yet.")
                   : picoDa(serie.colunas) === 0
-                    ? "No tokens recorded in these chats."
-                    : "Just one day so far — the shape fills in as you go."
+                    ? tr("No tokens recorded in these chats.")
+                    : tr("Just one day so far — the shape fills in as you go.")
             }
           />
         )}
@@ -390,7 +398,7 @@ export function UsageView({
         {visiveis.length > 0 && (
           <section className="axxa-home-block axxa-usage-filters">
             <div className="axxa-home-headrow">
-              <span className="axxa-section-label">Filter</span>
+              <span className="axxa-section-label">{tr("Filter")}</span>
               {/* Limpa os filtros de LISTA; o período fica — ele tem o
                   seletor dele, lá em cima, e não é isto que o botão diz. */}
               {marcados(f) > 0 && (
@@ -400,7 +408,7 @@ export function UsageView({
                   onClick={() => setF({ ...FILTRO_VAZIO, days: f.days })}
                 >
                   <Icon name="x" size={16} />
-                  <span>Clear</span>
+                  <span>{tr("Clear")}</span>
                 </button>
               )}
             </div>
@@ -416,7 +424,7 @@ export function UsageView({
                       className="axxa-home-filter is-accent"
                       onClick={() => verTodos(d.chave)}
                     >
-                      <span>See all {d.ops.length}</span>
+                      <span>{tr("See all {n}", { n: d.ops.length })}</span>
                       <Icon name="chevron-right" size={16} />
                     </button>
                   )}
@@ -456,15 +464,15 @@ export function UsageView({
             <Icon name="chart-no-axes-column" size={42} />
             <p>
               {chats.length === 0
-                ? "No usage yet. Every chat is counted here as you go."
-                : "Nothing in this slice. Try a longer period or fewer filters."}
+                ? tr("No usage yet. Every chat is counted here as you go.")
+                : tr("Nothing in this slice. Try a longer period or fewer filters.")}
             </p>
           </div>
         ) : (
           <>
             {/* "O caro é qual?", sem abrir conversa nenhuma. */}
             <section className="axxa-home-block">
-              <span className="axxa-section-label">By model</span>
+              <span className="axxa-section-label">{tr("By model")}</span>
               <div className="axxa-usage-list">
                 {modelos.map((r) => (
                   <LinhaDeFatia
@@ -480,7 +488,7 @@ export function UsageView({
 
             <section className="axxa-home-block">
               <span className="axxa-section-label">
-                {m === "cost" ? "Most expensive chats" : "Biggest chats"}
+                {m === "cost" ? tr("Most expensive chats") : tr("Biggest chats")}
               </span>
               <div className="axxa-usage-list">
                 {topo.map((c) => (
@@ -509,7 +517,7 @@ export function UsageView({
         {naLista.ops.length > BUSCA_A_PARTIR && (
           <SheetSearch
             value={buscaLista}
-            placeholder={`Search ${naLista.plural.toLowerCase()}`}
+            placeholder={naLista.busca}
             found={achadas.length}
             onChange={setBuscaLista}
           />
@@ -523,7 +531,7 @@ export function UsageView({
           ))}
         </p>
         {achadas.length === 0 ? (
-          <SheetNote>Nothing matches that search.</SheetNote>
+          <SheetNote>{tr("Nothing matches that search.")}</SheetNote>
         ) : (
           <div className="axxa-usage-list">
             {relatorio.usadas.map((r) => (
@@ -551,7 +559,7 @@ export function UsageView({
 
 /** "1 chat", "13 chats". */
 function contagem(n: number): string {
-  return n === 1 ? "1 chat" : `${n} chats`;
+  return n === 1 ? tr("1 chat") : tr("{n} chats", { n });
 }
 
 /**
@@ -586,10 +594,10 @@ function GraficoNoTempo({
   const alvo = colunas.find((c) => c.inicio === escolhida) ?? alta;
 
   return (
-    <section className="axxa-home-block" aria-label="Tokens over time">
+    <section className="axxa-home-block" aria-label={tr("Tokens over time")}>
       <div className="axxa-home-headrow">
-        <span className="axxa-section-label">Over time</span>
-        <span className="axxa-chart-step">{PASSO[passo]}</span>
+        <span className="axxa-section-label">{tr("Over time")}</span>
+        <span className="axxa-chart-step">{tr(PASSO[passo])}</span>
       </div>
       <div className="axxa-chart">
         {/* A legenda existe SEMPRE: dois tons da mesma cor se distinguem, mas
@@ -597,20 +605,28 @@ function GraficoNoTempo({
         <div className="axxa-chart-legend">
           <span className="axxa-chart-key">
             <span className="axxa-chart-swatch is-in" aria-hidden="true" />
-            Sent
+            {tr("Sent")}
           </span>
           <span className="axxa-chart-key">
             <span className="axxa-chart-swatch is-out" aria-hidden="true" />
-            Received
+            {tr("Received")}
           </span>
           {/* O topo da escala. Sem ele, altura é só forma: dá pra comparar as
               colunas entre si e com mais nada. */}
-          <span className="axxa-chart-peak">peak {formatCompact(pico)}</span>
+          <span className="axxa-chart-peak">
+            {tr("peak {n}", { n: formatCompact(pico) })}
+          </span>
         </div>
         <div
           className="axxa-chart-plot"
           role="group"
-          aria-label={`Tokens per ${passo}`}
+          aria-label={
+            passo === "day"
+              ? tr("Tokens per day")
+              : passo === "week"
+                ? tr("Tokens per week")
+                : tr("Tokens per month")
+          }
         >
           {colunas.map((c) => (
             <button
@@ -625,8 +641,16 @@ function GraficoNoTempo({
               // O mesmo texto da linha de baixo: no computador sai ao passar o
               // mouse, no leitor de tela sai ao chegar na coluna, e no celular
               // o toque leva ele pra linha — o número nunca depende do hover.
-              aria-label={`${c.titulo}: ${formatCompact(c.entrada)} sent, ${formatCompact(c.saida)} received`}
-              title={`${c.titulo} · ${formatCompact(c.entrada)} sent · ${formatCompact(c.saida)} received`}
+              aria-label={tr("{when}: {sent} sent, {received} received", {
+                when: c.titulo,
+                sent: formatCompact(c.entrada),
+                received: formatCompact(c.saida),
+              })}
+              title={tr("{when} · {sent} sent · {received} received", {
+                when: c.titulo,
+                sent: formatCompact(c.entrada),
+                received: formatCompact(c.saida),
+              })}
               onClick={() => setEscolhida(c.inicio)}
             >
               {/* A pilha é separada da coluna porque a coluna é o ALVO DO
@@ -672,9 +696,9 @@ function GraficoNoTempo({
         <p className="axxa-chart-readout">
           <span className="axxa-chart-when">{alvo.titulo}</span>
           <span className="axxa-usage-sep">·</span>
-          {formatCompact(alvo.entrada)} sent
+          {tr("{n} sent", { n: formatCompact(alvo.entrada) })}
           <span className="axxa-usage-sep">·</span>
-          {formatCompact(alvo.saida)} received
+          {tr("{n} received", { n: formatCompact(alvo.saida) })}
         </p>
       </div>
     </section>
@@ -702,7 +726,7 @@ function LinhaDeFatia({
 }) {
   const chats = contagem(r.chats);
   const preco =
-    r.preco === "gratis" ? "Free" : r.preco === "sem-preco" ? "—" : formatUsd(r.cost);
+    r.preco === "gratis" ? tr("Free") : r.preco === "sem-preco" ? "—" : formatUsd(r.cost);
   return (
     <div className="axxa-usage-row">
       <span
@@ -719,16 +743,16 @@ function LinhaDeFatia({
           {chats}
           <span className="axxa-usage-sep">·</span>
           {m === "cost"
-            ? `${formatCompact(r.tokens)} tokens`
+            ? tr("{n} tokens", { n: formatCompact(r.tokens) })
             : r.preco === "sem-preco"
-              ? "no public price"
-              : "free"}
+              ? tr("no public price")
+              : tr("free")}
         </span>
       </span>
       <span className="axxa-usage-row-end">
         <span
           className="axxa-usage-row-value"
-          title={r.preco === "sem-preco" ? "No public price" : undefined}
+          title={r.preco === "sem-preco" ? tr("No public price") : undefined}
         >
           {m === "cost" ? preco : formatCompact(r.tokens)}
           {r.piso && <span className="axxa-usage-approx">+</span>}
@@ -764,20 +788,20 @@ const FANTASMA = [22, 34, 26, 42, 30, 47, 26, 38, 30, 44, 25, 35];
  */
 function GraficoVazio({ motivo }: { motivo: string }) {
   return (
-    <section className="axxa-home-block" aria-label="Tokens over time">
+    <section className="axxa-home-block" aria-label={tr("Tokens over time")}>
       <div className="axxa-home-headrow">
-        <span className="axxa-section-label">Over time</span>
+        <span className="axxa-section-label">{tr("Over time")}</span>
       </div>
       <div className="axxa-chart is-empty">
         {/* A legenda fica: é ela que diz o que este lugar vai mostrar. */}
         <div className="axxa-chart-legend">
           <span className="axxa-chart-key">
             <span className="axxa-chart-swatch is-in" aria-hidden="true" />
-            Sent
+            {tr("Sent")}
           </span>
           <span className="axxa-chart-key">
             <span className="axxa-chart-swatch is-out" aria-hidden="true" />
-            Received
+            {tr("Received")}
           </span>
         </div>
         <div className="axxa-chart-plot">
@@ -814,7 +838,7 @@ function LinhaParada({ nome, icone }: { nome: string; icone: string }) {
       </span>
       <span className="axxa-usage-row-text">
         <span className="axxa-usage-row-name">{nome}</span>
-        <span className="axxa-usage-row-sub">No chats in this slice</span>
+        <span className="axxa-usage-row-sub">{tr("No chats in this slice")}</span>
       </span>
       <span className="axxa-usage-row-end">
         <span className="axxa-usage-row-value">—</span>
@@ -843,7 +867,7 @@ function LinhaDeConversa({
         <Icon name={providerIcon(c.provider)} size={20} />
       </span>
       <span className="axxa-usage-row-text">
-        <span className="axxa-usage-row-name">{c.title || "Untitled"}</span>
+        <span className="axxa-usage-row-name">{c.title || tr("Untitled")}</span>
         <span className="axxa-usage-row-sub">
           {prettyModelName(c.model)}
           <span className="axxa-usage-sep">·</span>
@@ -855,7 +879,7 @@ function LinhaDeConversa({
           {m === "tokens"
             ? formatCompact(c.tokensIn + c.tokensOut)
             : c.cost === 0
-              ? "Free"
+              ? tr("Free")
               : formatUsd(c.cost)}
         </span>
         <span className="axxa-usage-row-pct">{relativeShort(c.date)}</span>

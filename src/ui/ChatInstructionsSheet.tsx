@@ -16,6 +16,7 @@ import { loadChat, setChatInstructions } from "../core/chatPersistence";
 import { useChatStore } from "../store/chat";
 import { Sheet } from "./Sheet";
 import { SheetField, SheetSubmit, SheetTextarea } from "./SheetForm";
+import { tr } from "../i18n/tr";
 
 export function ChatInstructionsSheet({
   plugin,
@@ -76,38 +77,46 @@ export function ChatInstructionsSheet({
       const st = useChatStore.getState();
       if (st.currentChatId === chat.id) st.setSessionInstructions(limpo);
       new Notice(
-        limpo ? "Instructions saved for this chat." : "Instructions removed from this chat."
+        limpo
+          ? tr("Instructions saved for this chat.")
+          : tr("Instructions removed from this chat.")
       );
       onClose();
     } catch (err) {
       new Notice(
-        `Could not save the instructions: ${err instanceof Error ? err.message : String(err)}`
+        tr("Could not save the instructions: {error}", {
+          error: err instanceof Error ? err.message : String(err),
+        })
       );
     }
   };
 
   return (
     <Sheet
-      title="Instructions"
+      title={tr("Instructions")}
       mark={{ icon: "scroll-text" }}
       open={open}
       onClose={onClose}
       footer={
         <SheetSubmit
-          label="Save instructions"
-          problema={pronto ? null : "Loading…"}
+          label={tr("Save instructions")}
+          problema={pronto ? null : tr("Loading…")}
           onSubmit={() => void salvar()}
         />
       }
     >
       <SheetField
-        label={chat ? chat.title || "Untitled" : ""}
-        hint="Added to the assistant's own rules in every reply of this chat — like a project's instructions, they don't replace them. Leave it empty to remove."
+        label={chat ? chat.title || tr("Untitled") : ""}
+        hint={tr(
+          "Added to the assistant's own rules in every reply of this chat — like a project's instructions, they don't replace them. Leave it empty to remove."
+        )}
       >
         <SheetTextarea
           value={texto}
           rows={8}
-          placeholder="e.g. Answer in short bullet points and cite the note behind every claim."
+          placeholder={tr(
+            "e.g. Answer in short bullet points and cite the note behind every claim."
+          )}
           autoFocus={open && pronto}
           onChange={setTexto}
         />

@@ -23,6 +23,7 @@ import { openActions } from "./menu";
 import { PromptModal, ConfirmModal } from "./modals";
 import { relativeShort } from "./modules";
 import { ALERT_LABEL, chatAlert } from "./chatAlert";
+import { tr } from "../i18n/tr";
 
 /** Logo do provider da conversa. Desconhecido cai num ícone neutro em vez de
  *  quebrar o setIcon com um nome que não existe.
@@ -83,11 +84,14 @@ function acoes(c: ChatSummary): { texto: string; ativo: boolean } | null {
   if (c.mode !== "agent") return null;
   if (c.toolCount > 0) {
     return {
-      texto: c.toolCount === 1 ? "1 action" : `${c.toolCount} actions`,
+      texto:
+        c.toolCount === 1
+          ? tr("1 action")
+          : tr("{n} actions", { n: c.toolCount }),
       ativo: true,
     };
   }
-  return { texto: "No actions", ativo: false };
+  return { texto: tr("No actions"), ativo: false };
 }
 
 /** Quantos projetos cabem no submenu antes de virar "ver todos". */
@@ -127,10 +131,10 @@ export function ChatList({
 
   const renomear = async (c: ChatSummary) => {
     const title = await new PromptModal(plugin.app, {
-      title: "Rename chat",
-      label: "Title",
+      title: tr("Rename chat"),
+      label: tr("Title"),
       initial: c.title,
-      submitLabel: "Rename",
+      submitLabel: tr("Rename"),
     }).openAndWait();
     if (title && title !== c.title) await session.rename(c, title);
   };
@@ -149,7 +153,9 @@ export function ChatList({
       await plugin.loadChatSummaries(true);
     } catch (err) {
       new Notice(
-        `Could not star: ${err instanceof Error ? err.message : String(err)}`
+        tr("Could not star: {error}", {
+          error: err instanceof Error ? err.message : String(err),
+        })
       );
     }
   };
@@ -158,7 +164,7 @@ export function ChatList({
    *  ver cria (o ponto na aba). Aqui ela vira gesto voluntário. */
   const deixarNaoLida = (c: ChatSummary) => {
     plugin.markChatUnread(c.id);
-    new Notice("Marked as unread.");
+    new Notice(tr("Marked as unread."));
   };
 
   /** Exportar: a conversa mora em `.axxa/chats`, pasta que o Obsidian ignora —
@@ -172,10 +178,12 @@ export function ChatList({
         c.id
       );
       const caminho = await exportChatToVault(plugin.app, chat);
-      new Notice(`Exported to ${caminho}`);
+      new Notice(tr("Exported to {path}", { path: caminho }));
     } catch (err) {
       new Notice(
-        `Export failed: ${err instanceof Error ? err.message : String(err)}`
+        tr("Export failed: {error}", {
+          error: err instanceof Error ? err.message : String(err),
+        })
       );
     }
   };
@@ -189,17 +197,21 @@ export function ChatList({
           : p
       )
     );
-    const nome =
-      (plugin.settings.projects ?? []).find((p) => p.id === projectId)?.name ??
-      "project";
-    new Notice(`Added to ${nome}.`);
+    const nome = (plugin.settings.projects ?? []).find(
+      (p) => p.id === projectId
+    )?.name;
+    new Notice(
+      nome === undefined
+        ? tr("Added to project.")
+        : tr("Added to {name}.", { name: nome })
+    );
   };
 
   const apagar = async (c: ChatSummary) => {
     const ok = await new ConfirmModal(plugin.app, {
-      title: `Delete "${c.title || "Untitled"}"?`,
-      body: "The chat file goes to the system trash (recoverable).",
-      confirmLabel: "Delete",
+      title: tr("Delete \"{title}\"?", { title: c.title || tr("Untitled") }),
+      body: tr("The chat file goes to the system trash (recoverable)."),
+      confirmLabel: tr("Delete"),
       danger: true,
     }).openAndWait();
     if (ok) await session.delete(c);
@@ -248,7 +260,7 @@ export function ChatList({
 
                 <span className="axxa-card-text">
                   <span className="axxa-history-title">
-                    {c.title || "Untitled"}
+                    {c.title || tr("Untitled")}
                   </span>
                   <span className="axxa-history-meta">
                     {/* O ponto pulsa e a palavra diz o que ele significa — um
@@ -256,7 +268,7 @@ export function ChatList({
                     {alerta && (
                       <span className={`axxa-card-live is-${alerta}`}>
                         <span className="axxa-card-pulse" aria-hidden="true" />
-                        {ALERT_LABEL[alerta]}
+                        {tr(ALERT_LABEL[alerta])}
                       </span>
                     )}
                     {alerta && <span className="axxa-card-dot">·</span>}
@@ -299,11 +311,13 @@ export function ChatList({
             <button
               type="button"
               className="axxa-icon-btn axxa-history-more"
-              aria-label={`Actions for ${c.title || "Untitled"}`}
+              aria-label={tr("Actions for {title}", {
+                title: c.title || tr("Untitled"),
+              })}
               onClick={(e) =>
                 openActions(e, [
                   {
-                    label: c.starred ? "Unstar" : "Star",
+                    label: c.starred ? tr("Unstar") : tr("Star"),
                     icon: c.starred ? "star-off" : "star",
                     run: () => void favoritar(c),
                   },
@@ -313,7 +327,7 @@ export function ChatList({
                   ...(c.id !== currentChatId && !naoLidas.has(c.id)
                     ? [
                         {
-                          label: "Mark as unread",
+                          label: tr("Mark as unread"),
                           // "Não vi isto" é o que a marca quer dizer — e é o
                           // que este ícone desenha. O `dot` de antes era um
                           // ponto sem forma, indistinguível de um espaço vazio
@@ -324,7 +338,7 @@ export function ChatList({
                       ]
                     : []),
                   {
-                    label: "Add to project",
+                    label: tr("Add to project"),
                     icon: "folder-plus",
                     // O segundo nível: os projetos que existem e, no fim, a
                     // porta pra criar um. Sem projeto nenhum, a lista é só a
@@ -335,7 +349,7 @@ export function ChatList({
                       // conforme a quantidade de projetos obriga a ler a lista
                       // toda pra achar o que não é projeto nenhum.
                       {
-                        label: "New project…",
+                        label: tr("New project…"),
                         icon: "plus",
                         run: () => painel.novoProjetoCom(c.id),
                       },
@@ -351,9 +365,9 @@ export function ChatList({
                       ...((plugin.settings.projects ?? []).length > MAX_PROJETOS
                         ? [
                             {
-                              label: `See all ${
-                                (plugin.settings.projects ?? []).length
-                              }`,
+                              label: tr("See all {n}", {
+                                n: (plugin.settings.projects ?? []).length,
+                              }),
                               icon: "list",
                               run: () => painel.escolherProjetoPara(c.id),
                             },
@@ -364,22 +378,22 @@ export function ChatList({
                   {
                     // As instruções DESTA conversa — somam às do app (e às
                     // do projeto, que já moram aqui). Ver ChatInstructionsSheet.
-                    label: "Instructions…",
+                    label: tr("Instructions…"),
                     icon: "scroll-text",
                     run: () => painel.instrucoesDe(c),
                   },
                   {
-                    label: "Export to vault",
+                    label: tr("Export to vault"),
                     icon: "file-down",
                     run: () => void exportar(c),
                   },
                   {
-                    label: "Rename",
+                    label: tr("Rename"),
                     icon: "pencil",
                     run: () => void renomear(c),
                   },
                   {
-                    label: "Delete",
+                    label: tr("Delete"),
                     icon: "trash-2",
                     danger: true,
                     run: () => void apagar(c),

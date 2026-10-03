@@ -488,10 +488,7 @@ export async function runAgentTurn(
           {
             phase: "failed",
             iconFailed: "x-circle",
-            failedText: spec.pendingText.replace(
-              /^(Reading|Editing|Creating|Moving|Deleting|Listing|Searching|Running)/,
-              "Failed on"
-            ),
+            failedText: spec.failedText,
           },
           msg
         );

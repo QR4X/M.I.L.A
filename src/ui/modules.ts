@@ -13,6 +13,7 @@
 
 import { CHAT_MODES, isChatMode, type ChatMode } from "../core/session";
 import type { ChatSummary } from "../core/chatPersistence";
+import { marca, tr } from "../i18n/tr";
 
 export interface ModuleMeta {
   /** `ChatMode` pros três que o motor conhece; um id qualquer pros que só
@@ -35,36 +36,38 @@ export interface ModuleMeta {
   fabLabel: string;
 }
 
+// tagline, placeholder, emptyLine e fabLabel são chaves do i18n (marca): quem
+// mostra o campo direto passa por tr(); as funções abaixo já devolvem traduzido.
 export const MODULES: Record<ChatMode, ModuleMeta> = {
   chat: {
     id: "chat",
     label: "Chat",
     short: "Chat",
     icon: "message-circle",
-    tagline: "Just you and the model. Your notes stay out of it.",
-    placeholder: "Message the model…",
-    emptyLine: "Ask anything. Your chats show up here.",
-    fabLabel: "New chat",
+    tagline: marca("Just you and the model. Your notes stay out of it."),
+    placeholder: marca("Message the model…"),
+    emptyLine: marca("Ask anything. Your chats show up here."),
+    fabLabel: marca("New chat"),
   },
   "vault-qa": {
     id: "vault-qa",
     label: "Vault Q&A",
     short: "Vault",
     icon: "library",
-    tagline: "Answers grounded in your notes, found by local search.",
-    placeholder: "Ask something about your notes…",
-    emptyLine: "Ask about your notes. The answers land here.",
-    fabLabel: "New question",
+    tagline: marca("Answers grounded in your notes, found by local search."),
+    placeholder: marca("Ask something about your notes…"),
+    emptyLine: marca("Ask about your notes. The answers land here."),
+    fabLabel: marca("New question"),
   },
   agent: {
     id: "agent",
     label: "Agent",
     short: "Agent",
     icon: "bot",
-    tagline: "Reads and edits your vault — every change asks first.",
-    placeholder: "Tell the agent what to do in your vault…",
-    emptyLine: "Put the agent to work in your vault. Runs show up here.",
-    fabLabel: "New session",
+    tagline: marca("Reads and edits your vault — every change asks first."),
+    placeholder: marca("Tell the agent what to do in your vault…"),
+    emptyLine: marca("Put the agent to work in your vault. Runs show up here."),
+    fabLabel: marca("New session"),
   },
 };
 
@@ -114,7 +117,7 @@ export function moduleIcon(id: string | undefined | null): string {
 }
 
 export function modulePlaceholder(id: string | undefined | null): string {
-  return isChatMode(id) ? MODULES[id].placeholder : MODULES.chat.placeholder;
+  return tr(isChatMode(id) ? MODULES[id].placeholder : MODULES.chat.placeholder);
 }
 
 /** O que uma busca devolveu, e COMO devolveu. */
@@ -144,7 +147,9 @@ export function searchChats(
 ): Busca {
   const q = query.trim();
   if (!q) return { hits: [...chats], regex: false, invalida: false };
-  const alvo = (c: ChatSummary) => `${c.title || "Untitled"} ${c.model}`;
+  // O título vazio procura pelo que a lista MOSTRA no lugar dele.
+  const semTitulo = tr("Untitled");
+  const alvo = (c: ChatSummary) => `${c.title || semTitulo} ${c.model}`;
   let re: RegExp | null = null;
   try {
     re = new RegExp(q, "i");
@@ -165,7 +170,7 @@ export function searchChats(
 
 /** Rótulo do botão flutuante da home daquele módulo. */
 export function moduleFabLabel(id: string | undefined | null): string {
-  return isChatMode(id) ? MODULES[id].fabLabel : MODULES.chat.fabLabel;
+  return tr(isChatMode(id) ? MODULES[id].fabLabel : MODULES.chat.fabLabel);
 }
 
 /**
@@ -180,7 +185,7 @@ export function relativeShort(iso: string, agora: number = Date.now()): string {
   const t = new Date(iso).getTime();
   if (Number.isNaN(t)) return "";
   const s = Math.max(0, Math.round((agora - t) / 1000));
-  if (s < 60) return "now";
+  if (s < 60) return tr("now");
   const min = Math.floor(s / 60);
   if (min < 60) return `${min}m`;
   const h = Math.floor(min / 60);
@@ -192,9 +197,9 @@ export function relativeShort(iso: string, agora: number = Date.now()): string {
 
 /** Frase da home quando o módulo ainda não tem conversa nenhuma. */
 export function moduleEmptyLine(id: string | undefined | null): string {
-  if (isChatMode(id)) return MODULES[id].emptyLine;
+  if (isChatMode(id)) return tr(MODULES[id].emptyLine);
   // Módulo que só existe no disco: o texto explica por que não há botão.
-  return "Chats saved here by another version. This one can't start new ones.";
+  return tr("Chats saved here by another version. This one can't start new ones.");
 }
 
 /**
@@ -241,9 +246,9 @@ export function relativeDay(iso: string, agora: number = Date.now()): string {
   const dia = (x: Date) =>
     Date.UTC(x.getFullYear(), x.getMonth(), x.getDate()) / 86400000;
   const diff = dia(new Date(agora)) - dia(d);
-  if (diff <= 0) return "Today";
-  if (diff === 1) return "Yesterday";
-  if (diff < 7) return `${diff} days ago`;
+  if (diff <= 0) return tr("Today");
+  if (diff === 1) return tr("Yesterday");
+  if (diff < 7) return tr("{n} days ago", { n: diff });
   return iso.slice(0, 10);
 }
 
@@ -325,8 +330,9 @@ export function filterSegment(
 
 /** Resumo de uma linha pra a linha do módulo no menu. */
 export function moduleHint(stats: ModuleStats, agora?: number): string {
-  if (stats.count === 0) return "No chats yet";
-  const quantos = stats.count === 1 ? "1 chat" : `${stats.count} chats`;
+  if (stats.count === 0) return tr("No chats yet");
+  const quantos =
+    stats.count === 1 ? tr("1 chat") : tr("{n} chats", { n: stats.count });
   const quando = stats.last ? relativeDay(stats.last, agora) : "";
   return quando ? `${quantos} · ${quando}` : quantos;
 }

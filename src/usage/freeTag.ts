@@ -18,6 +18,7 @@
 // as settings da pessoa, e não com uma tabela fixa.
 
 import { openaiFreeAllowance, openaiFreeTierForModel } from "./freeTokens";
+import { localeDaInterface, tr } from "../i18n/tr";
 
 export interface FreeTag {
   /** `always` = sem fatura. `daily` = cota diária já valendo. `offer` = de graça
@@ -68,7 +69,7 @@ export function gratisDeVerdade(
 
 /** 1000 → "1,000": o número da cota é o recado, e lido de relance. */
 function milhar(n: number): string {
-  return n.toLocaleString("en-US");
+  return n.toLocaleString(localeDaInterface());
 }
 
 /**
@@ -118,8 +119,11 @@ export function freeTag(
       return {
         kind: "daily",
         perDay,
-        label: `${qtd}/day`,
-        detail: `${qtd} tokens a day at no cost while you share API data with OpenAI. Past that, this model is billed normally — and the quota counts ALL your OpenAI API use, not just this vault.`,
+        label: tr("{n}/day", { n: qtd }),
+        detail: tr(
+          "{n} tokens a day at no cost while you share API data with OpenAI. Past that, this model is billed normally — and the quota counts ALL your OpenAI API use, not just this vault.",
+          { n: qtd }
+        ),
       };
     }
     // O "+" é o que separa a oferta do fato: ele lê como "isto você GANHARIA".
@@ -128,8 +132,11 @@ export function freeTag(
     return {
       kind: "offer",
       perDay,
-      label: `+${qtd}/day`,
-      detail: `Turn on data sharing in OpenAI's Data controls to get ${qtd} tokens a day here at no cost.`,
+      label: tr("+{n}/day", { n: qtd }),
+      detail: tr(
+        "Turn on data sharing in OpenAI's Data controls to get {n} tokens a day here at no cost.",
+        { n: qtd }
+      ),
     };
   }
 
@@ -138,9 +145,10 @@ export function freeTag(
     if (!geminiTemTierGratis(model)) return null;
     return {
       kind: "offer",
-      label: "free tier",
-      detail:
-        "No cost on the Gemini API's free tier — a project without billing turned on, where Google may use what you send to improve its products — within its rate limits. With billing on, this model is charged.",
+      label: tr("free tier"),
+      detail: tr(
+        "No cost on the Gemini API's free tier — a project without billing turned on, where Google may use what you send to improve its products — within its rate limits. With billing on, this model is charged."
+      ),
     };
   }
   if (!opts.free) return null;
@@ -148,36 +156,54 @@ export function freeTag(
   // que "free" quer dizer ali.
   if (provider === "openrouter") {
     const c = opts.cota;
-    const dia = c
+    const frase = c
       ? c.limit >= 1000
-        ? `and ${milhar(c.limit)} a day on this key`
-        : `and ${milhar(c.limit)} a day on this key — 1,000 once you've bought $10 in credits`
-      : "and 50 a day (1,000 once you've bought $10 in credits)";
-    const resta = c?.remaining != null ? ` ${milhar(c.remaining)} were left when you fetched.` : "";
+        ? tr(
+            "No cost. OpenRouter's free models share 20 requests a minute and {limit} a day on this key.",
+            { limit: milhar(c.limit) }
+          )
+        : tr(
+            "No cost. OpenRouter's free models share 20 requests a minute and {limit} a day on this key — 1,000 once you've bought $10 in credits.",
+            { limit: milhar(c.limit) }
+          )
+      : tr(
+          "No cost. OpenRouter's free models share 20 requests a minute and 50 a day (1,000 once you've bought $10 in credits)."
+        );
+    const resta =
+      c?.remaining != null
+        ? tr("{n} were left when you fetched.", { n: milhar(c.remaining) })
+        : "";
     return {
       kind: "always",
-      label: c ? `free · ${milhar(c.limit)}/day` : "free",
-      detail: `No cost. OpenRouter's free models share 20 requests a minute ${dia}.${resta} A free variant can run on a different host, with a smaller context than the paid one.`,
+      label: c ? tr("free · {n}/day", { n: milhar(c.limit) }) : tr("free"),
+      detail: [
+        frase,
+        resta,
+        tr("A free variant can run on a different host, with a smaller context than the paid one."),
+      ]
+        .filter(Boolean)
+        .join(" "),
     };
   }
   if (provider === "nim") {
     return {
       kind: "always",
-      label: "free · 40/min",
-      detail:
-        "A Free Endpoint in NVIDIA's API catalog: no cost with your developer key, for development and testing, up to 40 requests a minute. Models without this mark aren't part of the free tier.",
+      label: tr("free · 40/min"),
+      detail: tr(
+        "A Free Endpoint in NVIDIA's API catalog: no cost with your developer key, for development and testing, up to 40 requests a minute. Models without this mark aren't part of the free tier."
+      ),
     };
   }
   if (provider === "ollama") {
     return {
       kind: "always",
-      label: "free",
-      detail: "Runs on your own machine — there's no bill at all.",
+      label: tr("free"),
+      detail: tr("Runs on your own machine — there's no bill at all."),
     };
   }
   return {
     kind: "always",
-    label: "free",
-    detail: "No cost — this model has no billing at all.",
+    label: tr("free"),
+    detail: tr("No cost — this model has no billing at all."),
   };
 }

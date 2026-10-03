@@ -4,6 +4,7 @@
 // e futuros consumidores importam daqui.
 
 import type AxxaPlugin from "../main";
+import { tr } from "../i18n/tr";
 
 export const PROVIDERS = [
   { id: "openai", name: "OpenAI", icon: "logo-openai" },
@@ -49,9 +50,9 @@ export function providerBlockedReason(
 ): string | null {
   switch (providerHealth(plugin, id)) {
     case "off":
-      return "No credential yet — add one in Settings › Providers.";
+      return tr("No credential yet — add one in Settings › Providers.");
     case "fail":
-      return "Last connection test failed — check the key in Settings › Providers.";
+      return tr("Last connection test failed — check the key in Settings › Providers.");
     default:
       return null;
   }

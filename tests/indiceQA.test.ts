@@ -51,7 +51,8 @@ describe("a pasta do índice", () => {
   it("vira campo na aba Vault, junto das outras pastas", () => {
     expect(isControlKey("ragIndexPath")).toBe(true);
     const tree = readFileSync(resolve(__dirname, "../src/ui/settings/tree.ts"), "utf8");
-    expect(tree).toMatch(/text\(\s*"Index folder",[\s\S]{0,400}"ragIndexPath"/);
+    // O nome passa pelo tr() (a árvore é traduzida na montagem).
+    expect(tree).toMatch(/text\(\s*tr\("Index folder"\),[\s\S]{0,400}"ragIndexPath"/);
   });
 
   it("barra na ponta sai; vazio volta pro padrão", () => {

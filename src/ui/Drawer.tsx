@@ -23,6 +23,7 @@ import { Icon } from "./Icon";
 import { openPluginSettings } from "./modals";
 import { moduleHint, moduleStats, modulesInUse } from "./modules";
 import { alertCount } from "./chatAlert";
+import { marca, tr } from "../i18n/tr";
 
 export type ViewId =
   | "home"
@@ -35,12 +36,12 @@ export type ViewId =
 
 /** O resto do menu — o que não é módulo. */
 const NAV: Array<{ id: ViewId; label: string; icon: string }> = [
-  { id: "projects", label: "Projects", icon: "folder-open" },
-  { id: "skills", label: "Skills", icon: "sparkles" },
+  { id: "projects", label: marca("Projects"), icon: "folder-open" },
+  { id: "skills", label: marca("Skills"), icon: "sparkles" },
   // O uso também mora aqui, e não só atrás do cartão da home: o cartão só
   // aparece com conversa no mês, e "quanto eu gastei" é pergunta que se faz
   // justamente nos meses em que se usou pouco.
-  { id: "usage", label: "Usage", icon: "chart-no-axes-column" },
+  { id: "usage", label: marca("Usage"), icon: "chart-no-axes-column" },
 ];
 
 export function Drawer({
@@ -119,7 +120,7 @@ export function Drawer({
         ref={panelRef}
         className="axxa-drawer"
         role="dialog"
-        aria-label="AXXA menu"
+        aria-label={tr("AXXA menu")}
         tabIndex={-1}
       >
         <header className="axxa-drawer-head">
@@ -127,7 +128,7 @@ export function Drawer({
           <button
             type="button"
             className="axxa-icon-btn"
-            aria-label="Close menu"
+            aria-label={tr("Close menu")}
             onClick={onClose}
           >
             <Icon name="x" />
@@ -194,7 +195,7 @@ export function Drawer({
                 onClick={() => go(n.id)}
               >
                 <Icon name={n.icon} />
-                <span>{n.label}</span>
+                <span>{tr(n.label)}</span>
               </button>
             ))}
             <button
@@ -206,7 +207,7 @@ export function Drawer({
               }}
             >
               <Icon name="settings" />
-              <span>Settings</span>
+              <span>{tr("Settings")}</span>
             </button>
           </nav>
 

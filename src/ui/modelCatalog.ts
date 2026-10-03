@@ -21,6 +21,7 @@ import {
   type RoleId,
 } from "../providers/modelRoles";
 import { compararFabricantes, fabricante, type Fabricante } from "../providers/vendors";
+import { tr } from "../i18n/tr";
 
 export interface CatalogFamily {
   id: string;
@@ -57,7 +58,7 @@ export function buildModelCatalog(
     const families = byRole.get(role) ?? new Map<string, CatalogFamily>();
     const entry = families.get(fam.id) ?? {
       id: fam.id,
-      label: fam.label,
+      label: tr(fam.label),
       icon: fam.icon,
       color: fam.color,
       models: [],
@@ -77,7 +78,9 @@ export function buildModelCatalog(
     for (const f of list) f.models.sort();
     out.push({
       id: role,
-      label: ROLE_LABELS[role],
+      // O nome do papel já sai no idioma da interface: o catálogo é montado
+      // na hora de desenhar a lista.
+      label: tr(ROLE_LABELS[role]),
       icon: ROLE_ICONS[role],
       count: list.reduce((n, f) => n + f.models.length, 0),
       families: list,

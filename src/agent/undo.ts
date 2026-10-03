@@ -14,6 +14,7 @@
 // (ConflitoAoDesfazer) — passar por cima é escolha de quem lê o aviso.
 
 import { TFile, TFolder, type App, type TAbstractFile } from "obsidian";
+import { tr } from "../i18n/tr";
 
 /** A mudança é mais nova que a do agente: desfazer agora apagaria isso. */
 export class ConflitoAoDesfazer extends Error {}
@@ -139,12 +140,14 @@ export async function depoisDe(app: App, antes: Antes): Promise<Desfazer | null>
       return {
         async executar(forcar) {
           const atual = await textoDe(app, antes.path);
-          if (!atual) throw new Error(`${antes.path} no longer exists.`);
+          if (!atual) throw new Error(tr("{path} no longer exists.", { path: antes.path }));
           if (atual.texto !== escrito && !forcar) {
-            throw new ConflitoAoDesfazer(`${antes.path} changed after the agent created it.`);
+            throw new ConflitoAoDesfazer(
+              tr("{path} changed after the agent created it.", { path: antes.path })
+            );
           }
           await app.fileManager.trashFile(atual.f);
-          return `Removed ${antes.path}`;
+          return tr("Removed {path}", { path: antes.path });
         },
       };
     }
@@ -155,12 +158,14 @@ export async function depoisDe(app: App, antes: Antes): Promise<Desfazer | null>
       return {
         async executar(forcar) {
           const atual = await textoDe(app, antes.path);
-          if (!atual) throw new Error(`${antes.path} no longer exists.`);
+          if (!atual) throw new Error(tr("{path} no longer exists.", { path: antes.path }));
           if (atual.texto !== escrito && !forcar) {
-            throw new ConflitoAoDesfazer(`${antes.path} changed after the agent's edit.`);
+            throw new ConflitoAoDesfazer(
+              tr("{path} changed after the agent's edit.", { path: antes.path })
+            );
           }
           await app.vault.process(atual.f, () => antes.conteudo);
-          return `Restored ${antes.path}`;
+          return tr("Restored {path}", { path: antes.path });
         },
       };
     }
@@ -168,21 +173,23 @@ export async function depoisDe(app: App, antes: Antes): Promise<Desfazer | null>
       return {
         async executar() {
           const alvo: TAbstractFile | null = app.vault.getAbstractFileByPath(antes.to);
-          if (!alvo) throw new Error(`Nothing at ${antes.to} anymore.`);
+          if (!alvo) throw new Error(tr("Nothing at {path} anymore.", { path: antes.to }));
           if (app.vault.getAbstractFileByPath(antes.from)) {
-            throw new Error(`${antes.from} is taken now — move it by hand.`);
+            throw new Error(tr("{path} is taken now — move it by hand.", { path: antes.from }));
           }
           await garantirPasta(app, pai(antes.from));
           // O mesmo caminho da tool: reescreve os [[links]] de volta.
           await app.fileManager.renameFile(alvo, antes.from);
-          return `Moved back to ${antes.from}`;
+          return tr("Moved back to {path}", { path: antes.from });
         },
       };
     case "vault_delete":
       return {
         async executar() {
           if (app.vault.getAbstractFileByPath(antes.path)) {
-            throw new Error(`${antes.path} exists again — nothing to restore over.`);
+            throw new Error(
+              tr("{path} exists again — nothing to restore over.", { path: antes.path })
+            );
           }
           await garantirPasta(app, pai(antes.path));
           if (antes.pasta) {
@@ -190,19 +197,23 @@ export async function depoisDe(app: App, antes: Antes): Promise<Desfazer | null>
           } else {
             await app.vault.createBinary(antes.path, antes.bytes);
           }
-          return `Restored ${antes.path}`;
+          return tr("Restored {path}", { path: antes.path });
         },
       };
     case "vault_create_folder":
       return {
         async executar() {
           const d = app.vault.getAbstractFileByPath(antes.path);
-          if (!(d instanceof TFolder)) throw new Error(`${antes.path} no longer exists.`);
+          if (!(d instanceof TFolder)) {
+            throw new Error(tr("{path} no longer exists.", { path: antes.path }));
+          }
           // Pasta com coisa dentro não sai nem forçando: o que entrou nela
           // depois não é do agente.
-          if (d.children.length > 0) throw new Error(`${antes.path} has files in it now.`);
+          if (d.children.length > 0) {
+            throw new Error(tr("{path} has files in it now.", { path: antes.path }));
+          }
           await app.fileManager.trashFile(d);
-          return `Removed folder ${antes.path}`;
+          return tr("Removed folder {path}", { path: antes.path });
         },
       };
   }
@@ -229,7 +240,7 @@ export function podeDesfazer(id: string | undefined): boolean {
  */
 export async function desfazer(id: string, forcar = false): Promise<string> {
   const d = registro.get(id);
-  if (!d) throw new Error("This change can no longer be undone.");
+  if (!d) throw new Error(tr("This change can no longer be undone."));
   const feito = await d.executar(forcar);
   registro.delete(id);
   return feito;

@@ -13,20 +13,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
+import { marca, tr } from "../i18n/tr";
 
 /** Os verbos da espera. Ordem fixa (não sorteada) pra a sequência ser sempre
  *  a mesma — e pra o teste poder olhar pra ela. */
 export const THINKING_VERBS = [
-  "Thinking",
-  "Pondering",
-  "Deliberating",
-  "Mulling it over",
-  "Considering",
-  "Ruminating",
-  "Turning it over",
-  "Weighing options",
-  "Chewing on it",
-  "Puzzling it out",
+  marca("Thinking"),
+  marca("Pondering"),
+  marca("Deliberating"),
+  marca("Mulling it over"),
+  marca("Considering"),
+  marca("Ruminating"),
+  marca("Turning it over"),
+  marca("Weighing options"),
+  marca("Chewing on it"),
+  marca("Puzzling it out"),
 ];
 
 /** De quanto em quanto tempo a palavra muda. */
@@ -130,7 +131,7 @@ export function ThinkingLine({
       <span className="axxa-thinking-label">
         <span className="axxa-thinking-time">{elapsedLabel(passado)}</span>
         <span className="axxa-thinking-dot"> · </span>
-        {texto}…
+        {tr(texto)}…
       </span>
       {count > 0 && <Icon name="chevron-right" size={15} />}
     </button>
@@ -159,7 +160,7 @@ export function ThinkingInline({ since }: { since: number }) {
       <span className="axxa-thinking-label">
         <span className="axxa-thinking-time">{elapsedLabel(passado)}</span>
         <span className="axxa-thinking-dot"> · </span>
-        {verbAt(passado)}…
+        {tr(verbAt(passado))}…
       </span>
     </span>
   );

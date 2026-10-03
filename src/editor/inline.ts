@@ -14,6 +14,7 @@ import type AxxaPlugin from "../main";
 import { getProvider } from "../providers";
 import type { ProviderMessage } from "../providers/base";
 import { modeloSalvoPara } from "../core/modeloPadrao";
+import { marca, tr } from "../i18n/tr";
 
 export type AcaoNoTexto = "rewrite" | "fix" | "translate" | "continue";
 
@@ -67,10 +68,10 @@ export function emendar(antes: string, continuacao: string): string {
 }
 
 const ROTULO: Record<AcaoNoTexto, string> = {
-  rewrite: "Rewriting",
-  fix: "Fixing",
-  translate: "Translating",
-  continue: "Writing",
+  rewrite: marca("Rewriting with {model}…"),
+  fix: marca("Fixing with {model}…"),
+  translate: marca("Translating with {model}…"),
+  continue: marca("Writing with {model}…"),
 };
 
 /**
@@ -89,11 +90,11 @@ export async function acaoNoTexto(
   const model = modeloSalvoPara(s, providerId);
   const chave = plugin.providerCredential(providerId).trim();
   if (!model) {
-    new Notice("Pick a default model in the plugin settings first.");
+    new Notice(tr("Pick a default model in the plugin settings first."));
     return;
   }
   if (!chave) {
-    new Notice(`Add your ${providerId} key in the plugin settings first.`);
+    new Notice(tr("Add your {provider} key in the plugin settings first.", { provider: providerId }));
     return;
   }
 
@@ -107,7 +108,7 @@ export async function acaoNoTexto(
     entrada = tudoAntes.slice(-CONTEXTO_CONTINUAR);
     original = "";
     if (!entrada.trim()) {
-      new Notice("Write something first: the model continues from what's there.");
+      new Notice(tr("Write something first: the model continues from what's there."));
       return;
     }
   } else {
@@ -116,19 +117,19 @@ export async function acaoNoTexto(
     original = editor.getRange(de, ate);
     entrada = original;
     if (!original.trim()) {
-      new Notice("Select some text first.");
+      new Notice(tr("Select some text first."));
       return;
     }
   }
 
-  const aviso = new Notice(`${ROTULO[acao]} with ${model}…`, 0);
+  const aviso = new Notice(tr(ROTULO[acao], { model }), 0);
   try {
     const res = await getProvider(providerId).chat(
       { model, messages: mensagensDaAcao(acao, entrada, opts) },
       chave
     );
     const resultado = limparResposta(res.content ?? "");
-    if (!resultado) throw new Error("the model returned nothing");
+    if (!resultado) throw new Error(tr("the model returned nothing"));
 
     if (acao === "continue") {
       // O cursor ainda está onde estava? (a pessoa pode ter seguido digitando)
@@ -149,7 +150,7 @@ export async function acaoNoTexto(
     const fim = editor.offsetToPos(editor.posToOffset(de) + resultado.length);
     editor.setSelection(de, fim);
   } catch (err) {
-    new Notice(`Couldn't finish: ${err instanceof Error ? err.message : String(err)}`);
+    new Notice(tr("Couldn't finish: {error}", { error: err instanceof Error ? err.message : String(err) }));
   } finally {
     aviso.hide();
   }
@@ -158,29 +159,29 @@ export async function acaoNoTexto(
 async function copiar(texto: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(texto);
-    new Notice("The text changed while the model was writing, so nothing was replaced. The result is on your clipboard.", 8000);
+    new Notice(tr("The text changed while the model was writing, so nothing was replaced. The result is on your clipboard."), 8000);
   } catch {
-    new Notice("The text changed while the model was writing, so nothing was replaced.", 8000);
+    new Notice(tr("The text changed while the model was writing, so nothing was replaced."), 8000);
   }
 }
 
 /** Os idiomas do "Translate selection…": os mais pedidos primeiro, e
  *  qualquer outro digitado vale (o modelo entende o nome). */
 export const IDIOMAS = [
-  "English",
-  "Portuguese (Brazil)",
-  "Spanish",
-  "French",
-  "German",
-  "Italian",
-  "Japanese",
-  "Chinese (Simplified)",
-  "Korean",
-  "Russian",
-  "Arabic",
-  "Hindi",
-  "Dutch",
-  "Portuguese (Portugal)",
+  marca("English"),
+  marca("Portuguese (Brazil)"),
+  marca("Spanish"),
+  marca("French"),
+  marca("German"),
+  marca("Italian"),
+  marca("Japanese"),
+  marca("Chinese (Simplified)"),
+  marca("Korean"),
+  marca("Russian"),
+  marca("Arabic"),
+  marca("Hindi"),
+  marca("Dutch"),
+  marca("Portuguese (Portugal)"),
 ];
 
 /** A escolha do idioma: a lista do Obsidian, com busca — e o que se digitar
@@ -191,17 +192,21 @@ export class IdiomaModal extends SuggestModal<string> {
     private readonly escolher: (idioma: string) => void
   ) {
     super(app);
-    this.setPlaceholder("Translate into…");
+    this.setPlaceholder(tr("Translate into…"));
   }
 
   getSuggestions(busca: string): string[] {
     const q = busca.trim().toLowerCase();
-    const achados = IDIOMAS.filter((l) => l.toLowerCase().includes(q));
-    return q && !achados.some((l) => l.toLowerCase() === q) ? [busca.trim(), ...achados] : achados;
+    // Acha pelo nome que está na tela (o traduzido) e pelo inglês — que é o
+    // que segue pro modelo, seja qual for o idioma da interface.
+    const nomes = (l: string) => [l.toLowerCase(), tr(l).toLowerCase()];
+    const achados = IDIOMAS.filter((l) => nomes(l).some((n) => n.includes(q)));
+    return q && !achados.some((l) => nomes(l).includes(q)) ? [busca.trim(), ...achados] : achados;
   }
 
   renderSuggestion(idioma: string, el: HTMLElement): void {
-    el.setText(idioma);
+    // Os da lista aparecem no idioma da interface; o digitado, como veio.
+    el.setText(IDIOMAS.includes(idioma) ? tr(idioma) : idioma);
   }
 
   onChooseSuggestion(idioma: string): void {

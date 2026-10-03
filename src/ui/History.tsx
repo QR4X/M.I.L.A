@@ -28,6 +28,7 @@ import {
   moduleSegments,
   searchChats,
 } from "./modules";
+import { tr } from "../i18n/tr";
 
 export function History({
   plugin,
@@ -71,7 +72,7 @@ export function History({
         <button
           type="button"
           className="axxa-icon-btn"
-          aria-label="Back"
+          aria-label={tr("Back")}
           onClick={onBack}
         >
           <Icon name="arrow-left" />
@@ -80,7 +81,7 @@ export function History({
             leva de volta e o que se está vendo moram na mesma barra. Como
             título dentro da página ele ocupava uma linha inteira pra dizer
             uma palavra. */}
-        <span className="axxa-brand axxa-topbar-brand">History</span>
+        <span className="axxa-brand axxa-topbar-brand">{tr("History")}</span>
       </header>
 
       <div className="axxa-messages axxa-home">
@@ -99,7 +100,7 @@ export function History({
                 }) > 0,
             }))}
             value={atual}
-            label="Filter chats by mode"
+            label={tr("Filter chats by mode")}
             onChange={onAba}
           />
         )}
@@ -108,8 +109,8 @@ export function History({
             teclado não cobre o resultado (ver SearchSheet.tsx). */}
         <SearchField
           value={query}
-          placeholder="Search"
-          label="Search chats"
+          placeholder={tr("Search")}
+          label={tr("Search chats")}
           found={visiveis.length}
           onChange={setQuery}
           onOpen={() => setBuscando(true)}
@@ -129,8 +130,8 @@ export function History({
             <Icon name="message-circle" size={42} />
             <p>
               {query.trim()
-                ? "Nothing matches that search."
-                : "Nothing here yet."}
+                ? tr("Nothing matches that search.")
+                : tr("Nothing here yet.")}
             </p>
           </div>
         )}
@@ -140,8 +141,8 @@ export function History({
           comum também é regex válida (ver modules.searchChats). */}
       <SearchSheet
         open={buscando}
-        title="Search chats"
-        placeholder="Search"
+        title={tr("Search chats")}
+        placeholder={tr("Search")}
         value={query}
         found={visiveis.length}
         invalid={busca.invalida}
@@ -165,8 +166,8 @@ export function History({
             <Icon name="search" size={42} />
             <p>
               {query.trim()
-                ? "Nothing matches that search."
-                : "Type to search your chats."}
+                ? tr("Nothing matches that search.")
+                : tr("Type to search your chats.")}
             </p>
           </div>
         )}

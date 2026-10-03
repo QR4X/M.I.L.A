@@ -24,10 +24,12 @@ import {
   type EffortLevel,
 } from "../../core/effort";
 import { ConfirmModal } from "../modals";
+import { localeDaInterface, marca, tr } from "../../i18n/tr";
 
 type Overrides = Partial<Record<EffortLevel, Partial<EffortConfig>>>;
 
-/** Um campo do editor. */
+/** Um campo do editor. O nome e a explicação são só MARCADOS (marca): quem
+ *  desenha chama tr(), porque o idioma pode mudar com o app aberto. */
 export interface CampoDeEsforco {
   key: keyof EffortConfig;
   /** O nome na linha — curto: a tela não tem lugar pra explicação. */
@@ -58,8 +60,6 @@ function de(ini: number, fim: number, passo = 1): number[] {
   return out;
 }
 
-const plural = (n: number, um: string, varios: string) => (n === 1 ? `1 ${um}` : `${n} ${varios}`);
-
 /** Os nove ajustes, em três blocos: a resposta (tamanho, a parte do contexto
  *  quando não tem teto, temperatura), o agente (voltas, novas tentativas,
  *  trava de loop, paralelo) e o Vault Q&A (quantas notas, quanto de cada). */
@@ -67,8 +67,10 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
   {
     key: "maxTokens",
     icone: "message-square-text",
-    name: "Reply length",
-    desc: "The longest a reply can get, in tokens — longer costs more. No cap lets it use up to the share of context below. Models that think first (GPT-5, the o-series, Claude 5, Fable, Gemini 2.5 and 3) spend part of it thinking, so they always get at least 16k (32k on High, 64k from Extra high), and where the provider allows, the level also sets how hard they think. Each model has its own ceiling (4k on NVIDIA, 64k on Claude Haiku 4.5…), and the plugin never asks above it.",
+    name: marca("Reply length"),
+    desc: marca(
+      "The longest a reply can get, in tokens — longer costs more. No cap lets it use up to the share of context below. Models that think first (GPT-5, the o-series, Claude 5, Fable, Gemini 2.5 and 3) spend part of it thinking, so they always get at least 16k (32k on High, 64k from Extra high), and where the provider allows, the level also sets how hard they think. Each model has its own ceiling (4k on NVIDIA, 64k on Claude Haiku 4.5…), and the plugin never asks above it."
+    ),
     tipo: "numero",
     min: 0,
     max: 200000,
@@ -76,36 +78,42 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
       256, 512, 1000, 1500, 2048, 3000, 4000, 6000, 8000, 12000, 16000, 24000, 32000,
       48000, 64000, 100000, 128000, 200000, 0,
     ],
-    mostrar: (v) => (v === 0 ? "No cap" : `${tokensCurtos(v)} tokens`),
+    mostrar: (v) => (v === 0 ? tr("No cap") : tr("{n} tokens", { n: tokensCurtos(v) })),
   },
   {
     key: "contextReservePercent",
     icone: "pie-chart",
-    name: "Share of context",
-    desc: "With no cap on the reply, how much of the model's context window it may fill. The rest is kept for your message, the chat so far and the notes. The model's own output ceiling still applies on top.",
+    name: marca("Share of context"),
+    desc: marca(
+      "With no cap on the reply, how much of the model's context window it may fill. The rest is kept for your message, the chat so far and the notes. The model's own output ceiling still applies on top."
+    ),
     tipo: "numero",
     min: 10,
     max: 95,
     paradas: de(10, 95, 5),
-    mostrar: (v) => `up to ${v}%`,
+    mostrar: (v) => tr("up to {n}%", { n: v }),
     quando: (cfg) => cfg.maxTokens === 0,
   },
   {
     key: "temperature",
     icone: "thermometer",
-    name: "Temperature",
-    desc: "How adventurous the wording is: low sticks to the likeliest answer, high is more creative and less predictable. Provider default sends nothing. Not every model takes it — the newest Claude (Fable, Opus 4.7+, Sonnet 5+) and the reasoning models (GPT-5, the o-series, DeepSeek R1) always use their own, so the plugin leaves it out for them. Claude goes up to 1 and NVIDIA from 0.01 to 1 — values outside are brought in.",
+    name: marca("Temperature"),
+    desc: marca(
+      "How adventurous the wording is: low sticks to the likeliest answer, high is more creative and less predictable. Provider default sends nothing. Not every model takes it — the newest Claude (Fable, Opus 4.7+, Sonnet 5+) and the reasoning models (GPT-5, the o-series, DeepSeek R1) always use their own, so the plugin leaves it out for them. Claude goes up to 1 and NVIDIA from 0.01 to 1 — values outside are brought in."
+    ),
     tipo: "numero",
     min: -1,
     max: 2,
     paradas: [-1, ...de(0, 2, 0.1)],
-    mostrar: (v) => (v < 0 ? "Provider default" : String(v)),
+    mostrar: (v) => (v < 0 ? tr("Provider default") : String(v)),
   },
   {
     key: "agentMaxTurns",
     icone: "footprints",
-    name: "Agent turns",
-    desc: "How many rounds of tool use (read, search, edit…) the Agent gets before it stops and answers. No cap leaves only the loop guard to stop it.",
+    name: marca("Agent turns"),
+    desc: marca(
+      "How many rounds of tool use (read, search, edit…) the Agent gets before it stops and answers. No cap leaves only the loop guard to stop it."
+    ),
     tipo: "numero",
     min: 0,
     max: 1000,
@@ -113,53 +121,66 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
       1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 80, 100, 150, 200, 300, 500,
       1000, 0,
     ],
-    mostrar: (v) => (v === 0 ? "No cap" : plural(v, "turn", "turns")),
+    mostrar: (v) =>
+      v === 0 ? tr("No cap") : v === 1 ? tr("1 turn") : tr("{n} turns", { n: v }),
   },
   {
     key: "toolRetryOnError",
     icone: "wrench",
-    name: "Tool retries",
-    desc: "How many times the Agent retries a tool that failed for a passing reason: network, timeout, a locked file. A wrong path is never retried.",
+    name: marca("Tool retries"),
+    desc: marca(
+      "How many times the Agent retries a tool that failed for a passing reason: network, timeout, a locked file. A wrong path is never retried."
+    ),
     tipo: "numero",
     min: 0,
     max: 20,
     paradas: [...de(0, 10), 12, 15, 20],
-    mostrar: (v) => (v === 0 ? "None" : plural(v, "retry", "retries")),
+    mostrar: (v) =>
+      v === 0 ? tr("None") : v === 1 ? tr("1 retry") : tr("{n} retries", { n: v }),
   },
   {
     key: "loopDetectionWindow",
     icone: "shield",
-    name: "Loop guard",
-    desc: "How many identical tool calls in a row make the Agent stop and rethink, so it doesn't spin in place. Off turns the check off.",
+    name: marca("Loop guard"),
+    desc: marca(
+      "How many identical tool calls in a row make the Agent stop and rethink, so it doesn't spin in place. Off turns the check off."
+    ),
     tipo: "numero",
     min: 0,
     max: 20,
     paradas: de(0, 20),
-    mostrar: (v) => (v === 0 ? "Off" : `${v} in a row`),
+    mostrar: (v) =>
+      v === 0 ? tr("Off") : v === 1 ? tr("1 in a row") : tr("{n} in a row", { n: v }),
   },
   {
     key: "parallelToolCalls",
     icone: "split",
-    name: "Run tools in parallel",
-    desc: "When the Agent asks for several tools at once, run them together instead of one after another. Faster; off is easier to follow.",
+    name: marca("Run tools in parallel"),
+    desc: marca(
+      "When the Agent asks for several tools at once, run them together instead of one after another. Faster; off is easier to follow."
+    ),
     tipo: "chave",
   },
   {
     key: "vaultTopK",
     icone: "files",
-    name: "Vault Q&A notes",
-    desc: "How many of your notes Vault Q&A pulls in to answer each question. More notes, wider view, more tokens. On a local Ollama model the plugin grows the context window to fit what's sent (8k, 16k, 32k…, up to what the model supports), so nothing gets cut — a bigger window just uses more memory.",
+    name: marca("Vault Q&A notes"),
+    desc: marca(
+      "How many of your notes Vault Q&A pulls in to answer each question. More notes, wider view, more tokens. On a local Ollama model the plugin grows the context window to fit what's sent (8k, 16k, 32k…, up to what the model supports), so nothing gets cut — a bigger window just uses more memory."
+    ),
     tipo: "numero",
     min: 1,
     max: 100,
     paradas: [...de(1, 20), 25, 30, 40, 50, 75, 100],
-    mostrar: (v) => plural(v, "note", "notes"),
+    mostrar: (v) => (v === 1 ? tr("1 note") : tr("{n} notes", { n: v })),
   },
   {
     key: "vaultExcerptChars",
     icone: "type",
-    name: "Characters per note",
-    desc: "How much of each note Vault Q&A pulls in goes into the context, in characters. More text, more detail, more tokens.",
+    name: marca("Characters per note"),
+    desc: marca(
+      "How much of each note Vault Q&A pulls in goes into the context, in characters. More text, more detail, more tokens."
+    ),
     tipo: "numero",
     min: 100,
     max: 10000,
@@ -167,7 +188,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
       100, 200, 300, 400, 500, 600, 800, 1000, 1200, 1500, 2000, 2500, 3000, 4000, 5000, 6000,
       8000, 10000,
     ],
-    mostrar: (v) => `${v.toLocaleString("en-US")} chars`,
+    mostrar: (v) => tr("{n} chars", { n: v.toLocaleString(localeDaInterface()) }),
   },
 ];
 
@@ -228,8 +249,13 @@ export function nivelEditado(overrides: Overrides | undefined, level: EffortLeve
 /** A linha do nível nas settings: os números que valem agora. */
 export function resumoDoNivel(overrides: Overrides | undefined, level: EffortLevel): string {
   const cfg = resolveEffortConfig(level, overrides);
-  const temp = cfg.temperature < 0 ? "provider temperature" : `temperature ${cfg.temperature}`;
-  return `${effortNumbers(cfg)} · ${temp} · ${cfg.vaultTopK} notes`;
+  const temp =
+    cfg.temperature < 0
+      ? tr("provider temperature")
+      : tr("temperature {t}", { t: cfg.temperature });
+  const notas =
+    cfg.vaultTopK === 1 ? tr("1 note") : tr("{n} notes", { n: cfg.vaultTopK });
+  return `${effortNumbers(cfg)} · ${temp} · ${notas}`;
 }
 
 /** O que o editor precisa do plugin — o teste consegue fingir. */
@@ -268,7 +294,7 @@ export class EffortLevelModal extends Modal {
 
   onOpen(): void {
     this.modalEl.addClass("axxa-effort-modal");
-    this.titleEl.setText(`${EFFORT_LABELS[this.level]} effort`);
+    this.titleEl.setText(tr("{level} effort", { level: tr(EFFORT_LABELS[this.level]) }));
     this.desenhar();
     this.montarRestaurar();
     // Qualquer toque fora do ⓘ fecha o balão — inclusive no próprio balão e
@@ -292,7 +318,7 @@ export class EffortLevelModal extends Modal {
     if (mesma) return;
     const el = topo.createDiv({
       cls: "axxa-esf-dica",
-      text: campo.desc,
+      text: tr(campo.desc),
       attr: { id: `axxa-esf-dica-${campo.key}`, role: "note" },
     });
     botao.setAttribute("aria-expanded", "true");
@@ -362,11 +388,13 @@ export class EffortLevelModal extends Modal {
       cls: "axxa-esf-restaurar clickable-icon",
       attr: {
         type: "button",
-        "aria-label": `Restore ${EFFORT_LABELS[this.level]}'s defaults`,
+        "aria-label": tr("Restore {level}'s defaults", {
+          level: tr(EFFORT_LABELS[this.level]),
+        }),
       },
     });
     setIcon(restaurar.createSpan({ cls: "axxa-esf-restaurar-ico" }), "rotate-ccw");
-    restaurar.createSpan({ text: "Restore" });
+    restaurar.createSpan({ text: tr("Restore") });
     restaurar.addEventListener("click", () => void this.restaurarTudo());
     this.restaurarEl = restaurar;
     this.pintarRestaurar();
@@ -406,11 +434,14 @@ export class EffortLevelModal extends Modal {
   }
 
   private async restaurarTudo(): Promise<void> {
-    const nome = EFFORT_LABELS[this.level];
+    const nome = tr(EFFORT_LABELS[this.level]);
     const ok = await new ConfirmModal(this.app, {
-      title: `Restore ${nome} to its defaults?`,
-      body: `Every setting of ${nome} goes back to ${nome}'s own defaults. The other levels keep theirs.`,
-      confirmLabel: "Restore",
+      title: tr("Restore {level} to its defaults?", { level: nome }),
+      body: tr(
+        "Every setting of {level} goes back to {level}'s own defaults. The other levels keep theirs.",
+        { level: nome }
+      ),
+      confirmLabel: tr("Restore"),
       danger: true,
     }).openAndWait();
     if (!ok) return;
@@ -418,7 +449,7 @@ export class EffortLevelModal extends Modal {
     delete resto[this.level];
     this.plugin.settings.effortConfigs = resto;
     await this.plugin.saveSettings();
-    new Notice(`${nome} effort is back to its defaults.`);
+    new Notice(tr("{level} effort is back to its defaults.", { level: nome }));
     for (const l of this.linhas) l.repor();
     this.mostrarDependentes(DEFAULT_EFFORT_CONFIGS[this.level]);
     this.pintarRestaurar();
@@ -430,12 +461,13 @@ export class EffortLevelModal extends Modal {
   private topo(pai: HTMLElement, campo: CampoDeEsforco, padraoVisivel: string) {
     const topo = pai.createDiv({ cls: "axxa-esf-topo" });
     setIcon(topo.createSpan({ cls: "axxa-esf-ico" }), campo.icone);
-    topo.createSpan({ cls: "axxa-esf-nome", text: campo.name });
+    const nome = tr(campo.name);
+    topo.createSpan({ cls: "axxa-esf-nome", text: nome });
     const info = topo.createEl("button", {
       cls: "axxa-esf-info clickable-icon",
       attr: {
         type: "button",
-        "aria-label": `What is ${campo.name}?`,
+        "aria-label": tr("What is {name}?", { name: nome }),
         "aria-expanded": "false",
         "aria-controls": `axxa-esf-dica-${campo.key}`,
       },
@@ -446,7 +478,10 @@ export class EffortLevelModal extends Modal {
       cls: "axxa-esf-volta clickable-icon",
       attr: {
         type: "button",
-        "aria-label": `Back to the ${EFFORT_LABELS[this.level]} default (${padraoVisivel})`,
+        "aria-label": tr("Back to the {level} default ({value})", {
+          level: tr(EFFORT_LABELS[this.level]),
+          value: padraoVisivel,
+        }),
       },
     });
     setIcon(volta, "rotate-ccw");
@@ -472,8 +507,8 @@ export class EffortLevelModal extends Modal {
         min: "0",
         max: String(paradas.length - 1),
         step: "1",
-        "aria-label": campo.name,
-        "aria-description": campo.desc,
+        "aria-label": tr(campo.name),
+        "aria-description": tr(campo.desc),
       },
     });
 
@@ -522,10 +557,10 @@ export class EffortLevelModal extends Modal {
     const padrao = DEFAULT_EFFORT_CONFIGS[this.level][campo.key] as boolean;
     const salvo = () => this.editado()[campo.key] as boolean | undefined;
     const linha = pai.createDiv({ cls: "axxa-esf-linha is-chave" });
-    const { topo, valorEl, volta } = this.topo(linha, campo, padrao ? "on" : "off");
+    const { topo, valorEl, volta } = this.topo(linha, campo, padrao ? tr("on") : tr("off"));
     valorEl.remove(); // o próprio interruptor é o valor
     const chave = new ToggleComponent(topo);
-    chave.toggleEl.setAttribute("aria-label", campo.name);
+    chave.toggleEl.setAttribute("aria-label", tr(campo.name));
 
     // O setValue do ToggleComponent CHAMA o onChange quando o valor muda —
     // sem esta trava, abrir a tela (ou o ↺) gravaria sozinho.

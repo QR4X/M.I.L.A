@@ -10,6 +10,8 @@
 //
 // Aqui o formulário vira arquivo. O YAML é NOSSO problema, não do usuário.
 
+import { tr } from "../i18n/tr";
+
 /** O que o formulário coleta. Vira frontmatter + corpo. */
 export interface SkillDraft {
   name: string;
@@ -100,12 +102,13 @@ export function skillProblema(
   /** Caminho do skill sendo editado (ele não conflita consigo mesmo). */
   atual?: string
 ): string | null {
-  if (!d.name.trim()) return "Give it a name.";
-  if (!d.body.trim()) return "Write the prompt — that is what the skill is.";
+  if (!d.name.trim()) return tr("Give it a name.");
+  if (!d.body.trim())
+    return tr("Write the prompt — that is what the skill is.");
   const alvo = skillFileName(d.name);
   const colide = existentes.some(
     (p) => p !== atual && (p.split("/").pop() ?? p).toLowerCase() === alvo.toLowerCase()
   );
-  if (colide) return "There is already a skill with that name.";
+  if (colide) return tr("There is already a skill with that name.");
   return null;
 }

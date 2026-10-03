@@ -48,6 +48,7 @@ import { limparRun } from "../assistant/store";
 import type { ProjetoSugerido } from "../assistant/parse";
 import { useAssistant } from "./useAssistant";
 import { rankNotes, vaultNotes } from "./notePicker";
+import { marca, tr } from "../i18n/tr";
 
 /**
  * Os passos da CRIAÇÃO de um projeto, um por tela.
@@ -59,11 +60,11 @@ import { rankNotes, vaultNotes } from "./notePicker";
  * Cor e ícone por último, e separados — uma pergunta por tela.
  */
 export const PASSOS_PROJETO = [
-  { id: "name", label: "Name" },
-  { id: "notes", label: "Notes" },
-  { id: "instructions", label: "Instructions" },
-  { id: "color", label: "Color" },
-  { id: "icon", label: "Icon" },
+  { id: "name", label: marca("Name") },
+  { id: "notes", label: marca("Notes") },
+  { id: "instructions", label: marca("Instructions") },
+  { id: "color", label: marca("Color") },
+  { id: "icon", label: marca("Icon") },
 ] as const;
 
 export type PassoProjeto = (typeof PASSOS_PROJETO)[number]["id"];
@@ -228,7 +229,7 @@ export function ProjectForm({
         onBack={() => onProcurar(false)}
         onPick={(icon) => set({ icon })}
       >
-        <SheetField label="Color">
+        <SheetField label={tr("Color")}>
           <SheetSwatches
             colors={PROJECT_COLORS}
             value={draft.color}
@@ -255,23 +256,23 @@ export function ProjectForm({
         </span>
         <span className="axxa-thing-text">
           <span className="axxa-thing-name">
-            {draft.name.trim() || "Untitled project"}
+            {draft.name.trim() || tr("Untitled project")}
           </span>
           <span className="axxa-thing-note">
             {quantas === 0
-              ? "No notes yet"
+              ? tr("No notes yet")
               : quantas === 1
-                ? "1 note"
-                : `${quantas} notes`}
-            {extras.instructions.trim() ? " · instructions" : ""}
+                ? tr("1 note")
+                : tr("{n} notes", { n: quantas })}
+            {extras.instructions.trim() ? ` · ${tr("instructions")}` : ""}
           </span>
         </span>
       </div>
 
       {mostra("name") && (
         <SheetField
-          label="Name"
-          hint={passo ? "Or describe it and let ✨ set up the whole project." : undefined}
+          label={tr("Name")}
+          hint={passo ? tr("Or describe it and let ✨ set up the whole project.") : undefined}
         >
           {/* O primeiro campo vazio da tela é onde a oferta faz sentido:
               daqui ela monta o projeto inteiro — nome, ícone, cor,
@@ -293,7 +294,7 @@ export function ProjectForm({
             <SheetInput
               comSpark
               value={draft.name}
-              placeholder="Thesis, Client X, Apartment…"
+              placeholder={tr("Thesis, Client X, Apartment…")}
               autoFocus={focar && (passo === undefined || passo === "name")}
               onChange={(name) => set({ name })}
             />
@@ -304,15 +305,15 @@ export function ProjectForm({
       {mostra("notes") && (
         <>
           <SheetField
-            label="Notes"
-            hint="What this project should know — they go in as context on every chat started in it."
+            label={tr("Notes")}
+            hint={tr("What this project should know — they go in as context on every chat started in it.")}
           >
             {/* O ✨ mora no campo de BUSCA: procurar notas é o que este campo
                 já faz, e a assistente é o jeito de procurar sem saber o nome
                 delas. Sem foco automático — a tela abre mostrando o que já foi
                 escolhido, e não o teclado cobrindo a lista. */}
             <ComAssistente
-              titulo="Find notes for me"
+              titulo={tr("Find notes for me")}
               aberto={ajudando === "notes"}
               ocupado={runNotas.fase === "rodando"}
               onAbrir={() => setAjudando("notes")}
@@ -338,7 +339,7 @@ export function ProjectForm({
               <SheetInput
                 comSpark
                 value={busca}
-                placeholder="Search notes to add"
+                placeholder={tr("Search notes to add")}
                 onChange={setBusca}
               />
             </ComAssistente>
@@ -351,8 +352,8 @@ export function ProjectForm({
             <SheetGroup>
               <SheetRow
                 icon="eye"
-                title="Let ✨ see your note names"
-                note="Only titles and folders — never what is inside a note."
+                title={tr("Let ✨ see your note names")}
+                note={tr("Only titles and folders — never what is inside a note.")}
                 onClick={() => {
                   setLiberou(true);
                   void deixarVerNotas();
@@ -362,7 +363,7 @@ export function ProjectForm({
           )}
 
           {busca.trim() !== "" && (
-            <SheetGroup label="In your vault">
+            <SheetGroup label={tr("In your vault")}>
               {achadas.map((n) => (
                 <SheetRow
                   key={n.path}
@@ -372,7 +373,7 @@ export function ProjectForm({
                   note={n.path}
                   action={{
                     icon: "plus",
-                    label: `Add ${n.path}`,
+                    label: tr("Add {path}", { path: n.path }),
                     onClick: () =>
                       onExtras({ ...extras, notes: juntar(extras.notes, [n.path]) }),
                   }}
@@ -381,11 +382,13 @@ export function ProjectForm({
                   }
                 />
               ))}
-              {achadas.length === 0 && <SheetNote>No note matches that.</SheetNote>}
+              {achadas.length === 0 && (
+                <SheetNote>{tr("No note matches that.")}</SheetNote>
+              )}
             </SheetGroup>
           )}
 
-          <SheetGroup label={quantas ? "In this project" : undefined}>
+          <SheetGroup label={quantas ? tr("In this project") : undefined}>
             {extras.notes.map((path) => (
               <SheetRow
                 key={path}
@@ -395,7 +398,7 @@ export function ProjectForm({
                 note={path}
                 action={{
                   icon: "x",
-                  label: `Remove ${path}`,
+                  label: tr("Remove {path}", { path }),
                   onClick: () =>
                     onExtras({
                       ...extras,
@@ -407,8 +410,9 @@ export function ProjectForm({
             ))}
             {quantas === 0 && (
               <SheetNote>
-                No notes yet. Search above, or tap ✨ to have the assistant find
-                them. You can also skip this and add notes later.
+                {tr(
+                  "No notes yet. Search above, or tap ✨ to have the assistant find them. You can also skip this and add notes later."
+                )}
               </SheetNote>
             )}
           </SheetGroup>
@@ -417,8 +421,10 @@ export function ProjectForm({
 
       {mostra("instructions") && (
         <SheetField
-          label="Instructions"
-          hint="Sent with every new chat in this project — it adds to how the app already works, it does not replace it."
+          label={tr("Instructions")}
+          hint={tr(
+            "Sent with every new chat in this project — it adds to how the app already works, it does not replace it."
+          )}
         >
           {/* Ela escreve A PARTIR do projeto: o nome e as notas escolhidas no
               passo anterior são a matéria-prima, e o que estiver escrito vai
@@ -452,9 +458,9 @@ export function ProjectForm({
               value={extras.instructions}
               rows={7}
               autoFocus={focar && passo === "instructions"}
-              placeholder={
+              placeholder={tr(
                 "Answer in Portuguese.\nCite the note you took it from.\nShort paragraphs, no bullet lists."
-              }
+              )}
               onChange={(instructions) => onExtras({ ...extras, instructions })}
             />
           </ComAssistente>
@@ -462,7 +468,7 @@ export function ProjectForm({
       )}
 
       {mostra("color") && (
-        <SheetField label="Color">
+        <SheetField label={tr("Color")}>
           <SheetSwatches
             colors={PROJECT_COLORS}
             value={draft.color}
@@ -473,7 +479,7 @@ export function ProjectForm({
       )}
 
       {mostra("icon") && (
-        <SheetField label="Icon">
+        <SheetField label={tr("Icon")}>
           <SheetIconGrid
             icons={PROJECT_ICONS}
             value={draft.icon}

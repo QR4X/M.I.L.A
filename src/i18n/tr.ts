@@ -22,10 +22,21 @@
 import { PT_BR_UI } from "./ui-pt";
 
 let dicionario: Record<string, string> = {};
+let localeAtual: "en-US" | "pt-BR" = "en-US";
 
 /** O plugin troca o idioma da interface (ao carregar e a cada save). */
 export function definirIdiomaDaInterface(locale: "en-us" | "pt-br"): void {
   dicionario = locale === "pt-br" ? PT_BR_UI : {};
+  localeAtual = locale === "pt-br" ? "pt-BR" : "en-US";
+}
+
+/**
+ * O locale de NÚMEROS e DATAS da interface ("pt-BR" ou "en-US"): em português,
+ * "1.000" e "outubro"; em inglês, "1,000" e "October". Pra toLocaleString e
+ * toLocaleDateString — nunca pra conta de fuso (aquilo é parse, não texto).
+ */
+export function localeDaInterface(): "en-US" | "pt-BR" {
+  return localeAtual;
 }
 
 /** O texto no idioma da interface, com as {variáveis} preenchidas. */

@@ -18,6 +18,7 @@
 // primeira, e é o que qualquer um espera de tocar "escreve de novo".
 
 import type { TurnoAssistente } from "./run";
+import { tr } from "../i18n/tr";
 
 export type FaseRun =
   | "parada"
@@ -132,7 +133,7 @@ export function comecarRodada(
       // botão escrito "Writing…" que nunca volta.
       por(chave, {
         fase: "erro",
-        erro: (e as Error)?.message || "The assistant could not answer.",
+        erro: (e as Error)?.message || tr("The assistant could not answer."),
       });
       aoTerminar?.(lerRun(chave));
     });

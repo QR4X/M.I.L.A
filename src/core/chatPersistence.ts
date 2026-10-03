@@ -15,6 +15,7 @@ import type { App, DataAdapter } from "obsidian";
 import type { AIToolStep } from "../agent/types";
 import { previewFromMarkdown } from "./chatPreview";
 import { texto } from "./texto";
+import { tr } from "../i18n/tr";
 
 export interface ChatMessageStored {
   type: "user" | "ai-response";
@@ -379,7 +380,7 @@ function parseBody(body: string): ChatMessageStored[] {
 export function parseChatMarkdown(content: string): ChatData {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!match) {
-    throw new Error("Invalid frontmatter — no `---` delimiters found.");
+    throw new Error(tr("Invalid frontmatter — no `---` delimiters found."));
   }
   const fm = parseSimpleYaml(match[1]);
   const messages = parseBody(match[2]);
@@ -577,11 +578,11 @@ export async function renameChat(
   newTitle: string
 ): Promise<void> {
   const clean = newTitle.trim();
-  if (!clean) throw new Error("Title is empty.");
+  if (!clean) throw new Error(tr("Title is empty."));
   const path = chatFilePath(chatsPath, mode, chatId);
   const content = await app.vault.adapter.read(path);
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!match) throw new Error("Invalid frontmatter in this chat file.");
+  if (!match) throw new Error(tr("Invalid frontmatter in this chat file."));
   // Atualiza só a linha `title:` (mantém resto do frontmatter)
   const updatedFm = match[1].replace(
     /^title:\s*.*$/m,
@@ -624,7 +625,7 @@ export async function setChatInstructions(
   const path = chatFilePath(chatsPath, mode, chatId);
   const content = await app.vault.adapter.read(path);
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!match) throw new Error("Invalid frontmatter in this chat file.");
+  if (!match) throw new Error(tr("Invalid frontmatter in this chat file."));
   let fm = match[1].replace(/^instructions:\s*.*$\n?/m, "");
   const texto = instructions.trim();
   if (texto) {
@@ -648,7 +649,7 @@ export async function setChatStarred(
   const path = chatFilePath(chatsPath, mode, chatId);
   const content = await app.vault.adapter.read(path);
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!match) throw new Error("Invalid frontmatter in this chat file.");
+  if (!match) throw new Error(tr("Invalid frontmatter in this chat file."));
   let fm = match[1].replace(/^starred:\s*.*$\n?/m, "");
   if (starred) {
     // Reinsere antes de tokens_in. Se o arquivo não tiver tokens_in (formato

@@ -13,11 +13,15 @@ import { MarkdownView, TFile, type Editor, type Menu, type MarkdownFileInfo } fr
 import type AxxaPlugin from "../main";
 import { pedirAoPainel } from "./ponte";
 import { IdiomaModal, acaoNoTexto, type AcaoNoTexto } from "./inline";
+import { marca, tr } from "../i18n/tr";
 
 /** O pedido do "Summarize this note" — curto e útil: o essencial e o que
- *  pede ação. Em inglês: a resposta segue o idioma do app (system prompt). */
-export const PEDIDO_RESUMO =
-  "Summarize this note: the main points first, then anything that needs action or a decision.";
+ *  pede ação. Ele vira a MENSAGEM da pessoa na conversa (e o título dela),
+ *  então sai no idioma da interface: em português, uma bolha em inglês no
+ *  meio do chat parecia um engano. */
+export const PEDIDO_RESUMO = marca(
+  "Summarize this note: the main points first, then anything that needs action or a decision."
+);
 
 /** É uma nota Markdown de verdade (não um canvas, PDF ou imagem)? */
 function ehNota(f: unknown): f is TFile {
@@ -33,7 +37,7 @@ export function registrarComandosDoEditor(plugin: AxxaPlugin): void {
     pedirAoPainel(pedido);
   };
   const perguntarSobre = (f: TFile) => void abrirCom({ tipo: "nota", path: f.path });
-  const resumir = (f: TFile) => void abrirCom({ tipo: "nota", path: f.path, enviar: PEDIDO_RESUMO });
+  const resumir = (f: TFile) => void abrirCom({ tipo: "nota", path: f.path, enviar: tr(PEDIDO_RESUMO) });
   const mandarTrecho = (editor: Editor, info: MarkdownView | MarkdownFileInfo) => {
     const texto = editor.getSelection();
     if (!texto.trim()) return;
@@ -47,7 +51,7 @@ export function registrarComandosDoEditor(plugin: AxxaPlugin): void {
   // ── a paleta ──────────────────────────────────────────────────────────
   plugin.addCommand({
     id: "ask-about-note",
-    name: "Ask about this note",
+    name: tr("Ask about this note"),
     icon: "message-square-text",
     checkCallback: (checking) => {
       const f = app.workspace.getActiveFile();
@@ -58,7 +62,7 @@ export function registrarComandosDoEditor(plugin: AxxaPlugin): void {
   });
   plugin.addCommand({
     id: "summarize-note",
-    name: "Summarize this note",
+    name: tr("Summarize this note"),
     icon: "list",
     checkCallback: (checking) => {
       const f = app.workspace.getActiveFile();
@@ -69,7 +73,7 @@ export function registrarComandosDoEditor(plugin: AxxaPlugin): void {
   });
   plugin.addCommand({
     id: "send-selection-to-chat",
-    name: "Send selection to chat",
+    name: tr("Send selection to chat"),
     icon: "message-square-quote",
     editorCheckCallback: (checking, editor, info) => {
       if (!temSelecao(editor)) return false;
@@ -88,11 +92,11 @@ export function registrarComandosDoEditor(plugin: AxxaPlugin): void {
         return true;
       },
     });
-  noTextoComSelecao("rewrite-selection", "Rewrite selection", "wand-sparkles", "rewrite");
-  noTextoComSelecao("fix-selection", "Fix grammar and spelling in selection", "spell-check", "fix");
+  noTextoComSelecao("rewrite-selection", tr("Rewrite selection"), "wand-sparkles", "rewrite");
+  noTextoComSelecao("fix-selection", tr("Fix grammar and spelling in selection"), "spell-check", "fix");
   plugin.addCommand({
     id: "translate-selection",
-    name: "Translate selection…",
+    name: tr("Translate selection…"),
     icon: "languages",
     editorCheckCallback: (checking, editor) => {
       if (!temSelecao(editor)) return false;
@@ -102,7 +106,7 @@ export function registrarComandosDoEditor(plugin: AxxaPlugin): void {
   });
   plugin.addCommand({
     id: "continue-writing",
-    name: "Continue writing",
+    name: tr("Continue writing"),
     icon: "pen-line",
     editorCallback: (editor) => noTexto(editor, "continue"),
   });
@@ -113,15 +117,15 @@ export function registrarComandosDoEditor(plugin: AxxaPlugin): void {
       const item = (title: string, icon: string, acao: () => void) =>
         menu.addItem((i) => i.setTitle(title).setIcon(icon).setSection("axxa").onClick(acao));
       if (temSelecao(editor)) {
-        item("Rewrite with AXXA", "wand-sparkles", () => noTexto(editor, "rewrite"));
-        item("Fix grammar with AXXA", "spell-check", () => noTexto(editor, "fix"));
-        item("Translate with AXXA…", "languages", () => traduzir(editor));
-        item("Send selection to AXXA", "message-square-quote", () => mandarTrecho(editor, info));
+        item(tr("Rewrite with AXXA"), "wand-sparkles", () => noTexto(editor, "rewrite"));
+        item(tr("Fix grammar with AXXA"), "spell-check", () => noTexto(editor, "fix"));
+        item(tr("Translate with AXXA…"), "languages", () => traduzir(editor));
+        item(tr("Send selection to AXXA"), "message-square-quote", () => mandarTrecho(editor, info));
       } else {
-        item("Continue writing with AXXA", "pen-line", () => noTexto(editor, "continue"));
+        item(tr("Continue writing with AXXA"), "pen-line", () => noTexto(editor, "continue"));
         if (ehNota(info.file)) {
           const f = info.file;
-          item("Ask AXXA about this note", "message-square-text", () => perguntarSobre(f));
+          item(tr("Ask AXXA about this note"), "message-square-text", () => perguntarSobre(f));
         }
       }
     })
@@ -133,8 +137,8 @@ export function registrarComandosDoEditor(plugin: AxxaPlugin): void {
       if (!ehNota(file)) return;
       const item = (title: string, icon: string, acao: () => void) =>
         menu.addItem((i) => i.setTitle(title).setIcon(icon).setSection("axxa").onClick(acao));
-      item("Ask AXXA about this note", "message-square-text", () => perguntarSobre(file));
-      item("Summarize with AXXA", "list", () => resumir(file));
+      item(tr("Ask AXXA about this note"), "message-square-text", () => perguntarSobre(file));
+      item(tr("Summarize with AXXA"), "list", () => resumir(file));
     })
   );
 }

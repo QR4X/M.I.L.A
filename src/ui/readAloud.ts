@@ -16,6 +16,7 @@ import { Notice } from "obsidian";
 import type AxxaPlugin from "../main";
 import { getProvider } from "../providers";
 import { elevenSpeak } from "../providers/elevenlabs";
+import { marca, tr } from "../i18n/tr";
 
 /** Teto do texto mandado pro TTS. Resposta longa vira audiobook e custa caro. */
 export const SPEAK_MAX_CHARS = 4000;
@@ -51,8 +52,8 @@ export const STT_MODELS = [
 
 /** Quem sabe falar hoje. Cresce quando um provider ganhar `generateAudio`. */
 export const TTS_PROVIDERS: { id: string; label: string; needs: string }[] = [
-  { id: "openai", label: "OpenAI", needs: "OpenAI key" },
-  { id: "eleven", label: "ElevenLabs", needs: "ElevenLabs key" },
+  { id: "openai", label: "OpenAI", needs: marca("OpenAI key") },
+  { id: "eleven", label: "ElevenLabs", needs: marca("ElevenLabs key") },
 ];
 
 /** Tem credencial pra falar por este caminho? */
@@ -152,8 +153,8 @@ export async function speak(
   if (!ttsReady(plugin, s.ttsProvider)) {
     new Notice(
       s.ttsProvider === "eleven"
-        ? "Add your ElevenLabs key in Settings › Chat › Voice."
-        : "Add your OpenAI key in Settings › Providers."
+        ? tr("Add your ElevenLabs key in Settings › Chat › Voice.")
+        : tr("Add your OpenAI key in Settings › Providers.")
     );
     return;
   }
@@ -169,7 +170,7 @@ export async function speak(
   try {
     const item = await synthesize(plugin, clean.slice(0, SPEAK_MAX_CHARS), opts);
     if (!item) {
-      new Notice("This provider can't do text-to-speech yet.");
+      new Notice(tr("This provider can't do text-to-speech yet."));
       return;
     }
     // Outra fala começou enquanto esta buscava o áudio: desiste.
@@ -194,7 +195,9 @@ export async function speak(
             // Recusa do sistema é diferente de erro de rede — e o usuário
             // precisa saber qual dos dois foi.
             new Notice(
-              `Playback blocked: ${err instanceof Error ? err.message : String(err)}`
+              tr("Playback blocked: {error}", {
+                error: err instanceof Error ? err.message : String(err),
+              })
             );
           }
           resolve();
@@ -203,7 +206,9 @@ export async function speak(
     });
   } catch (err) {
     new Notice(
-      `Read aloud failed: ${err instanceof Error ? err.message : String(err)}`
+      tr("Read aloud failed: {error}", {
+        error: err instanceof Error ? err.message : String(err),
+      })
     );
   } finally {
     if (current === audio) {

@@ -27,7 +27,8 @@ import {
 } from "../store/chat";
 import { getProvider } from "../providers";
 import { modeloSalvoPara } from "./modeloPadrao";
-import { getTranslations, resolverIdioma } from "../i18n";
+import { getTranslations } from "../i18n";
+import { tr } from "../i18n/tr";
 import {
   saveChat,
   loadChat,
@@ -548,7 +549,7 @@ export class ChatSession {
     }
     useChatStore.getState().setAttachments(notes);
     if (missing.length > 0) {
-      new Notice(`Project sources not found: ${missing.join(", ")}`);
+      new Notice(tr("Project sources not found: {names}", { names: missing.join(", ") }));
     }
     this.emit();
   }
@@ -734,11 +735,10 @@ export class ChatSession {
     console.error("[axxa] não consegui gravar a conversa:", err);
     if (this.avisoDeGravacaoDado) return;
     this.avisoDeGravacaoDado = true;
-    const en = resolverIdioma(this.plugin.settings.language) === "en-us";
     new Notice(
-      en
-        ? "AXXA could not save this chat to your vault — what you see here is not on disk yet. Check the vault's disk space and permissions."
-        : "A AXXA não conseguiu gravar esta conversa no vault — o que está na tela ainda não está em disco. Confira o espaço e as permissões do vault.",
+      tr(
+        "AXXA could not save this chat to your vault — what you see here is not on disk yet. Check the vault's disk space and permissions."
+      ),
       12000
     );
   }

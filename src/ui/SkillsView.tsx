@@ -39,11 +39,12 @@ import { SkillForm, PASSOS_SKILL } from "./SkillSheet";
 import { openActions } from "./menu";
 import { MODULES, relativeShort } from "./modules";
 import { CHAT_MODES, isChatMode } from "../core/session";
+import { marca, tr } from "../i18n/tr";
 
 /** As abas da galeria: o modo em que o skill abre. É a única divisão que um
  *  skill tem — o resto (nome, prompt) é assunto da busca. */
 const ABAS: Array<{ id: string; label: string }> = [
-  { id: "all", label: "All" },
+  { id: "all", label: marca("All") },
   ...CHAT_MODES.map((m) => ({ id: m, label: MODULES[m].short })),
 ];
 
@@ -112,7 +113,7 @@ export function SkillsView({
   const abrirNota = (path: string) => {
     const f = plugin.app.vault.getAbstractFileByPath(path);
     if (f instanceof TFile) void plugin.app.workspace.getLeaf(true).openFile(f);
-    else new Notice(`Not found: ${path}`);
+    else new Notice(tr("Not found: {path}", { path }));
   };
 
   const criar = () => {
@@ -174,18 +175,18 @@ export function SkillsView({
       force();
     } catch (err) {
       new Notice(
-        `Could not save the skill: ${
-          err instanceof Error ? err.message : String(err)
-        }`
+        tr("Could not save the skill: {error}", {
+          error: err instanceof Error ? err.message : String(err),
+        })
       );
     }
   };
 
   const apagar = async (s: Skill) => {
     const ok = await new ConfirmModal(plugin.app, {
-      title: `Delete "${s.name}"?`,
-      body: "The note goes to the trash — you can get it back from there.",
-      confirmLabel: "Delete",
+      title: tr("Delete \"{name}\"?", { name: s.name }),
+      body: tr("The note goes to the trash — you can get it back from there."),
+      confirmLabel: tr("Delete"),
       danger: true,
     }).openAndWait();
     if (!ok) return;
@@ -198,7 +199,11 @@ export function SkillsView({
   const exemplos = async () => {
     const n = await plugin.seedExampleSkills();
     new Notice(
-      n > 0 ? `${n} example skill(s) created.` : "The examples are already here."
+      n === 1
+        ? tr("1 example skill created.")
+        : n > 1
+          ? tr("{n} example skills created.", { n })
+          : tr("The examples are already here.")
     );
     force();
   };
@@ -223,12 +228,12 @@ export function SkillsView({
       total={PASSOS_SKILL.length}
       onPasso={setPasso}
       problema={problema}
-      label="Create skill"
+      label={tr("Create skill")}
       onSubmit={() => void salvar()}
     />
   ) : noFormulario ? (
     <SheetSubmit
-      label="Save skill"
+      label={tr("Save skill")}
       problema={problema}
       onSubmit={() => void salvar()}
     />
@@ -250,7 +255,12 @@ export function SkillsView({
       action={
         noFormulario
           ? undefined
-          : { icon: "plus", label: "New skill", text: "New", onClick: criar }
+          : {
+              icon: "plus",
+              label: tr("New skill"),
+              text: tr("New"),
+              onClick: criar,
+            }
       }
       // Com o catálogo aberto quem manda no título é ELE (useSheetLevel →
       // `interno` em Sheet.tsx), então não há o que dizer daqui.
@@ -260,10 +270,10 @@ export function SkillsView({
             // cinco vezes seguidas não distingue uma tela da seguinte, e a
             // pessoa precisa saber o que a tela está perguntando antes de
             // olhar pro campo.
-            `New skill · ${PASSOS_SKILL[passo].label}`
+            tr("New skill · {step}", { step: tr(PASSOS_SKILL[passo].label) })
           : noFormulario
-            ? "Edit skill"
-            : "Skills"
+            ? tr("Edit skill")
+            : tr("Skills")
       }
       open={open}
       onClose={() => {
@@ -318,13 +328,18 @@ export function SkillsView({
               vê a lista mudar de tamanho, que é a mesma informação. */}
           {skills.length > 0 && (
             <Segmented
-              label="Filter skills by mode"
+              label={tr("Filter skills by mode")}
               value={aba}
               onChange={setAba}
               // Sem ponto: na home ele quer dizer "tem coisa te esperando
               // aqui", e usar a mesma marca pra dizer "tem item" ensinaria
               // que ela não significa nada.
-              options={ABAS.map((a) => ({ id: a.id, label: a.label }))}
+              // Só o "All" se traduz: o nome do modo fica como é (Chat,
+              // Vault, Agent), igual ao resto do app.
+              options={ABAS.map((a) => ({
+                id: a.id,
+                label: a.id === "all" ? tr(a.label) : a.label,
+              }))}
             />
           )}
 
@@ -337,7 +352,7 @@ export function SkillsView({
               a mesma ordem dos providers nas settings. */}
           <SheetSearch
             value={query}
-            placeholder="Search skills"
+            placeholder={tr("Search skills")}
             found={visiveis.length}
             onChange={setQuery}
           />
@@ -386,36 +401,38 @@ export function SkillsView({
                       />
                       <span>
                         {s.mtime
-                          ? `Edited ${relativeShort(
-                              new Date(s.mtime).toISOString()
-                            )}`
-                          : s.description || "Prompt"}
+                          ? tr("Edited {time}", {
+                              time: relativeShort(
+                                new Date(s.mtime).toISOString()
+                              ),
+                            })
+                          : s.description || tr("Prompt")}
                       </span>
                     </span>
                   </button>
                   <button
                     type="button"
                     className="axxa-icon-btn axxa-tile-more"
-                    aria-label={`Actions for ${s.name}`}
+                    aria-label={tr("Actions for {name}", { name: s.name })}
                     onClick={(e) =>
                       openActions(e, [
                         {
-                          label: "Use",
+                          label: tr("Use"),
                           icon: "corner-down-left",
                           run: () => onUse(s),
                         },
                         {
-                          label: "Edit",
+                          label: tr("Edit"),
                           icon: "pencil",
                           run: () => editar(s),
                         },
                         {
-                          label: "Open note",
+                          label: tr("Open note"),
                           icon: "file-text",
                           run: () => abrirNota(s.path),
                         },
                         {
-                          label: "Delete",
+                          label: tr("Delete"),
                           icon: "trash-2",
                           danger: true,
                           run: () => void apagar(s),
@@ -435,8 +452,10 @@ export function SkillsView({
               <Icon name="sparkles" size={42} />
               <p>
                 {skills.length > 0
-                  ? "Nothing matches that."
-                  : "A skill is a prompt you keep. Write it once, use it in one tap — here, in the composer’s +, or by typing / in any chat."}
+                  ? tr("Nothing matches that.")
+                  : tr(
+                      "A skill is a prompt you keep. Write it once, use it in one tap — here, in the composer’s +, or by typing / in any chat."
+                    )}
               </p>
               {skills.length === 0 && (
                 <button
@@ -445,7 +464,7 @@ export function SkillsView({
                   onClick={() => void exemplos()}
                 >
                   <Icon name="wand" size={18} />
-                  <span>Start with three examples</span>
+                  <span>{tr("Start with three examples")}</span>
                 </button>
               )}
             </div>

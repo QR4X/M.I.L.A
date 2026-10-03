@@ -12,6 +12,7 @@
 // que esta folha escolhe.
 
 import { getModelCard } from "../providers/modelDescriptions";
+import { marca } from "../i18n/tr";
 
 export interface ModelGroup {
   /** Rótulo do grupo. Vazio no primeiro: ele não precisa se apresentar. */
@@ -19,14 +20,15 @@ export interface ModelGroup {
   models: string[];
 }
 
-/** Ordem dos grupos e o nome de cada um. */
+/** Ordem dos grupos e o nome de cada um. O nome é só MARCADO (marca): quem
+ *  mostra o grupo chama tr(). */
 const ORDEM: Array<{ id: string; label: string; cats: string[] }> = [
-  { id: "chat", label: "Chat", cats: ["chat-vision", "chat-text", "agent"] },
-  { id: "reasoning", label: "Reasoning", cats: ["reasoning"] },
-  { id: "image", label: "Image", cats: ["image-gen"] },
-  { id: "voice", label: "Voice", cats: ["audio-gen"] },
-  { id: "video", label: "Video", cats: ["video-gen"] },
-  { id: "outros", label: "Other", cats: ["embedding", "other"] },
+  { id: "chat", label: marca("Chat"), cats: ["chat-vision", "chat-text", "agent"] },
+  { id: "reasoning", label: marca("Reasoning"), cats: ["reasoning"] },
+  { id: "image", label: marca("Image"), cats: ["image-gen"] },
+  { id: "voice", label: marca("Voice"), cats: ["audio-gen"] },
+  { id: "video", label: marca("Video"), cats: ["video-gen"] },
+  { id: "outros", label: marca("Other"), cats: ["embedding", "other"] },
 ];
 
 /**

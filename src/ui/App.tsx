@@ -27,6 +27,7 @@ import { Notice } from "obsidian";
 import { ouvirPedidos } from "../editor/ponte";
 import { readNote } from "./notePicker";
 import { useChatStore } from "../store/chat";
+import { tr } from "../i18n/tr";
 
 export interface ComposerInject {
   text: string;
@@ -103,7 +104,7 @@ export function App({
           if (p.tipo === "nota") {
             const nota = await readNote(plugin.app, p.path);
             if (!nota) {
-              new Notice(`Note not found: ${p.path}`);
+              new Notice(tr("Note not found: {path}", { path: p.path }));
               return;
             }
             session.newChat();

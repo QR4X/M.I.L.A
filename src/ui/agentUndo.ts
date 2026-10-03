@@ -11,6 +11,7 @@ import { Notice, type App } from "obsidian";
 import { ConflitoAoDesfazer, desfazer, podeDesfazer } from "../agent/undo";
 import { useChatStore, type ActivityMeta } from "../store/chat";
 import { ConfirmModal } from "./modals";
+import { tr } from "../i18n/tr";
 
 /** O id de desfazer de uma ação que AINDA pode ser desfeita, ou null. */
 export function idDesfazivel(a: ActivityMeta | undefined): string | null {
@@ -39,13 +40,15 @@ export async function desfazerUma(app: App, id: string): Promise<boolean> {
     return true;
   } catch (err) {
     if (!(err instanceof ConflitoAoDesfazer)) {
-      new Notice(`Could not undo: ${mensagem(err)}`);
+      new Notice(tr("Could not undo: {error}", { error: mensagem(err) }));
       return false;
     }
     const ok = await new ConfirmModal(app, {
-      title: "Undo anyway?",
-      body: `${err.message} Undoing now throws away what changed since.`,
-      confirmLabel: "Undo anyway",
+      title: tr("Undo anyway?"),
+      body: tr("{message} Undoing now throws away what changed since.", {
+        message: err.message,
+      }),
+      confirmLabel: tr("Undo anyway"),
       danger: true,
     }).openAndWait();
     if (!ok) return false;
@@ -55,7 +58,7 @@ export async function desfazerUma(app: App, id: string): Promise<boolean> {
       new Notice(feito);
       return true;
     } catch (err2) {
-      new Notice(`Could not undo: ${mensagem(err2)}`);
+      new Notice(tr("Could not undo: {error}", { error: mensagem(err2) }));
       return false;
     }
   }
@@ -69,9 +72,14 @@ export async function desfazerUma(app: App, id: string): Promise<boolean> {
 export async function desfazerRodada(app: App, ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   const ok = await new ConfirmModal(app, {
-    title: ids.length === 1 ? "Undo the agent's change?" : `Undo the agent's ${ids.length} changes?`,
-    body: "Notes go back to how they were before this turn. Anything you changed by hand since is kept.",
-    confirmLabel: "Undo",
+    title:
+      ids.length === 1
+        ? tr("Undo the agent's change?")
+        : tr("Undo the agent's {n} changes?", { n: ids.length }),
+    body: tr(
+      "Notes go back to how they were before this turn. Anything you changed by hand since is kept."
+    ),
+    confirmLabel: tr("Undo"),
   }).openAndWait();
   if (!ok) return;
   let feitas = 0;
@@ -87,12 +95,25 @@ export async function desfazerRodada(app: App, ids: string[]): Promise<void> {
       else falhas.push(mensagem(err));
     }
   }
-  const partes = [feitas === 1 ? "1 change undone" : `${feitas} changes undone`];
+  const partes = [
+    feitas === 1 ? tr("1 change undone") : tr("{n} changes undone", { n: feitas }),
+  ];
   if (puladas > 0) {
     partes.push(
-      `${puladas} kept because the note changed since (undo ${puladas === 1 ? "it" : "them"} from the action list to force)`
+      puladas === 1
+        ? tr("1 kept because the note changed since (undo it from the action list to force)")
+        : tr(
+            "{n} kept because the note changed since (undo them from the action list to force)",
+            { n: puladas }
+          )
     );
   }
-  if (falhas.length > 0) partes.push(`${falhas.length} failed: ${falhas[0]}`);
+  if (falhas.length > 0) {
+    partes.push(
+      falhas.length === 1
+        ? tr("1 failed: {error}", { error: falhas[0] })
+        : tr("{n} failed: {error}", { n: falhas.length, error: falhas[0] })
+    );
+  }
   new Notice(partes.join(" · "), falhas.length || puladas ? 8000 : 4000);
 }

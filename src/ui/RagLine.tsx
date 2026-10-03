@@ -25,6 +25,7 @@ import type AxxaPlugin from "../main";
 import { formatCompact } from "../usage/format";
 import { Icon } from "./Icon";
 import { openPluginSettings } from "./modals";
+import { tr } from "../i18n/tr";
 
 export function RagLine({ plugin }: { plugin: AxxaPlugin }) {
   // O índice muda por fora desta tela (a indexação roda no plugin), e o
@@ -46,7 +47,7 @@ export function RagLine({ plugin }: { plugin: AxxaPlugin }) {
       <button
         type="button"
         className="axxa-rag-open"
-        aria-label="Index settings"
+        aria-label={tr("Index settings")}
         onClick={() => openPluginSettings(plugin)}
       >
         {/* O mesmo ícone nos dois estados: o que muda é a COR (ver o `is-on`
@@ -56,17 +57,18 @@ export function RagLine({ plugin }: { plugin: AxxaPlugin }) {
         <span className="axxa-rag-text">
           {pronto ? (
             <>
-              <strong>Local index</strong> · {formatCompact(notas)}{" "}
-              {notas === 1 ? "note" : "notes"} · {formatCompact(trechos)}{" "}
-              {trechos === 1 ? "chunk" : "chunks"} · searched on this device
+              <strong>{tr("Local index")}</strong> ·{" "}
+              {notas === 1 ? tr("1 note") : tr("{n} notes", { n: formatCompact(notas) })} ·{" "}
+              {trechos === 1 ? tr("1 chunk") : tr("{n} chunks", { n: formatCompact(trechos) })} ·{" "}
+              {tr("searched on this device")}
             </>
           ) : (
             <>
               {/* Sem índice o app NÃO fica sem busca — ele cai na busca por
                   palavra. Dizer "desligado" seria mentira; o que muda é achar
                   por sentido ou só por palavra igual. */}
-              <strong>Local index</strong> · not built yet — notes are found by
-              keyword until you build it
+              <strong>{tr("Local index")}</strong> ·{" "}
+              {tr("not built yet — notes are found by keyword until you build it")}
             </>
           )}
         </span>
@@ -77,8 +79,8 @@ export function RagLine({ plugin }: { plugin: AxxaPlugin }) {
       <button
         type="button"
         className={rodando ? "axxa-rag-refresh is-running" : "axxa-rag-refresh"}
-        aria-label={rodando ? "Cancel indexing" : "Update index"}
-        title={rodando ? "Cancel indexing" : "Update index with new notes"}
+        aria-label={rodando ? tr("Cancel indexing") : tr("Update index")}
+        title={rodando ? tr("Cancel indexing") : tr("Update index with new notes")}
         onClick={() => void plugin.runVaultIndex()}
       >
         <Icon name={rodando ? "square" : "refresh-cw"} size={14} />

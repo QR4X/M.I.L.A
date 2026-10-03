@@ -88,24 +88,26 @@ import {
   resumoDoNivel,
 } from "./settings/effortEditor";
 import { EFFORT_ICONS, type EffortLevel } from "../core/effort";
+import { localeDaInterface, marca, tr } from "../i18n/tr";
 
 /** Favoritos aparecem na tela inicial; mais que isso vira lista, não atalho. */
 export const FAVORITE_LIMIT = 5;
 
-/** O que a bolinha do trilho quer dizer (vai no tooltip do item). */
+/** O que a bolinha do trilho quer dizer (vai no tooltip do item). Marcado
+ *  aqui, traduzido no syncReady. */
 const HEALTH_TEXT: Record<ProviderHealth, string> = {
-  off: "no credential",
-  unknown: "not tested",
-  ok: "connected",
-  fail: "last test failed",
+  off: marca("no credential"),
+  unknown: marca("not tested"),
+  ok: marca("connected"),
+  fail: marca("last test failed"),
 };
 
-/** O que a linha de conexão diz em cada estado. */
+/** O que a linha de conexão diz em cada estado (o tr() roda ao pintar). */
 const CONN_TEXT: Record<string, (detail?: string) => string> = {
-  unknown: () => "Not tested yet — hit Test to check the credential.",
-  testing: () => "Talking to the provider…",
-  ok: (d) => `Connected. ${d ?? ""}`.trim(),
-  fail: (d) => `Failed. ${d ?? ""}`.trim(),
+  unknown: () => tr("Not tested yet — hit Test to check the credential."),
+  testing: () => tr("Talking to the provider…"),
+  ok: (d) => tr("Connected. {detail}", { detail: d ?? "" }).trim(),
+  fail: (d) => tr("Failed. {detail}", { detail: d ?? "" }).trim(),
 };
 
 /** Estado do teste de conexão. "unknown" = ainda não testou nesta sessão. */
@@ -198,6 +200,12 @@ export class AxxaSettingsTab extends PluginSettingTab {
 
   /** 1.11.4–1.12.x (e o 1.13, se a árvore falhar): a MESMA árvore, por nós. */
   display(): void {
+    this.desenharLegado();
+  }
+
+  /** O desenho do `display()`, chamável de dentro (a troca de idioma) sem
+   *  passar pelo método que o 1.13 marca como obsoleto. */
+  private desenharLegado(): void {
     this.legacy?.dispose();
     this.slots.clear();
     this.containerEl.empty();
@@ -278,6 +286,9 @@ export class AxxaSettingsTab extends PluginSettingTab {
         // Sente na hora o que acabou de ligar.
         if (value === true) tap();
         break;
+      case "language":
+        this.retraduzir();
+        break;
       case "openaiDataSharing":
       case "openaiTier":
         // Os dois mudam a etiqueta de cota de cada modelo da OpenAI.
@@ -299,6 +310,18 @@ export class AxxaSettingsTab extends PluginSettingTab {
         }, 800);
         break;
     }
+  }
+
+  /**
+   * O idioma mudou: a árvore é montada de novo, com os textos no idioma novo.
+   * No 1.13 o Obsidian só lê a árvore no `addSettingTab` (o `update()` relê e
+   * redesenha a aba aberta); antes do 1.13 é o desenho do `display()`. É o
+   * único redesenho inteiro da aba: a escolha do idioma é um menu, então não
+   * há campo com foco pra perder.
+   */
+  private retraduzir(): void {
+    if (requireApiVersion("1.13.0")) this.update();
+    else this.desenharLegado();
   }
 
   /** Reavalia os `visible` da árvore depois de uma mudança feita à mão. */
@@ -387,7 +410,8 @@ export class AxxaSettingsTab extends PluginSettingTab {
   }
 
   private blurbOf(id: TabId): string {
-    return tabsFor(Platform.isMobile).find((t) => t.id === id)?.blurb ?? "";
+    const blurb = tabsFor(Platform.isMobile).find((t) => t.id === id)?.blurb;
+    return blurb ? tr(blurb) : "";
   }
 
   /** Segmented control, igual ao da tela inicial: trilho + thumb que desliza
@@ -406,7 +430,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
     for (const t of tabsFor(Platform.isMobile)) {
       const active = t.id === this.tab;
       const btn = nav.createEl("button", {
-        text: t.label,
+        text: tr(t.label),
         cls: active ? "axxa-seg-item is-active" : "axxa-seg-item",
         attr: { type: "button", "aria-pressed": String(active), "data-tab": t.id },
       });
@@ -571,7 +595,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
       }
       btn.setAttribute(
         "title",
-        `${PROVIDERS.find((x) => x.id === id)?.name ?? id} · ${HEALTH_TEXT[health]}`
+        `${PROVIDERS.find((x) => x.id === id)?.name ?? id} · ${tr(HEALTH_TEXT[health])}`
       );
     }
   }
@@ -598,7 +622,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
       const key = f.key;
       row.addText((t) => {
         t.inputEl.type = "password";
-        t.setPlaceholder("key…")
+        t.setPlaceholder(tr("key…"))
           .setValue(s[key])
           .onChange(async (v) => {
             s[key] = v.trim();
@@ -627,7 +651,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
     const st = this.connOf(providerId);
     row.setDesc(CONN_TEXT[st.state](st.detail));
     row.addButton((b) => {
-      b.setButtonText(st.state === "testing" ? "Testing…" : "Test")
+      b.setButtonText(st.state === "testing" ? tr("Testing…") : tr("Test"))
         .setDisabled(
           st.state === "testing" || !providerConfigured(this.plugin, providerId)
         )
@@ -655,9 +679,11 @@ export class AxxaSettingsTab extends PluginSettingTab {
       this.conn[providerId] = {
         state: "ok",
         detail:
-          models.length > 0
-            ? `${models.length} models available.`
-            : "The provider answered, but listed no models.",
+          models.length === 0
+            ? tr("The provider answered, but listed no models.")
+            : models.length === 1
+              ? tr("1 model available.")
+              : tr("{n} models available.", { n: models.length }),
       };
     } catch (err) {
       this.conn[providerId] = {
@@ -699,7 +725,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
     const busy = this.fetchingFor === providerId;
     row.addButton((b) =>
       b
-        .setButtonText(busy ? "Fetching…" : "Fetch models")
+        .setButtonText(busy ? tr("Fetching…") : tr("Fetch models"))
         .setCta()
         .setDisabled(this.fetchingFor !== null)
         .onClick(() => void this.fetchModels(providerId))
@@ -725,19 +751,25 @@ export class AxxaSettingsTab extends PluginSettingTab {
       // "Free Endpoint" no NIM) — o número que a lista vai mostrar.
       const gratis = models.filter((m) => this.tagGratis(providerId, m) !== null).length;
       const partes = [
-        `${models.length} models found`,
-        ...(gratis > 0 ? [`${gratis} free`] : []),
-        ...(embeds.length > 0 ? [`${embeds.length} for Vault Q&A embeddings`] : []),
+        models.length === 1
+          ? tr("1 model found")
+          : tr("{n} models found", { n: models.length }),
+        ...(gratis > 0 ? [tr("{n} free", { n: gratis })] : []),
+        ...(embeds.length > 0
+          ? [tr("{n} for Vault Q&A embeddings", { n: embeds.length })]
+          : []),
       ];
       new Notice(
         models.length > 0
           ? `${partes.join(" · ")}.`
-          : "No models returned — check the key or the endpoint."
+          : tr("No models returned — check the key or the endpoint.")
       );
     } catch (err) {
       console.error("[axxa] scanModels falhou:", err);
       new Notice(
-        `Fetch failed: ${err instanceof Error ? err.message : String(err)}`
+        tr("Fetch failed: {error}", {
+          error: err instanceof Error ? err.message : String(err),
+        })
       );
     } finally {
       this.fetchingFor = null;
@@ -765,7 +797,12 @@ export class AxxaSettingsTab extends PluginSettingTab {
 
   private freeOfferText(): string {
     const n = this.freeOfferCount();
-    return `${n} model${n === 1 ? "" : "s"} in this list would get a daily quota — they are the ones marked with a "+".`;
+    return n === 1
+      ? tr("1 model in this list would get a daily quota — it is the one marked with a \"+\".")
+      : tr(
+          "{n} models in this list would get a daily quota — they are the ones marked with a \"+\".",
+          { n }
+        );
   }
 
   private freeOfferChanged(): void {
@@ -817,17 +854,19 @@ export class AxxaSettingsTab extends PluginSettingTab {
         cls: "axxa-models-empty",
         text:
           this.fetchingFor === providerId
-            ? "Fetching…"
-            : "No models yet — fetch the catalog, or type one in the field above.",
+            ? tr("Fetching…")
+            : tr("No models yet — fetch the catalog, or type one in the field above."),
       });
       return;
     }
 
     const head = list.createDiv({ cls: "axxa-models-head" });
-    head.createSpan({ text: `${models.length} models` });
+    head.createSpan({
+      text: models.length === 1 ? tr("1 model") : tr("{n} models", { n: models.length }),
+    });
     head.createSpan({
       cls: "axxa-models-legend",
-      text: `Show · Favorite (${favs.length}/${FAVORITE_LIMIT})`,
+      text: tr("Show · Favorite ({n}/{max})", { n: favs.length, max: FAVORITE_LIMIT }),
     });
 
     // PAPEL no filtro, FAMÍLIA nas seções — as duas coisas o motor já sabe
@@ -850,7 +889,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
       const cab = sec.createDiv({ cls: "axxa-models-fav-head" });
       const ico = cab.createSpan({ cls: "axxa-models-fav-ico" });
       setIcon(ico, "star");
-      cab.createSpan({ text: "Favorites" });
+      cab.createSpan({ text: tr("Favorites") });
       cab.createSpan({
         cls: "axxa-model-section-count",
         text: `${favs.length}/${FAVORITE_LIMIT}`,
@@ -863,16 +902,20 @@ export class AxxaSettingsTab extends PluginSettingTab {
     // vazia é um toque perdido.
     const gratis = models.filter((m) => this.tagGratis(providerId, m) !== null);
     if (gratis.length > 0) {
-      head.firstElementChild?.setText(`${models.length} models · ${gratis.length} free`);
+      head.firstElementChild?.setText(
+        models.length === 1
+          ? tr("1 model · {free} free", { free: gratis.length })
+          : tr("{n} models · {free} free", { n: models.length, free: gratis.length })
+      );
     }
 
     if (groups.length > 1 || gratis.length > 0) {
       const filter = list.createDiv({ cls: "axxa-seg axxa-models-filter" });
       seedThumb(filter, thumb);
       const items = [
-        { id: "all", label: "All", icon: "layers" },
+        { id: "all", label: tr("All"), icon: "layers" },
         ...(gratis.length > 0
-          ? [{ id: "free", label: "Free", icon: "gift" }]
+          ? [{ id: "free", label: tr("Free"), icon: "gift" }]
           : []),
         ...groups.map((g) => ({ id: g.id, label: g.label, icon: g.icon })),
       ];
@@ -998,7 +1041,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
       if (gratis.length === 0) {
         list.createEl("p", {
           cls: "axxa-models-empty",
-          text: "Nothing free in this catalog.",
+          text: tr("Nothing free in this catalog."),
         });
         return;
       }
@@ -1073,13 +1116,29 @@ export class AxxaSettingsTab extends PluginSettingTab {
    *  Free, porque o detalhe da etiqueta (o `title`) não aparece no toque. */
   private notaGratis(providerId: string): string | null {
     if (providerId === "openrouter") {
+      // Três frases inteiras (a cota da chave conhecida ou não, e se já passou
+      // dos US$ 10) em vez de pedaços colados: cada uma se traduz sozinha.
       const c = this.s.freeQuota?.[providerId];
-      const dia = c ? `${c.limit.toLocaleString("en-US")} a day on this key` : "50 a day";
-      const extra = c && c.limit >= 1000 ? "" : " (1,000 once you've bought $10 in credits)";
-      return `No cost, checked by price, not by the ":free" in the name. They share 20 requests a minute and ${dia}${extra}.`;
+      if (!c) {
+        return tr(
+          "No cost, checked by price, not by the \":free\" in the name. They share 20 requests a minute and 50 a day (1,000 once you've bought $10 in credits)."
+        );
+      }
+      const n = c.limit.toLocaleString(localeDaInterface());
+      return c.limit >= 1000
+        ? tr(
+            "No cost, checked by price, not by the \":free\" in the name. They share 20 requests a minute and {n} a day on this key.",
+            { n }
+          )
+        : tr(
+            "No cost, checked by price, not by the \":free\" in the name. They share 20 requests a minute and {n} a day on this key (1,000 once you've bought $10 in credits).",
+            { n }
+          );
     }
     if (providerId === "nim") {
-      return "No cost: the models NVIDIA marks as Free Endpoint, for development and testing, 40 requests a minute. The rest of NIM isn't part of the free tier.";
+      return tr(
+        "No cost: the models NVIDIA marks as Free Endpoint, for development and testing, 40 requests a minute. The rest of NIM isn't part of the free tier."
+      );
     }
     return null;
   }
@@ -1116,11 +1175,11 @@ export class AxxaSettingsTab extends PluginSettingTab {
     const isShown = shown.includes(m);
     const showBtn = actions.createEl("button", {
       cls: isShown ? "axxa-model-toggle is-on" : "axxa-model-toggle",
-      text: "Show",
+      text: tr("Show"),
       attr: {
         type: "button",
         "aria-pressed": String(isShown),
-        title: "Appears in this provider's model list",
+        title: tr("Appears in this provider's model list"),
       },
     });
     showBtn.onclick = async () => {
@@ -1135,7 +1194,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
       attr: {
         type: "button",
         "aria-pressed": String(isFav),
-        title: `Appears on the new-chat screen (max ${FAVORITE_LIMIT})`,
+        title: tr("Appears on the new-chat screen (max {n})", { n: FAVORITE_LIMIT }),
       },
     });
     setIcon(favBtn, isFav ? "star" : "star-off");
@@ -1143,7 +1202,9 @@ export class AxxaSettingsTab extends PluginSettingTab {
       const list = this.s.favoriteModels?.[providerId] ?? [];
       if (!list.includes(m) && list.length >= FAVORITE_LIMIT) {
         new Notice(
-          `${FAVORITE_LIMIT} favorites per provider is the limit — unstar one first.`
+          tr("{n} favorites per provider is the limit — unstar one first.", {
+            n: FAVORITE_LIMIT,
+          })
         );
         return;
       }
@@ -1230,7 +1291,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
           checked: i.value === value,
           extra: ouvir && {
             icon: "play",
-            label: `Play ${i.label}`,
+            label: tr("Play {name}", { name: i.label }),
             run: (b: HTMLButtonElement) => this.tocarAmostra(b, i.value, ouvir(i.value)),
           },
           run: () => {
@@ -1275,9 +1336,9 @@ export class AxxaSettingsTab extends PluginSettingTab {
     setIcon(ico, EFFORT_ICONS[level]);
     row.nameEl.prepend(ico);
     const editado = nivelEditado(s.effortConfigs, level);
-    row.setDesc(resumoDoNivel(s.effortConfigs, level) + (editado ? " · edited" : ""));
+    row.setDesc(resumoDoNivel(s.effortConfigs, level) + (editado ? ` · ${tr("edited")}` : ""));
     row.addButton((b) =>
-      b.setButtonText("Edit").onClick(() => {
+      b.setButtonText(tr("Edit")).onClick(() => {
         new EffortLevelModal(this.app, this.plugin, level, () =>
           this.repaint(`effort:${level}`)
         ).open();
@@ -1304,10 +1365,12 @@ export class AxxaSettingsTab extends PluginSettingTab {
 
     row.setDesc(
       alvo
-        ? `Writes skills and projects for you. Now: ${prettyModelName(
-            alvo.model
-          )}${ehFree(alvo.model, livres) ? " · free" : ""}`
-        : "Nothing free found yet — run SCAN on OpenRouter, or pick a model here."
+        ? tr("Writes skills and projects for you. Now: {model}", {
+            model:
+              prettyModelName(alvo.model) +
+              (ehFree(alvo.model, livres) ? ` · ${tr("free")}` : ""),
+          })
+        : tr("Nothing free found yet — run SCAN on OpenRouter, or pick a model here.")
     );
     // O nome é o NOSSO (prettyModelName), como em toda parte do app — o id
     // cru do catálogo só aparece onde ele É o dado (a chave, o debug).
@@ -1323,13 +1386,13 @@ export class AxxaSettingsTab extends PluginSettingTab {
           value: "",
           // Curto pra caber na largura do botão: a lista embaixo dele é toda
           // do OpenRouter, e a descrição da linha diz quando falta modelo.
-          label: "Automatic — first free model",
+          label: tr("Automatic — first free model"),
           icon: "wand-sparkles",
         },
         ...todos.map((id) => ({
           value: id,
           label: ehFree(id, livres)
-            ? `${prettyModelName(id)} · free`
+            ? `${prettyModelName(id)} · ${tr("free")}`
             : prettyModelName(id),
           icon: modelLogo(id),
         })),
@@ -1353,7 +1416,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
         value: p.id,
         label: ttsReady(this.plugin, p.id)
           ? p.label
-          : `${p.label} (needs ${p.needs})`,
+          : tr("{provider} (needs {what})", { provider: p.label, what: tr(p.needs) }),
         // A ElevenLabs não tem logo no nosso set; a onda diz "voz".
         icon: p.id === "openai" ? "logo-openai" : "audio-waveform",
       })),
@@ -1371,7 +1434,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
     const s = this.s;
     row.addText((t) => {
       t.inputEl.type = "password";
-      t.setPlaceholder("key…")
+      t.setPlaceholder(tr("key…"))
         .setValue(s.elevenApiKey)
         .onChange(async (v) => {
           s.elevenApiKey = v.trim();
@@ -1391,7 +1454,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
       t.inputEl.min = "0";
       t.inputEl.step = "0.5";
       t.inputEl.inputMode = "decimal";
-      t.setPlaceholder("No limit")
+      t.setPlaceholder(tr("No limit"))
         .setValue(s.limiteGastoDiario > 0 ? String(s.limiteGastoDiario) : "")
         .onChange(async (v) => {
           const n = Number(v.replace(",", "."));
@@ -1405,7 +1468,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
     const s = this.s;
     row.addText((t) => {
       t.inputEl.type = "password";
-      t.setPlaceholder("Starts with tvly")
+      t.setPlaceholder(tr("Starts with tvly"))
         .setValue(s.tavilyApiKey ?? "")
         .onChange(async (v) => {
           s.tavilyApiKey = v.trim();
@@ -1417,7 +1480,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
   private paintElevenFetch(row: Setting): void {
     row.addButton((b) =>
       b
-        .setButtonText(this.fetchingVoices ? "Fetching…" : "Fetch voices")
+        .setButtonText(this.fetchingVoices ? tr("Fetching…") : tr("Fetch voices"))
         .setCta()
         // Sem trava por key vazia: sem key, a própria chamada avisa.
         .setDisabled(this.fetchingVoices)
@@ -1434,7 +1497,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
         const own = v.category === "cloned" || v.category === "professional";
         return {
           value: v.id,
-          label: own ? `${v.name} · yours` : v.name,
+          label: own ? `${v.name} · ${tr("yours")}` : v.name,
           icon: own ? "user-round" : "audio-lines",
         };
       }),
@@ -1451,14 +1514,14 @@ export class AxxaSettingsTab extends PluginSettingTab {
   /** O botão que prova que a voz escolhida funciona. */
   private paintTestVoice(row: Setting): void {
     row.addButton((b) =>
-      b.setButtonText("Play sample").onClick(async () => {
-        b.setButtonText("Playing…").setDisabled(true);
+      b.setButtonText(tr("Play sample")).onClick(async () => {
+        b.setButtonText(tr("Playing…")).setDisabled(true);
         // `speak` precisa começar DENTRO do clique: é lá que ele destrava o
         // áudio (o navegador recusa tocar fora do gesto).
         await speak(this.plugin, fraseDaAmostra(this.nomeDaVozAtual(), this.idiomaDaAmostra()), {
           guardar: true,
         });
-        b.setButtonText("Play sample").setDisabled(false);
+        b.setButtonText(tr("Play sample")).setDisabled(false);
       })
     );
   }
@@ -1472,12 +1535,12 @@ export class AxxaSettingsTab extends PluginSettingTab {
       stopSpeaking();
       return;
     }
-    const rotulo = botao.getAttribute("aria-label") ?? "Play";
+    const rotulo = botao.getAttribute("aria-label") ?? tr("Play");
     const desenhar = (estado: "parado" | "buscando" | "tocando") => {
       botao.toggleClass("is-loading", estado === "buscando");
       botao.toggleClass("is-playing", estado === "tocando");
       setIcon(botao, estado === "parado" ? "play" : estado === "buscando" ? "loader" : "square");
-      botao.setAttribute("aria-label", estado === "parado" ? rotulo : "Stop");
+      botao.setAttribute("aria-label", estado === "parado" ? rotulo : tr("Stop"));
     };
     this.amostra = botao;
     desenhar("buscando");
@@ -1529,12 +1592,17 @@ export class AxxaSettingsTab extends PluginSettingTab {
         (v) => v.category === "cloned" || v.category === "professional"
       ).length;
       new Notice(
-        voices.length + " voices" + (minhas > 0 ? " · " + minhas + " yours" : "") + "."
+        (voices.length === 1 ? tr("1 voice") : tr("{n} voices", { n: voices.length })) +
+          (minhas > 0
+            ? " · " + (minhas === 1 ? tr("1 yours") : tr("{n} yours", { n: minhas }))
+            : "") +
+          "."
       );
     } catch (err) {
       new Notice(
-        "Could not load voices: " +
-          (err instanceof Error ? err.message : String(err))
+        tr("Could not load voices: {error}", {
+          error: err instanceof Error ? err.message : String(err),
+        })
       );
     } finally {
       this.fetchingVoices = false;
@@ -1561,21 +1629,21 @@ export class AxxaSettingsTab extends PluginSettingTab {
         // Local (Ollama) não é "grátis de um provider": é a máquina de quem
         // usa, e a etiqueta diz isso — nada sai dela.
         const gratis = spec.local
-          ? "local"
+          ? tr("local")
           : spec.provider === "gemini"
             ? geminiTemTierGratis(spec.model)
-              ? "free tier"
+              ? tr("free tier")
               : ""
             : gratisDeVerdade(spec.model, s.freeModels?.[spec.provider], spec.free === true)
-              ? "free"
+              ? tr("free")
               : "";
         const extras = [
           gratis,
           providerConfigured(this.plugin, spec.provider)
             ? ""
             : spec.provider === "ollama"
-              ? "needs Ollama"
-              : "needs key",
+              ? tr("needs Ollama")
+              : tr("needs key"),
         ].filter(Boolean);
         return {
           value: spec.model,
@@ -1603,27 +1671,30 @@ export class AxxaSettingsTab extends PluginSettingTab {
     // Precisão e pedaços só valem na próxima atualização: a linha diz quando
     // o índice carregado ainda é o do jeito antigo.
     const pendente = pendenciaDoIndice(this.plugin.vectorIndex ?? null, s);
+    const folder = s.ragIndexPath;
     row.setDesc(
-      (size > 0
-        ? `Index loaded: ${size} chunks (folder: ${s.ragIndexPath}).`
-        : `No index yet (folder: ${s.ragIndexPath}).`) +
+      (size === 0
+        ? tr("No index yet (folder: {folder}).", { folder })
+        : size === 1
+          ? tr("Index loaded: 1 chunk (folder: {folder}).", { folder })
+          : tr("Index loaded: {n} chunks (folder: {folder}).", { n: size, folder })) +
         (pendente ? ` ${pendente}` : "")
     );
     row
       .addButton((b) =>
         b
-          .setButtonText(this.plugin.indexing ? "Cancel indexing" : "Index vault")
+          .setButtonText(this.plugin.indexing ? tr("Cancel indexing") : tr("Index vault"))
           .setCta()
           .onClick(() => void this.runIndex())
       )
       .addButton((b) =>
         // marcarPerigoso e não setWarning: ver a nota em ui/modals.ts.
-        marcarPerigoso(b.setButtonText("Delete index"))
+        marcarPerigoso(b.setButtonText(tr("Delete index")))
           .setDisabled(size === 0 && !this.plugin.vectorIndex)
           .onClick(async () => {
             await deleteIndex(this.app.vault.adapter, s.ragIndexPath);
             this.plugin.vectorIndex = null;
-            new Notice("Index deleted.");
+            new Notice(tr("Index deleted."));
             this.repaint("index");
           })
       );

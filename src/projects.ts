@@ -5,6 +5,8 @@
 // chat↔projeto vive em project.chatIds, e as fontes são anexadas como notas
 // quando o user começa uma conversa dentro do projeto.
 
+import { tr } from "./i18n/tr";
+
 export interface Project {
   id: string;
   name: string;
@@ -78,11 +80,11 @@ export function projectProblema(
   atualId?: string
 ): string | null {
   const nome = d.name.trim();
-  if (!nome) return "Give it a name.";
+  if (!nome) return tr("Give it a name.");
   const colide = existentes.some(
     (p) => p.id !== atualId && p.name.trim().toLowerCase() === nome.toLowerCase()
   );
-  if (colide) return "There is already a project with that name.";
+  if (colide) return tr("There is already a project with that name.");
   return null;
 }
 
@@ -106,12 +108,13 @@ export function nomeDaCopia(
   const usados = new Set(
     existentes.map((p) => p.name.trim().toLowerCase())
   );
-  const base = original.trim() || "Project";
+  const base = original.trim() || tr("Project");
   const livre = (nome: string) => !usados.has(nome.toLowerCase());
-  if (livre(`${base} copy`)) return `${base} copy`;
+  const copia = tr("{name} copy", { name: base });
+  if (livre(copia)) return copia;
   for (let n = 2; n <= 50; n++) {
-    const tentativa = `${base} copy ${n}`;
+    const tentativa = tr("{name} copy {n}", { name: base, n });
     if (livre(tentativa)) return tentativa;
   }
-  return `${base} copy`;
+  return copia;
 }

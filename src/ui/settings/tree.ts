@@ -45,6 +45,7 @@ import { CHAT_MODES } from "../../core/session";
 import { MODULES } from "../modules";
 import { QUANT_ITENS } from "./indice";
 import { LOCALES } from "../../i18n";
+import { marca, tr } from "../../i18n/tr";
 import { PERMISSION_ICONS, PERMISSION_LABELS } from "../../agent/permissions";
 import type { PermissionLevel } from "../../agent/types";
 import { ELEVEN_MODELS } from "../../providers/elevenlabs";
@@ -63,32 +64,34 @@ export interface TabDef {
   mobileOnly?: boolean;
 }
 
+// Rótulo e linha só MARCADOS (marca): a barra de abas traduz na hora de
+// desenhar (tr), porque o idioma pode mudar com o app aberto.
 export const TABS: TabDef[] = [
   {
     id: "providers",
-    label: "Providers",
-    blurb: "Your keys and the model each provider uses. Keys stay on this device.",
+    label: marca("Providers"),
+    blurb: marca("Your keys and the model each provider uses. Keys stay on this device."),
   },
   {
     id: "chat",
-    label: "Chat",
-    blurb: "What every new conversation starts with.",
+    label: marca("Chat"),
+    blurb: marca("What every new conversation starts with."),
   },
-  { id: "vault", label: "Vault", blurb: "Where the plugin writes in your vault." },
+  { id: "vault", label: marca("Vault"), blurb: marca("Where the plugin writes in your vault.") },
   {
     id: "rag",
-    label: "Q&A",
-    blurb: "Vault Q&A: the local index that grounds answers in your notes.",
+    label: marca("Q&A"),
+    blurb: marca("Vault Q&A: the local index that grounds answers in your notes."),
   },
   {
     id: "agent",
-    label: "Agent",
-    blurb: "What the agent may do to your notes without asking.",
+    label: marca("Agent"),
+    blurb: marca("What the agent may do to your notes without asking."),
   },
   {
     id: "mobile",
-    label: "Mobile",
-    blurb: "Options that only exist on the phone.",
+    label: marca("Mobile"),
+    blurb: marca("Options that only exist on the phone."),
     mobileOnly: true,
   },
 ];
@@ -122,7 +125,8 @@ export const PROVIDER_FIELDS: Record<string, { key?: KeyField; model: ModelField
 
 /** Idiomas oferecidos pro ditado. Vazio = deixa o modelo detectar. */
 export const SPEECH_LANGS: [string, string][] = [
-  ["", "Auto (detect)"],
+  // Só o Auto se traduz: cada idioma aparece no nome dele mesmo.
+  ["", marca("Auto (detect)")],
   ["pt", "Português"],
   ["en", "English"],
   ["es", "Español"],
@@ -280,7 +284,7 @@ function guarded(render: RowRender): RowRender {
       return render(row, group);
     } catch (err) {
       console.error("[axxa] settings: uma linha falhou ao desenhar", err);
-      row.setDesc("This setting failed to draw — see the developer console.");
+      row.setDesc(tr("This setting failed to draw — see the developer console."));
     }
   };
 }
@@ -290,6 +294,9 @@ function hintRow(render: RowRender, visible?: () => boolean): SettingDefinition 
   return { name: "", render, searchable: false, ...(visible ? { visible } : {}) };
 }
 
+// Os textos da árvore passam pelo tr() AQUI, na montagem: ela é montada em
+// tempo de execução (no addSettingTab e a cada troca de idioma — ver
+// SettingsTab.retraduzir), nunca no import.
 export function buildSettingsTree(ui: SettingsUi): SettingsTree {
   const items: SettingDefinitionItem[] = [];
   const places = new WeakMap<object, Place>();
@@ -357,26 +364,30 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
     group(at, { heading: p.name }, [
       f.key
         ? custom(
-            `${p.name} API key`,
-            "API key",
-            "Stored in the OS keychain (not in data.json).",
+            tr("{provider} API key", { provider: p.name }),
+            tr("API key"),
+            tr("Stored in the OS keychain (not in data.json)."),
             ui.credential(p.id),
             { aliases: KEY_ALIASES }
           )
         : custom(
-            `${p.name} endpoint`,
-            "Endpoint",
-            "Local server address. Ollama needs no key.",
+            tr("{provider} endpoint", { provider: p.name }),
+            tr("Endpoint"),
+            tr("Local server address. Ollama needs no key."),
             ui.credential(p.id),
             { aliases: ["url", "server", "servidor", "endereço"] }
           ),
-      custom(`${p.name} connection`, "Connection", "", ui.connection(p.id), {
-        aliases: ["test", "testar", "conexão"],
-      }),
       custom(
-        `${p.name} model for new chats`,
-        "Model for new chats",
-        "Used when this provider is selected and nothing else was picked.",
+        tr("{provider} connection", { provider: p.name }),
+        tr("Connection"),
+        "",
+        ui.connection(p.id),
+        { aliases: ["test", "testar", "conexão"] }
+      ),
+      custom(
+        tr("{provider} model for new chats", { provider: p.name }),
+        tr("Model for new chats"),
+        tr("Used when this provider is selected and nothing else was picked."),
         ui.newChatModel(p.id),
         { aliases: ["modelo", "default model"] }
       ),
@@ -385,10 +396,12 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
     // A cota diária é um programa DA OPENAI; prometê-la nos outros seria
     // inventar desconto.
     if (p.id === "openai") {
-      group(at, { heading: "Free daily tokens" }, [
+      group(at, { heading: tr("Free daily tokens") }, [
         toggle(
-          "I share API data with OpenAI",
-          "Their switch, in Data controls on platform.openai.com. Turning it on there gives your account a daily quota at no cost; telling us here is what makes this list show the real numbers.",
+          tr("I share API data with OpenAI"),
+          tr(
+            "Their switch, in Data controls on platform.openai.com. Turning it on there gives your account a daily quota at no cost; telling us here is what makes this list show the real numbers."
+          ),
           "openaiDataSharing",
           // "tier" também: com o interruptor desligado a linha do tier some da
           // busca (no 1.13 `visible` falso tira dela), e quem procura "tier"
@@ -400,16 +413,21 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
         // escolha que não faz nada. Aparece quando o interruptor liga.
         escolha(
           at,
-          "Usage tier",
+          tr("Usage tier"),
           null,
-          "Tiers 1–2 get 250k tokens/day on the big models and 2.5M/day on mini and nano. Tier 3 and up get 1M and 10M.",
+          tr(
+            "Tiers 1–2 get 250k tokens/day on the big models and 2.5M/day on mini and nano. Tier 3 and up get 1M and 10M."
+          ),
           "openaiTier",
           // O número do tier no lugar do ícone, e a cota dele no rótulo: é o
           // que decide a escolha.
           () =>
             [1, 2, 3, 4, 5].map((n) => ({
               value: String(n),
-              label: `Tier ${n} — ${n <= 2 ? "250k / 2.5M a day" : "1M / 10M a day"}`,
+              label:
+                n <= 2
+                  ? tr("Tier {n} — 250k / 2.5M a day", { n })
+                  : tr("Tier {n} — 1M / 10M a day", { n }),
               glyph: String(n),
             })),
           {
@@ -423,7 +441,10 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
         ),
         hintRow(
           ui.hint(
-            `The quota counts ALL your OpenAI API use, not just this vault — so anything the app says you have left is optimistic. Image models are never covered. Program terms as of ${FREE_TOKENS_AS_OF}.`
+            tr(
+              "The quota counts ALL your OpenAI API use, not just this vault — so anything the app says you have left is optimistic. Image models are never covered. Program terms as of {date}.",
+              { date: FREE_TOKENS_AS_OF }
+            )
           )
         ),
       ]);
@@ -433,9 +454,9 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
     // primeira linha já diz o que é o cartão.
     group(at, {}, [
       custom(
-        `${p.name} models`,
-        "Models",
-        "Fetch what this provider offers today, then choose what shows up where.",
+        tr("{provider} models", { provider: p.name }),
+        tr("Models"),
+        tr("Fetch what this provider offers today, then choose what shows up where."),
         ui.fetchModels(p.id),
         { aliases: ["modelos", "catalog", "catálogo", "favorites", "favoritos"] }
       ),
@@ -449,53 +470,56 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
   group(chat, {}, [
     escolha(
       chat,
-      "Provider",
+      tr("Provider"),
       null,
-      "Which provider a new chat opens with.",
+      tr("Which provider a new chat opens with."),
       "defaultProvider",
       () => PROVIDERS.map((p) => ({ value: p.id, label: p.name, icon: p.icon })),
       { aliases: ["default provider"] }
     ),
     escolha(
       chat,
-      "Mode",
+      tr("Mode"),
       null,
-      "Chat, Vault Q&A or Agent. Locks on the first message.",
+      tr("Chat, Vault Q&A or Agent. Locks on the first message."),
       "defaultMode",
       () =>
         CHAT_MODES.map((m) => ({
           value: m,
-          label: MODULES[m].label,
+          label: tr(MODULES[m].label),
           icon: MODULES[m].icon,
         })),
       { aliases: ["modo"] }
     ),
     escolha(
       chat,
-      "Effort",
+      tr("Effort"),
       null,
-      "How hard the model works: length, agent turns, temperature.",
+      tr("How hard the model works: length, agent turns, temperature."),
       "defaultEffort",
       () =>
         EFFORT_LEVELS.map((l) => ({
           value: l,
-          label: EFFORT_LABELS[l],
+          label: tr(EFFORT_LABELS[l]),
           icon: EFFORT_ICONS[l],
         })),
       { aliases: ["esforço", "reasoning"] }
     ),
     escolha(
       chat,
-      "Language",
+      tr("Language"),
       null,
-      "Interface, chat errors — and the language the model answers in. The creation assistant follows it too.",
+      tr(
+        "Interface, chat errors — and the language the model answers in. The creation assistant follows it too. \"Same as Obsidian\" follows the language Obsidian is set to. A few things, like command names, only switch after you reload Obsidian."
+      ),
       "language",
       () =>
         LOCALES.map((l) =>
           // O Auto não é um idioma: ganha o desenho de "idiomas", e os de
-          // verdade o código (EN, PT).
+          // verdade o código (EN, PT). Só ele se traduz — cada idioma
+          // aparece no nome dele mesmo.
           l.id === "auto"
-            ? { value: l.id, label: l.label, icon: "languages" }
+            ? { value: l.id, label: tr(l.label), icon: "languages" }
             : { value: l.id, label: l.label, glyph: l.id.slice(0, 2).toUpperCase() }
         ),
       { aliases: ["idioma", "língua", "portuguese", "português"] }
@@ -507,11 +531,11 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
   // sumiu na 0.4.0 e voltou: uma linha por nível, que abre o editor dele.
   group(
     chat,
-    { heading: "Effort levels" },
+    { heading: tr("Effort levels") },
     EFFORT_LEVELS.map((l) =>
       custom(
-        `${EFFORT_LABELS[l]} effort level`,
-        EFFORT_LABELS[l],
+        tr("{level} effort level", { level: tr(EFFORT_LABELS[l]) }),
+        tr(EFFORT_LABELS[l]),
         "",
         ui.effortLevel(l),
         {
@@ -532,29 +556,35 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
   // O orçamento do dia: o limite em dólar e o que acontece quando ele chega.
   // A conta sai dos preços públicos (ver usage/gastoDoDia.ts), e o Left today
   // da tela de Uso mostra o quanto sobra.
-  group(chat, { heading: "Daily spending" }, [
+  group(chat, { heading: tr("Daily spending") }, [
     custom(
-      "Daily limit",
+      tr("Daily limit"),
       null,
-      "In dollars, for paid models, counted from public token prices. You get a heads-up at 80% and at 100%. Empty means no limit.",
+      tr(
+        "In dollars, for paid models, counted from public token prices. You get a heads-up at 80% and at 100%. Empty means no limit."
+      ),
       ui.spendLimit,
       { aliases: ["budget", "orçamento", "gasto", "limite", "spending", "cost", "custo"] }
     ),
     toggle(
-      "Stop paid models at the limit",
-      "When today's spending reaches the limit, paid models pause until midnight. Free and local models keep working, and so do models without a public price.",
+      tr("Stop paid models at the limit"),
+      tr(
+        "When today's spending reaches the limit, paid models pause until midnight. Free and local models keep working, and so do models without a public price."
+      ),
       "travarNoLimite",
       { aliases: ["budget", "orçamento", "travar", "pause", "block"] }
     ),
   ]);
 
-  group(chat, { heading: "Assistant" }, [
-    custom("Assistant model", "Model", "", ui.assistantModel, {
+  group(chat, { heading: tr("Assistant") }, [
+    custom(tr("Assistant model"), tr("Model"), "", ui.assistantModel, {
       aliases: ["modelo", "assistente", "skills", "projects"],
     }),
     toggle(
-      "Let it see your note names",
-      "So it can suggest which notes to attach to a project. Only the paths are sent — never what is inside them. Off by default.",
+      tr("Let it see your note names"),
+      tr(
+        "So it can suggest which notes to attach to a project. Only the paths are sent — never what is inside them. Off by default."
+      ),
       "assistantSeesVault",
       { aliases: ["notes", "notas", "privacy", "privacidade"] }
     ),
@@ -568,10 +598,12 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
   const openaiReads = () => s().ttsEnabled && s().ttsProvider !== "eleven";
   const elevenReads = () => s().ttsEnabled && s().ttsProvider === "eleven";
 
-  group(chat, { heading: "Voice" }, [
+  group(chat, { heading: tr("Voice") }, [
     toggle(
-      "Talk instead of typing",
-      "Puts a microphone in the composer: you speak, the words land in the box, and you send when you are happy with them.",
+      tr("Talk instead of typing"),
+      tr(
+        "Puts a microphone in the composer: you speak, the words land in the box, and you send when you are happy with them."
+      ),
       "voiceEnabled",
       // "voice" tem de achar os DOIS interruptores de voz: as linhas com
       // "Voice" no nome só existem com a leitura ligada (e escondida, a busca
@@ -589,14 +621,16 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       }
     ),
     hintRow(
-      ui.hint("Dictation runs on OpenAI — add that key in Providers."),
+      ui.hint(tr("Dictation runs on OpenAI — add that key in Providers.")),
       () => voiceOn() && !ui.hasCredential("openai")
     ),
     escolha(
       chat,
-      "Ears",
+      tr("Ears"),
       null,
-      "Mini is quick, cheap and gets normal speech right; the full one is better with names, accents and noise.",
+      tr(
+        "Mini is quick, cheap and gets normal speech right; the full one is better with names, accents and noise."
+      ),
       "voiceModel",
       () =>
         STT_MODELS.map((m) => ({
@@ -608,9 +642,11 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
     ),
     escolha(
       chat,
-      "What you speak",
+      tr("What you speak"),
       null,
-      "Naming your language beats letting it guess — short takes are where guessing goes wrong.",
+      tr(
+        "Naming your language beats letting it guess — short takes are where guessing goes wrong."
+      ),
       "voiceLanguage",
       // Vazio = deixa o modelo detectar: esse ganha um desenho, os idiomas
       // ganham o código.
@@ -618,34 +654,36 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
         SPEECH_LANGS.map(([value, label]) =>
           value
             ? { value, label, glyph: value.toUpperCase() }
-            : { value, label, icon: "wand-sparkles" }
+            : { value, label: tr(label), icon: "wand-sparkles" }
         ),
       { visible: voiceOn, aliases: ["idioma", "language"] }
     ),
     toggle(
-      "Read answers out loud",
-      "Adds a Listen button under every answer.",
+      tr("Read answers out loud"),
+      tr("Adds a Listen button under every answer."),
       "ttsEnabled",
       {
         aliases: ["voice", "text to speech", "tts", "listen", "ouvir", "voz", "read aloud"],
       }
     ),
     custom(
-      "Who reads",
+      tr("Who reads"),
       null,
-      "OpenAI voices are ready to use. ElevenLabs sounds better and is the only one that can read in YOUR voice — clone it in their app and it shows up in the list below.",
+      tr(
+        "OpenAI voices are ready to use. ElevenLabs sounds better and is the only one that can read in YOUR voice — clone it in their app and it shows up in the list below."
+      ),
       ui.ttsProvider,
       { visible: ttsOn, aliases: ["elevenlabs", "voz", "tts"] }
     ),
     hintRow(
-      ui.hint("Add your OpenAI key in Providers to hear anything."),
+      ui.hint(tr("Add your OpenAI key in Providers to hear anything.")),
       () => openaiReads() && !ui.hasCredential("openai")
     ),
     escolha(
       chat,
-      "Voice",
+      tr("Voice"),
       null,
-      "Eleven of them — tap ▶ in the list to hear one before you pick it.",
+      tr("Eleven of them — tap ▶ in the list to hear one before you pick it."),
       "ttsVoice",
       () =>
         OPENAI_VOICES.map((v) => ({
@@ -660,9 +698,11 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
     // curto. De quebra, a busca deixou de achar duas linhas iguais.
     escolha(
       chat,
-      "OpenAI voice quality",
-      "Quality",
-      "gpt-4o-mini-tts reads with intention; tts-1 is the cheap classic; the HD one is the same voice, cleaner.",
+      tr("OpenAI voice quality"),
+      tr("Quality"),
+      tr(
+        "gpt-4o-mini-tts reads with intention; tts-1 is the cheap classic; the HD one is the same voice, cleaner."
+      ),
       "ttsModel",
       () =>
         OPENAI_TTS_MODELS.map((m) => ({
@@ -673,55 +713,63 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       { visible: openaiReads, aliases: ["quality", "qualidade"] }
     ),
     custom(
-      "Test OpenAI voice",
-      "Test",
-      "Plays one short line with the settings above.",
+      tr("Test OpenAI voice"),
+      tr("Test"),
+      tr("Plays one short line with the settings above."),
       ui.testVoice,
       { visible: openaiReads, aliases: ["play sample", "testar voz"] }
     ),
+    // A marca entra como variável: "ElevenLabs key" sozinha já é a chave do
+    // "(needs …)" de ui/readAloud.ts, que no meio da frase vai em minúscula.
     custom(
-      "ElevenLabs key",
+      tr("{provider} key", { provider: "ElevenLabs" }),
       null,
-      "From elevenlabs.io › Profile › API key. Stored in the OS keychain (not in data.json).",
+      tr(
+        "From elevenlabs.io › Profile › API key. Stored in the OS keychain (not in data.json)."
+      ),
       ui.elevenKey,
       { visible: elevenReads, aliases: KEY_ALIASES }
     ),
     custom(
-      "Your voices",
+      tr("Your voices"),
       null,
-      "Fetch what your account has — the stock voices and any you cloned, including your own.",
+      tr(
+        "Fetch what your account has — the stock voices and any you cloned, including your own."
+      ),
       ui.elevenFetch,
       { visible: elevenReads, aliases: ["clone", "cloned", "vozes", "elevenlabs"] }
     ),
     custom(
-      "ElevenLabs voice",
-      "Voice",
-      "Cloned ones are marked — that is the one that sounds like you. Tap ▶ in the list to hear any of them.",
+      tr("ElevenLabs voice"),
+      tr("Voice"),
+      tr(
+        "Cloned ones are marked — that is the one that sounds like you. Tap ▶ in the list to hear any of them."
+      ),
       ui.elevenVoice,
       { visible: () => elevenReads() && s().elevenVoices.length > 0, aliases: ["voz"] }
     ),
     hintRow(
-      ui.hint("No voices loaded yet — hit Fetch voices."),
+      ui.hint(tr("No voices loaded yet — hit Fetch voices.")),
       () => elevenReads() && s().elevenVoices.length === 0 && !!s().elevenApiKey
     ),
     escolha(
       chat,
-      "ElevenLabs voice quality",
-      "Quality",
-      "Multilingual sounds best; the faster ones answer sooner.",
+      tr("ElevenLabs voice quality"),
+      tr("Quality"),
+      tr("Multilingual sounds best; the faster ones answer sooner."),
       "elevenModel",
       () =>
         ELEVEN_MODELS.map((m) => ({
           value: m.id,
-          label: m.label,
+          label: tr(m.label),
           icon: ELEVEN_ICONS[m.id] ?? "audio-lines",
         })),
       { visible: elevenReads, aliases: ["quality", "qualidade"] }
     ),
     custom(
-      "Test ElevenLabs voice",
-      "Test",
-      "Plays one short line with the settings above.",
+      tr("Test ElevenLabs voice"),
+      tr("Test"),
+      tr("Plays one short line with the settings above."),
       ui.testVoice,
       { visible: elevenReads, aliases: ["play sample", "testar voz"] }
     ),
@@ -730,14 +778,16 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
   // ── Vault ────────────────────────────────────────────────────────────────
   group({ tab: "vault" }, {}, [
     text(
-      "Chats folder",
-      "Each chat is a .md file under <folder>/<mode>/. A folder starting with a dot is hidden from the file explorer, search and graph — which is why the default is .axxa/chats.",
+      tr("Chats folder"),
+      tr(
+        "Each chat is a .md file under <folder>/<mode>/. A folder starting with a dot is hidden from the file explorer, search and graph — which is why the default is .axxa/chats."
+      ),
       "chatsPath",
       { aliases: ["pasta", "conversas", "path"] }
     ),
     text(
-      "Skills folder",
-      "Each skill is a .md note (frontmatter + prompt body).",
+      tr("Skills folder"),
+      tr("Each skill is a .md note (frontmatter + prompt body)."),
       "skillsPath",
       { aliases: ["pasta", "path"] }
     ),
@@ -745,8 +795,10 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
     // do índice. Trocar não MOVE o índice (seria copiar megabytes no meio de
     // uma digitação): a pasta nova começa vazia e a antiga fica onde estava.
     text(
-      "Index folder",
-      "Where the Vault Q&A index lives. Changing it starts a fresh index there — the current one stays in the old folder, and switching back loads it again.",
+      tr("Index folder"),
+      tr(
+        "Where the Vault Q&A index lives. Changing it starts a fresh index there — the current one stays in the old folder, and switching back loads it again."
+      ),
       "ragIndexPath",
       { aliases: ["pasta", "path", "index", "índice", "rag", "embeddings"] }
     ),
@@ -756,35 +808,41 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
   const rag: Place = { tab: "rag" };
   group(rag, {}, [
     custom(
-      "Embedding model",
+      tr("Embedding model"),
       null,
-      "Needs the key of that model's provider. Without an index, Vault Q&A falls back to keyword search. Fetch models on a provider to list the embedding models your account has.",
+      tr(
+        "Needs the key of that model's provider. Without an index, Vault Q&A falls back to keyword search. Fetch models on a provider to list the embedding models your account has."
+      ),
       ui.embeddingModel,
       { aliases: ["embeddings", "rag", "modelo"] }
     ),
     // As duas voltaram pra tela (sumiram na 0.4.0; o motor continuou lendo).
     escolha(
       rag,
-      "Index precision",
+      tr("Index precision"),
       null,
-      "How much detail each note keeps in the index. Lighter takes less space and memory; Light and Minimal also shrink the vectors on OpenAI's text-embedding-3. Applies on the next index update, which rebuilds it from scratch.",
+      tr(
+        "How much detail each note keeps in the index. Lighter takes less space and memory; Light and Minimal also shrink the vectors on OpenAI's text-embedding-3. Applies on the next index update, which rebuilds it from scratch."
+      ),
       "ragQuantProfile",
-      () => QUANT_ITENS,
+      () => QUANT_ITENS.map((i) => ({ ...i, label: tr(i.label) })),
       { aliases: ["quantization", "quantização", "precisão", "int8", "memory", "memória"] }
     ),
     toggle(
-      "Search the index in pieces",
-      "Reads the index about 4 MB at a time instead of all at once — keeps memory low on big vaults, which matters on the phone. The catch: every index update then rebuilds it whole and re-embeds the vault, which costs tokens.",
+      tr("Search the index in pieces"),
+      tr(
+        "Reads the index about 4 MB at a time instead of all at once — keeps memory low on big vaults, which matters on the phone. The catch: every index update then rebuilds it whole and re-embeds the vault, which costs tokens."
+      ),
       "ragStreamShards",
       { aliases: ["shards", "pedaços", "memory", "memória", "streamed"] }
     ),
     toggle(
-      "Auto re-index on note changes",
-      "Re-embeds only changed notes (costs tokens). Only runs once an index exists.",
+      tr("Auto re-index on note changes"),
+      tr("Re-embeds only changed notes (costs tokens). Only runs once an index exists."),
       "ragAutoReindex",
       { aliases: ["reindex", "índice", "indice"] }
     ),
-    custom("Index", null, "", ui.index, {
+    custom(tr("Index"), null, "", ui.index, {
       aliases: ["índice", "indice", "index vault", "rag"],
     }),
   ]);
@@ -793,34 +851,40 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
   group({ tab: "agent" }, {}, [
     escolha(
       { tab: "agent" },
-      "Permission level",
+      tr("Permission level"),
       null,
-      "When the agent stops to ask before changing the vault. In YOLO, deletes run on their own too when Obsidian sends deleted files to a trash (set to delete permanently, they still ask). Every change can be undone from the chat while Obsidian is open.",
+      tr(
+        "When the agent stops to ask before changing the vault. In YOLO, deletes run on their own too when Obsidian sends deleted files to a trash (set to delete permanently, they still ask). Every change can be undone from the chat while Obsidian is open."
+      ),
       "agentPermissionLevel",
       () =>
         (Object.keys(PERMISSION_LABELS) as PermissionLevel[]).map((l) => ({
           value: l,
-          label: PERMISSION_LABELS[l],
+          label: tr(PERMISSION_LABELS[l]),
           icon: PERMISSION_ICONS[l],
         })),
       { aliases: ["permissão", "permissions", "yolo", "confirm", "confirmar"] }
     ),
     toggle(
-      "Show diff before applying edits",
-      "Preview every change the agent wants to write.",
+      tr("Show diff before applying edits"),
+      tr("Preview every change the agent wants to write."),
       "agentDiffApproval",
       { aliases: ["diff", "preview", "aprovação"] }
     ),
     toggle(
-      "Web access",
-      "Let the agent search the web and open public pages when a task needs it. In Ask and Vault, each request shows you the address or the search first; local addresses are always refused.",
+      tr("Web access"),
+      tr(
+        "Let the agent search the web and open public pages when a task needs it. In Ask and Vault, each request shows you the address or the search first; local addresses are always refused."
+      ),
       "agentWeb",
       { aliases: ["web", "internet", "search", "busca", "url", "fetch"] }
     ),
     custom(
-      "Tavily key",
+      tr("{provider} key", { provider: "Tavily" }),
       null,
-      "For web search, from tavily.com › API keys: 1,000 free searches a month, no card needed. Without it the agent can still open pages. Stored in the OS keychain (not in data.json).",
+      tr(
+        "For web search, from tavily.com › API keys: 1,000 free searches a month, no card needed. Without it the agent can still open pages. Stored in the OS keychain (not in data.json)."
+      ),
       ui.tavilyKey,
       { visible: () => s().agentWeb !== false, aliases: [...KEY_ALIASES, "tavily", "web search"] }
     ),
@@ -830,14 +894,18 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
   if (ui.isMobile) {
     group({ tab: "mobile" }, {}, [
       toggle(
-        "Fullscreen",
-        "Hides the drawer chrome and the global navbar while AXXA is the active tab. The menu button stays, so you are never stuck.",
+        tr("Fullscreen"),
+        tr(
+          "Hides the drawer chrome and the global navbar while AXXA is the active tab. The menu button stays, so you are never stuck."
+        ),
         "mobileFullscreen",
         { aliases: ["tela cheia", "full screen"] }
       ),
       toggle(
-        "Haptics",
-        "A short buzz on every tap. Android only — iPhone doesn't let a plugin touch the Taptic Engine.",
+        tr("Haptics"),
+        tr(
+          "A short buzz on every tap. Android only — iPhone doesn't let a plugin touch the Taptic Engine."
+        ),
         "hapticsEnabled",
         { aliases: ["vibration", "vibração", "vibrate"] }
       ),

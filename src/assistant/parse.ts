@@ -14,6 +14,7 @@
 // "sparkles-2" seria cobrar dela o erro dele.
 
 import { CHAT_MODES } from "../core/session";
+import { tr } from "../i18n/tr";
 
 /** O que a assistente pode devolver: uma pergunta, ou o rascunho pronto. */
 export interface RespostaAssistente<T> {
@@ -107,7 +108,7 @@ export function lerSkill(
   const body = texto(obj.body, 4000);
   if (!body) return null;
   return {
-    name: texto(obj.name, 60) || "Untitled skill",
+    name: texto(obj.name, 60) || tr("Untitled skill"),
     description: texto(obj.description, 140),
     icon: daLista(obj.icon, iconesValidos, iconePadrao),
     color: daLista(obj.color, coresValidas, "default"),

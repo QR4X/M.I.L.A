@@ -17,6 +17,7 @@ import { Icon } from "./Icon";
 import { useSheetFull, useSheetLevel } from "./Sheet";
 import { ICON_CATALOG, iconCatalogSize, iconCategoryOf } from "../iconCatalog";
 import { peDoWizard } from "./wizard";
+import { tr } from "../i18n/tr";
 
 /**
  * Rótulo + explicação + o campo. A unidade do formulário.
@@ -182,7 +183,9 @@ export function SheetChoices({
           /* O nome inteiro vai no rótulo acessível: lido em voz alta, "Work 21"
              não diz o que é o 21 — "Work, 21 icons" diz. */
           aria-label={
-            it.count === undefined ? undefined : `${it.label}, ${it.count} icons`
+            it.count === undefined
+              ? undefined
+              : tr("{label}, {n} icons", { label: it.label, n: it.count })
           }
           onClick={() => onPick(it.id)}
         >
@@ -273,7 +276,7 @@ export function SheetIconGrid({
   const curtos = icons.includes(value) ? [...icons] : [value, ...icons];
 
   return (
-    <div className="axxa-icongrid" role="group" aria-label="Icon">
+    <div className="axxa-icongrid" role="group" aria-label={tr("Icon")}>
       {curtos.map((ic) => (
         <IconTile
           key={ic}
@@ -292,11 +295,13 @@ export function SheetIconGrid({
       <button
         type="button"
         className="axxa-icontile is-more"
-        aria-label={`More icons — ${iconCatalogSize()} to choose from`}
+        aria-label={tr("More icons — {n} to choose from", {
+          n: iconCatalogSize(),
+        })}
         onClick={onBrowse}
       >
         <Icon name="plus" size={18} />
-        <span className="axxa-more-rotulo">More</span>
+        <span className="axxa-more-rotulo">{tr("More")}</span>
         <span className="axxa-more-conta">{iconCatalogSize()}</span>
       </button>
     </div>
@@ -346,7 +351,7 @@ export function SheetIconCatalog({
   // isto a barra continuava dizendo "New skill" com a tela cheia de ícones, e
   // a seta dela pulava o formulário inteiro: voltar desfazia dois toques em
   // vez de um.
-  useSheetLevel("Icon", onBack);
+  useSheetLevel(tr("Icon"), onBack);
 
   /** Começa na categoria do ícone de agora — quem veio trocar um avião
    *  provavelmente quer outro de viagem, não a primeira pílula. */
@@ -363,17 +368,19 @@ export function SheetIconCatalog({
           certa; agora as duas fariam a mesma coisa a 50px uma da outra. */}
       {children}
       <SheetChoices
-        label="Icon category"
+        label={tr("Icon category")}
         value={atual.id}
         onPick={setAba}
         items={ICON_CATALOG.map((c) => ({
           id: c.id,
-          label: c.label,
+          // O nome da categoria mora em iconCatalog.ts; a tradução sai aqui,
+          // na hora de desenhar.
+          label: tr(c.label),
           icon: c.icon,
           count: c.icons.length,
         }))}
       />
-      <div className="axxa-icongrid" role="group" aria-label={atual.label}>
+      <div className="axxa-icongrid" role="group" aria-label={tr(atual.label)}>
         {atual.icons.map((ic) => (
           <IconTile
             key={ic}
@@ -412,7 +419,7 @@ export function SheetSwatches({
   resolve: (color: string) => string;
 }) {
   return (
-    <div className="axxa-swatches" role="group" aria-label="Color">
+    <div className="axxa-swatches" role="group" aria-label={tr("Color")}>
       {colors.map((c) => (
         <button
           key={c}
@@ -516,7 +523,7 @@ export function SheetProgress({
       aria-valuemin={1}
       aria-valuemax={passos}
       aria-valuenow={feito}
-      aria-label={`Step ${feito} of ${passos}`}
+      aria-label={tr("Step {n} of {total}", { n: feito, total: passos })}
     >
       <span
         className="axxa-wiz-fill"
@@ -587,7 +594,7 @@ export function SheetWizardFoot({
            e recebeu o skill inteiro preenchido de uma vez. */
         <button type="button" className="axxa-wiz-now" onClick={onSubmit}>
           <Icon name="check" size={15} />
-          <span>{label} now</span>
+          <span>{tr("{label} now", { label })}</span>
         </button>
       ) : null}
 
@@ -606,7 +613,7 @@ export function SheetWizardFoot({
           </>
         ) : (
           <>
-            <span>Next</span>
+            <span>{tr("Next")}</span>
             <Icon name="chevron-right" size={18} />
           </>
         )}

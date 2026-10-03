@@ -7,6 +7,7 @@ import type { Project } from "../projects";
 import { relativeShort } from "./modules";
 import { blocoDeInstrucoes, blocoDeNotasAnexadas } from "../agent/conversation";
 import { estimateTokens } from "../core/tokens";
+import { tr } from "../i18n/tr";
 
 /**
  * O que o CARTÃO de um projeto conta sobre ele, em três perguntas:
@@ -36,10 +37,12 @@ export function resumoDoProjeto(
   const tempo = (iso: string) => {
     const r = relativeShort(iso, agora);
     if (!r) return "";
-    if (r === "now") return "just now";
+    // O relativeShort devolve "now" JÁ traduzido ("agora" em pt-BR): a
+    // comparação é com a mesma tradução, senão em português ela nunca casava.
+    if (r === tr("now")) return tr("just now");
     // "3d", "5h", "12m" viram "3d ago"; data inteira (mais de um mês) fica
     // como está — "ago" depois de uma data não é português nem inglês.
-    return /^\d+[mhd]$/.test(r) ? `${r} ago` : r;
+    return /^\d+[mhd]$/.test(r) ? tr("{time} ago", { time: r }) : r;
   };
   const quando = tempo(ultima ? ultima.date : p.createdAt);
   const primeira = (p.instructions ?? "")
@@ -47,7 +50,10 @@ export function resumoDoProjeto(
     .map((l) => l.trim())
     .find(Boolean);
   const sobre =
-    primeira ?? (ultima?.title.trim() ? `Latest: ${ultima.title.trim()}` : null);
+    primeira ??
+    (ultima?.title.trim()
+      ? tr("Latest: {title}", { title: ultima.title.trim() })
+      : null);
   return { quando, sobre, conversas: deles.length };
 }
 
@@ -78,8 +84,11 @@ export function tokensDeEntrada(
  * token), e um "1.234 tokens" exato prometeria uma precisão que ela não tem.
  */
 export function formatarTokens(n: number): string {
-  if (n <= 0) return "0 tokens";
-  if (n < 1000) return `~${n} tokens`;
-  if (n < 10_000) return `~${(n / 1000).toFixed(1).replace(/\.0$/, "")}k tokens`;
-  return `~${Math.round(n / 1000)}k tokens`;
+  if (n <= 0) return tr("0 tokens");
+  if (n < 1000) return tr("~{n} tokens", { n });
+  if (n < 10_000)
+    return tr("~{n}k tokens", {
+      n: (n / 1000).toFixed(1).replace(/\.0$/, ""),
+    });
+  return tr("~{n}k tokens", { n: Math.round(n / 1000) });
 }

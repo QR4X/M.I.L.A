@@ -37,6 +37,7 @@ import {
 import { usd } from "../usage/gastoDoDia";
 import { providerIcon } from "./ChatList";
 import { Icon } from "./Icon";
+import { localeDaInterface, tr } from "../i18n/tr";
 
 /** Onde mora (no localStorage do vault) quais blocos ficaram abertos. */
 const CHAVE_ABERTOS = "axxa-left-today-open";
@@ -63,13 +64,32 @@ function gravarAbertos(app: App, abertos: Set<string>): void {
  *  muitos, e o compacto é o que se lê ("238k"). */
 function numero(n: number, unidade: Medidor["unidade"]): string {
   if (unidade === "usd") return usd(n);
-  return unidade === "tokens" ? formatCompact(n) : Math.round(n).toLocaleString("en-US");
+  return unidade === "tokens" ? formatCompact(n) : Math.round(n).toLocaleString(localeDaInterface());
 }
 
-function plural(n: number, unidade: Medidor["unidade"]): string {
-  if (unidade === "tokens") return "tokens";
-  if (unidade === "usd") return "";
-  return n === 1 ? "request" : "requests";
+/** O número com a unidade: "238k tokens", "12 requests", "1 request". */
+function quantos(n: number, unidade: Medidor["unidade"]): string {
+  if (unidade === "tokens") return tr("{n} tokens", { n: numero(n, unidade) });
+  if (unidade === "usd") return numero(n, unidade);
+  return n === 1 ? tr("1 request") : tr("{n} requests", { n: numero(n, unidade) });
+}
+
+/** "238 left". Um só sobrando é singular em português ("resta 1"); dinheiro
+ *  não entra nessa conta ("$1.00 left" continua plural). */
+function sobram(n: number, unidade: Medidor["unidade"]): string {
+  return n === 1 && unidade !== "usd" ? tr("1 left") : tr("{n} left", { n: numero(n, unidade) });
+}
+
+/** A conta do pé: "238 of 250 requests used". O plural é o do teto. */
+function usadosDe(usado: number, limite: number, unidade: Medidor["unidade"]): string {
+  const u = numero(usado, unidade);
+  if (unidade === "usd") return tr("{used} of {limit} spent", { used: u, limit: numero(limite, unidade) });
+  if (unidade === "tokens") {
+    return tr("{used} of {limit} tokens used", { used: u, limit: numero(limite, unidade) });
+  }
+  return limite === 1
+    ? tr("{used} of 1 request used", { used: u })
+    : tr("{used} of {limit} requests used", { used: u, limit: numero(limite, unidade) });
 }
 
 /** Dinheiro de crédito e de gasto do dia: centavos bastam ("$0.31"); a casa
@@ -78,6 +98,15 @@ function dinheiro(n: number): string {
   if (n === 0) return "$0.00";
   if (n > 0 && n < 0.01) return "<$0.01";
   return `$${n.toFixed(2)}`;
+}
+
+/** De quanto em quanto o teto da chave volta, no valor que o OpenRouter
+ *  manda ("daily", "weekly", "monthly"); um valor novo vai como veio. */
+function voltaDoCredito(volta: string): string {
+  if (volta === "daily") return tr("resets daily");
+  if (volta === "weekly") return tr("resets weekly");
+  if (volta === "monthly") return tr("resets monthly");
+  return tr("resets {when}", { when: volta });
 }
 
 /** O nome de um medidor na tela: o do app pro modelo ("Gemini 2.5 Flash"),
@@ -150,9 +179,9 @@ export function LeftToday({ plugin }: { plugin: AxxaPlugin }) {
   if (cartoes.length === 0) return null;
 
   return (
-    <section className="axxa-home-block axxa-left" aria-label="Left today">
+    <section className="axxa-home-block axxa-left" aria-label={tr("Left today")}>
       <div className="axxa-home-headrow">
-        <span className="axxa-section-label">Left today</span>
+        <span className="axxa-section-label">{tr("Left today")}</span>
       </div>
       <div className="axxa-usage-list">
         {cartoes.map((c) => (
@@ -209,9 +238,9 @@ function CartaoDoDia({
         {aberto && (c.viraEm != null || c.semDia) && (
           <span
             className="axxa-left-reset"
-            title={c.viraOnde ? `Resets at ${c.viraOnde}` : undefined}
+            title={c.viraOnde ? tr("Resets at {when}", { when: c.viraOnde }) : undefined}
           >
-            {c.viraEm != null ? `resets in ${emQuanto(c.viraEm)}` : c.semDia}
+            {c.viraEm != null ? tr("resets in {time}", { time: emQuanto(c.viraEm) }) : c.semDia}
           </span>
         )}
         <span className="axxa-left-chev" aria-hidden="true">
@@ -275,7 +304,14 @@ function Barra({ m }: { m: Medidor }) {
   const f = fracaoQueSobra(m);
   if (f == null || m.limite == null || m.restante == null) return null;
   const n = nivel(m);
-  const texto = `${nomeDo(m)}: ${numero(m.restante, m.unidade)} of ${numero(m.limite, m.unidade)} left`;
+  const texto =
+    m.restante === 1 && m.unidade !== "usd"
+      ? tr("{name}: 1 of {limit} left", { name: nomeDo(m), limit: numero(m.limite, m.unidade) })
+      : tr("{name}: {left} of {limit} left", {
+          name: nomeDo(m),
+          left: numero(m.restante, m.unidade),
+          limit: numero(m.limite, m.unidade),
+        });
   return (
     <span
       className={n ? `axxa-left-bar is-${n}` : "axxa-left-bar"}
@@ -313,17 +349,15 @@ function LinhaDoMedidor({
   const dinheiro = m.unidade === "usd";
   const valor =
     m.restante != null
-      ? `${numero(m.restante, m.unidade)} left`
+      ? sobram(m.restante, m.unidade)
       : dinheiro
-        ? `${numero(m.usado, m.unidade)} spent`
-        : `${numero(m.usado, m.unidade)} ${plural(m.usado, m.unidade)}`;
+        ? tr("{n} spent", { n: numero(m.usado, m.unidade) })
+        : quantos(m.usado, m.unidade);
   const conta =
     m.limite != null
-      ? dinheiro
-        ? `${numero(m.usado, m.unidade)} of ${numero(m.limite, m.unidade)} spent`
-        : `${numero(m.usado, m.unidade)} of ${numero(m.limite, m.unidade)} ${plural(m.limite, m.unidade)} used`
+      ? usadosDe(m.usado, m.limite, m.unidade)
       : m.limiteEditavel
-        ? "No daily limit set"
+        ? tr("No daily limit set")
         : null;
   const pe = [conta, m.nota].filter(Boolean).join(" · ");
   return (
@@ -345,12 +379,12 @@ function LinhaDoMedidor({
           <button
             type="button"
             className="axxa-home-filter is-accent axxa-left-action"
-            aria-label="Ask OpenRouter again"
+            aria-label={tr("Ask OpenRouter again")}
             disabled={atualizar.lendo}
             onClick={atualizar.ir}
           >
             <Icon name={atualizar.lendo ? "loader" : "refresh-cw"} size={14} />
-            <span>{atualizar.lendo ? "Asking…" : "Refresh"}</span>
+            <span>{atualizar.lendo ? tr("Asking…") : tr("Refresh")}</span>
           </button>
         )
       )}
@@ -393,14 +427,20 @@ function EditorDeLimite({
         type="button"
         className="axxa-home-filter is-accent axxa-left-action"
         aria-label={
-          dinheiro ? `${atual ? "Edit" : "Set"} the daily spending limit` : `${atual ? "Edit" : "Set"} the daily limit for ${nome}`
+          dinheiro
+            ? atual
+              ? tr("Edit the daily spending limit")
+              : tr("Set the daily spending limit")
+            : atual
+              ? tr("Edit the daily limit for {name}", { name: nome })
+              : tr("Set the daily limit for {name}", { name: nome })
         }
         onClick={() => {
           setTxt(atual ? String(atual) : "");
           setAberto(true);
         }}
       >
-        <span>{atual ? "Edit" : "Set limit"}</span>
+        <span>{atual ? tr("Edit") : tr("Set limit")}</span>
       </button>
     );
   }
@@ -423,8 +463,10 @@ function EditorDeLimite({
           step={dinheiro ? 0.5 : 1}
           className="axxa-left-input"
           value={txt}
-          placeholder={dinheiro ? "$ a day" : "Per day"}
-          aria-label={dinheiro ? "Daily spending limit in dollars" : `Requests per day for ${nome}`}
+          placeholder={dinheiro ? tr("$ a day") : tr("Per day")}
+          aria-label={
+            dinheiro ? tr("Daily spending limit in dollars") : tr("Requests per day for {name}", { name: nome })
+          }
           ref={campo}
           onChange={(e) => setTxt(e.target.value)}
           onKeyDown={(e) => {
@@ -435,7 +477,7 @@ function EditorDeLimite({
         <button
           type="button"
           className="axxa-icon-btn"
-          aria-label="Save limit"
+          aria-label={tr("Save limit")}
           onClick={salvar}
         >
           <Icon name="check" />
@@ -443,7 +485,7 @@ function EditorDeLimite({
       </span>
       {ajuda && (
         <span className="axxa-left-row-hint">
-          Requests per day.{" "}
+          {tr("Requests per day.")}{" "}
           <a
             className="axxa-left-link"
             href={ajuda.url}
@@ -468,19 +510,23 @@ function LinhaDoCredito({
   const comTeto = credito.restante != null;
   const pe = comTeto
     ? [
-        credito.gastoHoje != null ? `${dinheiro(credito.gastoHoje)} spent today` : null,
-        credito.volta ? `resets ${credito.volta}` : null,
+        credito.gastoHoje != null
+          ? tr("{amount} spent today", { amount: dinheiro(credito.gastoHoje) })
+          : null,
+        credito.volta ? voltaDoCredito(credito.volta) : null,
       ]
         .filter(Boolean)
         .join(" · ")
-    : "No spending cap on this key";
+    : tr("No spending cap on this key");
   return (
     <div className="axxa-left-row">
       <span className="axxa-left-row-name">
-        {comTeto ? "Key credit" : "Spent today"}
+        {comTeto ? tr("Key credit") : tr("Spent today")}
       </span>
       <span className="axxa-left-row-value">
-        {comTeto ? `${dinheiro(credito.restante ?? 0)} left` : dinheiro(credito.gastoHoje ?? 0)}
+        {comTeto
+          ? tr("{n} left", { n: dinheiro(credito.restante ?? 0) })
+          : dinheiro(credito.gastoHoje ?? 0)}
       </span>
       {pe && <span className="axxa-left-row-sub">{pe}</span>}
     </div>

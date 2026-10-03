@@ -39,6 +39,7 @@ import {
   trabalhoDoPeriodo,
   type ModeloUsado,
 } from "./homeModules";
+import { tr } from "../i18n/tr";
 
 /** Quantos modelos cabem na lista sem ela virar um relatório. */
 const MODELOS = 3;
@@ -81,7 +82,7 @@ export function UsageCard({
       className="axxa-usage is-clickable"
       role="button"
       tabIndex={0}
-      aria-label={`Usage in ${mapa.rotulo} — open details`}
+      aria-label={tr("Usage in {month} — open details", { month: mapa.rotulo })}
       onClick={onOpen}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -93,9 +94,9 @@ export function UsageCard({
       <div className="axxa-usage-line">
         <span className="axxa-usage-meta">
           <span className="axxa-usage-big">{formatCompact(mapa.total)}</span>
-          <span className="axxa-usage-unit">tokens</span>
+          <span className="axxa-usage-unit">{tr("tokens")}</span>
           <span className="axxa-usage-sep">·</span>
-          {agg.total.chats === 1 ? "1 chat" : `${agg.total.chats} chats`}
+          {agg.total.chats === 1 ? tr("1 chat") : tr("{n} chats", { n: agg.total.chats })}
           {agg.total.cost > 0 && (
             <>
               <span className="axxa-usage-sep">·</span>
@@ -103,7 +104,7 @@ export function UsageCard({
               {agg.total.hasUnknownCost && (
                 <span
                   className="axxa-usage-approx"
-                  title="Some models have no public price — this is a floor"
+                  title={tr("Some models have no public price — this is a floor")}
                 >
                   +
                 </span>
@@ -133,17 +134,17 @@ export function UsageCard({
         {/* A sequência primeiro: é a única que muda de valor por você abrir o
             app hoje, e a única que se PERDE. */}
         <Modulo
-          rotulo="Streak"
+          rotulo={tr("Streak")}
           valor={sequencia > 0 ? String(sequencia) : "—"}
-          unidade={sequencia === 1 ? "day" : "days"}
+          unidade={sequencia === 1 ? tr("day") : tr("days")}
         />
         {/* "Active days" quebrava em duas linhas num quadro estreito e
             esticava a fileira: o rótulo é uma palavra só, e quem diz que são
             dias é o vizinho da esquerda. */}
         <Modulo
-          rotulo="Active"
+          rotulo={tr("Active")}
           valor={String(ativos.ativos)}
-          unidade={`of ${ativos.total}`}
+          unidade={tr("of {n}", { n: ativos.total })}
         />
         {/* Ações é o número mais AXXA de todos: é o equivalente daqui às
             linhas de código do painel do Claude Code. Token mede consumo;
@@ -151,15 +152,15 @@ export function UsageCard({
             Agent —, o lugar vai pras mensagens em vez de exibir um zero. */}
         {trabalho.acoes > 0 ? (
           <Modulo
-            rotulo="Actions"
+            rotulo={tr("Actions")}
             valor={formatCompact(trabalho.acoes)}
-            unidade="in vault"
+            unidade={tr("in vault")}
           />
         ) : (
           <Modulo
-            rotulo="Messages"
+            rotulo={tr("Messages")}
             valor={formatCompact(trabalho.mensagens)}
-            unidade="sent"
+            unidade={tr("sent")}
           />
         )}
       </div>
@@ -189,7 +190,7 @@ function Calendario({ celulas, pico }: { celulas: Celula[]; pico: number }) {
     <div
       className="axxa-heat"
       role="img"
-      aria-label={`Daily usage this month, busiest day ${formatCompact(pico)} tokens`}
+      aria-label={tr("Daily usage this month, busiest day {n} tokens", { n: formatCompact(pico) })}
     >
       {celulas.map((c, i) => (
         <span
@@ -203,7 +204,9 @@ function Calendario({ celulas, pico }: { celulas: Celula[]; pico: number }) {
           }
           // O título é o que dá o número exato de um dia sem gastar linha:
           // no desktop sai no hover, no celular é inofensivo.
-          title={c.dia ? `${c.dia} · ${formatCompact(c.tokens)} tokens` : undefined}
+          title={
+            c.dia ? tr("{day} · {n} tokens", { day: c.dia, n: formatCompact(c.tokens) }) : undefined
+          }
         />
       ))}
     </div>
@@ -220,7 +223,7 @@ function Calendario({ celulas, pico }: { celulas: Celula[]; pico: number }) {
  */
 function LinhaDeModelo({ m }: { m: ModeloUsado }) {
   return (
-    <div className="axxa-model-row" title={`${formatCompact(m.tokens)} tokens`}>
+    <div className="axxa-model-row" title={tr("{n} tokens", { n: formatCompact(m.tokens) })}>
       <span
         className="axxa-donut"
         style={{ "--axxa-pct": m.pct } as CSSProperties}

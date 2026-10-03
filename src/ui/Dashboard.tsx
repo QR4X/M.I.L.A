@@ -33,6 +33,7 @@ import { UsageCard } from "./UsageCard";
 import { alertCount } from "./chatAlert";
 import { MODULES, chatsOfModule, defaultSegment } from "./modules";
 import type { ChatSummary } from "../core/chatPersistence";
+import { tr } from "../i18n/tr";
 
 /** Quantas conversas a home mostra antes de mandar pro histórico. */
 const RECENTES = 4;
@@ -86,7 +87,7 @@ export function Dashboard({
         <button
           type="button"
           className="axxa-icon-btn"
-          aria-label="Open menu"
+          aria-label={tr("Open menu")}
           onClick={onOpenMenu}
         >
           <Icon name="menu" />
@@ -110,7 +111,9 @@ export function Dashboard({
             type="button"
             className="axxa-icon-btn axxa-topbar-end"
             aria-label={
-              plugin.settings.mobileFullscreen ? "Exit fullscreen" : "Fullscreen"
+              plugin.settings.mobileFullscreen
+                ? tr("Exit fullscreen")
+                : tr("Fullscreen")
             }
             aria-pressed={plugin.settings.mobileFullscreen === true}
             onClick={() => void alternarTelaCheia()}
@@ -146,7 +149,7 @@ export function Dashboard({
               }) > 0,
           }))}
           value={atual}
-          label="Chat mode"
+          label={tr("Chat mode")}
           onChange={onAba}
         />
 
@@ -154,7 +157,7 @@ export function Dashboard({
           <>
             <div className="axxa-home-headrow">
               <span className="axxa-section-label">
-                Pick up where you left
+                {tr("Pick up where you left")}
               </span>
               {/* Só aparece quando há mesmo mais o que ver. Um "ver tudo" que
                   mostra o que já está na tela é um toque que não leva a
@@ -175,7 +178,7 @@ export function Dashboard({
                     onOpenHistory();
                   }}
                 >
-                  <span>See all {visiveis.length}</span>
+                  <span>{tr("See all {n}", { n: visiveis.length })}</span>
                   <Icon name="chevron-right" size={16} />
                 </button>
               )}
@@ -192,7 +195,7 @@ export function Dashboard({
         {visiveis.length === 0 && (
           <div className="axxa-home-empty">
             <Icon name={MODULES[atual].icon} size={42} />
-            <p>{MODULES[atual].emptyLine}</p>
+            <p>{tr(MODULES[atual].emptyLine)}</p>
           </div>
         )}
 
@@ -212,10 +215,10 @@ export function Dashboard({
               há bifurcação, há um caminho só. */}
           {visiveis.length > 0 && (
             <span className="axxa-or">
-              <span>or</span>
+              <span>{tr("or")}</span>
             </span>
           )}
-          <span className="axxa-section-label">Start something new</span>
+          <span className="axxa-section-label">{tr("Start something new")}</span>
           <div className="axxa-start-grid">
             {CHAT_MODES.map((m) => (
               <button

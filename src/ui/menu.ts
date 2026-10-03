@@ -23,6 +23,7 @@
 
 import { setIcon } from "obsidian";
 import { screen } from "./haptics";
+import { tr } from "../i18n/tr";
 
 /** Menu de ações (⋯ de um chat, de um projeto). */
 export interface MenuAction {
@@ -282,7 +283,7 @@ export function openActions(
   const desenhar = (itens: MenuAction[], voltar: (() => void) | null): void => {
     while (balao.firstChild) balao.removeChild(balao.firstChild);
     if (voltar) {
-      const volta = item(balao, { label: "Back", icon: "chevron-left" }, voltar);
+      const volta = item(balao, { label: tr("Back"), icon: "chevron-left" }, voltar);
       volta.classList.add("is-back");
     }
     for (const a of itens) {

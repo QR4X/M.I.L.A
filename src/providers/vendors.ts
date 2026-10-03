@@ -5,6 +5,8 @@
 // ganha um nível a mais: fabricante → classe → modelo. Nos providers de uma
 // casa só (OpenAI, Anthropic, Gemini) esse nível não diria nada.
 
+import { tr } from "../i18n/tr";
+
 /** Os providers cuja lista é de VÁRIOS fabricantes. */
 export const PROVIDERS_MULTI_FABRICANTE = new Set(["openrouter", "nim"]);
 
@@ -114,7 +116,7 @@ function titulo(slug: string): string {
 export function fabricante(id: string): Fabricante {
   const s = (id || "").trim().toLowerCase();
   const barra = s.indexOf("/");
-  if (barra <= 0) return { chave: "", nome: "Other" };
+  if (barra <= 0) return { chave: "", nome: tr("Other") };
   const cru = s.slice(0, barra).replace(/^~/, "");
   const chave = APELIDOS[cru] ?? cru;
   return { chave, nome: NOMES[chave] ?? titulo(chave) };

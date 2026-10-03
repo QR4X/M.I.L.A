@@ -14,6 +14,8 @@
 // dia qualquer, num lugar onde a pessoa não tem como adivinhar o que
 // aconteceu. Aqui a gente procura entre os que ela já tem.
 
+import { tr } from "../i18n/tr";
+
 /** Onde a assistente roda. */
 export interface AssistantAlvo {
   provider: string;
@@ -97,8 +99,12 @@ export function motivoIndisponivel(
   temChave: (provider: string) => boolean
 ): string | null {
   if (!alvo)
-    return "Pick an assistant model in Settings — a free OpenRouter model works.";
+    return tr(
+      "Pick an assistant model in Settings — a free OpenRouter model works."
+    );
   if (!temChave(alvo.provider))
-    return `Add your ${alvo.provider} key in Settings to use the assistant.`;
+    return tr("Add your {provider} key in Settings to use the assistant.", {
+      provider: alvo.provider,
+    });
   return null;
 }

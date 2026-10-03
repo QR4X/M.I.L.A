@@ -6,6 +6,7 @@
 // v0.1.236
 
 import type { ModelCategory } from "./modelDescriptions";
+import { marca } from "../i18n/tr";
 
 /** Modelo escolhido pra um papel: o ID + de qual provider (dedup cross-provider). */
 export interface RoleModelEntry {
@@ -35,12 +36,12 @@ export const ROLE_ORDER: RoleId[] = [
 
 export const ROLE_LABELS: Record<RoleId, string> = {
   chat: "Chat",
-  reasoning: "Reasoning",
-  image: "Image",
-  video: "Video",
-  tts: "Text-to-speech",
-  embedding: "Text embedding",
-  other: "Other",
+  reasoning: marca("Reasoning"),
+  image: marca("Image"),
+  video: marca("Video"),
+  tts: marca("Text-to-speech"),
+  embedding: marca("Text embedding"),
+  other: marca("Other"),
 };
 
 /** Ícone Lucide do "brasão" de cada papel. */

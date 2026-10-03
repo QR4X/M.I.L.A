@@ -12,6 +12,7 @@
 import { Icon } from "./Icon";
 import type { Voice } from "./useVoice";
 import { commit, warn } from "./haptics";
+import { tr } from "../i18n/tr";
 
 export function VoiceDock({ voice }: { voice: Voice }) {
   const working = voice.state === "working";
@@ -20,7 +21,7 @@ export function VoiceDock({ voice }: { voice: Voice }) {
       <button
         type="button"
         className="axxa-voice-x"
-        aria-label="Discard recording"
+        aria-label={tr("Discard recording")}
         disabled={working}
         onClick={() => {
           warn();
@@ -31,7 +32,7 @@ export function VoiceDock({ voice }: { voice: Voice }) {
       </button>
 
       {working ? (
-        <span className="axxa-voice-working">Transcribing…</span>
+        <span className="axxa-voice-working">{tr("Transcribing…")}</span>
       ) : (
         // A onda é a única prova de que o microfone está ouvindo: sem ela,
         // mudo e quebrado são a mesma tela.
@@ -49,7 +50,7 @@ export function VoiceDock({ voice }: { voice: Voice }) {
       <button
         type="button"
         className="axxa-voice-ok"
-        aria-label="Use this transcript"
+        aria-label={tr("Use this transcript")}
         disabled={working}
         onClick={() => {
           commit();

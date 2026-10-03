@@ -7,6 +7,7 @@
 
 import { TFile, TFolder, type App } from "obsidian";
 import type { MessageAttachment, NoteAttachment } from "../providers/base";
+import { tr } from "../i18n/tr";
 
 /** Onde o plugin salva o que gera (imagens, áudio, vídeo + sidecar .md). */
 export const GENERATION_DIR = "axxa-ai/generation";
@@ -196,9 +197,13 @@ export function attachmentLabel(a: MessageAttachment): string {
         return a.path;
       }
     }
+    // Texto colado: o caminho (que o modelo vê) continua em inglês; o chip
+    // mostra o rótulo no idioma da interface.
+    const colado = /^Pasted text \(([^)]*)\)$/.exec(a.path);
+    if (colado) return tr("Pasted text ({size})", { size: colado[1] });
     return a.path.split("/").pop() ?? a.path;
   }
-  if (a.type === "image") return a.name ?? "Image";
+  if (a.type === "image") return a.name ?? tr("Image");
   if (a.type === "pdf") return a.name;
-  return a.path.split("/").pop() ?? "Audio";
+  return a.path.split("/").pop() ?? tr("Audio");
 }

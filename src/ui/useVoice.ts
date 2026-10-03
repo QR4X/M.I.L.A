@@ -25,6 +25,7 @@ import {
   joinTranscripts,
   shouldRotate,
 } from "./voiceSegments";
+import { tr } from "../i18n/tr";
 
 /** De quanto em quanto tempo o parcial do segmento em curso é atualizado. */
 const INTERIM_MS = 3000;
@@ -338,7 +339,7 @@ export function useVoice(opts: VoiceOptions): Voice {
     publicar();
     if (falharamRef.current.size) {
       optsRef.current.onNotice(
-        "Part of the recording could not be transcribed — check the connection."
+        tr("Part of the recording could not be transcribed — check the connection.")
       );
     }
     if (!discardedRef.current) {
@@ -349,12 +350,12 @@ export function useVoice(opts: VoiceOptions): Voice {
   const start = useCallback(async () => {
     if (recRef.current) return false;
     if (typeof MediaRecorder === "undefined" || !navigator.mediaDevices) {
-      optsRef.current.onNotice("This device can't record audio.");
+      optsRef.current.onNotice(tr("This device can't record audio."));
       return false;
     }
     if (!optsRef.current.apiKey().trim()) {
       optsRef.current.onNotice(
-        "Voice needs an OpenAI key — add one in Settings › Providers."
+        tr("Voice needs an OpenAI key — add one in Settings › Providers.")
       );
       return false;
     }
@@ -375,7 +376,7 @@ export function useVoice(opts: VoiceOptions): Voice {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch {
         optsRef.current.onNotice(
-          "Microphone blocked — allow it for Obsidian and try again."
+          tr("Microphone blocked — allow it for Obsidian and try again.")
         );
         return false;
       }
@@ -432,7 +433,7 @@ export function useVoice(opts: VoiceOptions): Voice {
       const elapsed = (agora - startedAtRef.current) / 1000;
       setSeconds(elapsed);
       if (elapsed >= MAX_SECONDS) {
-        optsRef.current.onNotice("Recording stopped at 5 minutes.");
+        optsRef.current.onNotice(tr("Recording stopped at 5 minutes."));
         atual.stop();
         return;
       }

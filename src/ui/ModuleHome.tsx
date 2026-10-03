@@ -29,13 +29,41 @@ import {
   moduleLabel,
   searchChats,
 } from "./modules";
+import { marca, tr } from "../i18n/tr";
 
 /** Janelas do filtro de período do Agent, em dias (0 = tudo). */
-const PERIODOS: Array<{ id: string; label: string; dias: number }> = [
-  { id: "all", label: "All", dias: 0 },
-  { id: "today", label: "Today", dias: 1 },
-  { id: "week", label: "This week", dias: 7 },
-  { id: "month", label: "This month", dias: 30 },
+const PERIODOS: Array<{
+  id: string;
+  label: string;
+  /** A lista vazia naquele período, em frase inteira: montar "Nothing in" +
+   *  o rótulo não vira português palavra por palavra. */
+  vazio: string;
+  dias: number;
+}> = [
+  {
+    id: "all",
+    label: marca("All"),
+    vazio: marca("Nothing in all."),
+    dias: 0,
+  },
+  {
+    id: "today",
+    label: marca("Today"),
+    vazio: marca("Nothing in today."),
+    dias: 1,
+  },
+  {
+    id: "week",
+    label: marca("This week"),
+    vazio: marca("Nothing in this week."),
+    dias: 7,
+  },
+  {
+    id: "month",
+    label: marca("This month"),
+    vazio: marca("Nothing in this month."),
+    dias: 30,
+  },
 ];
 
 export function ModuleHome({
@@ -92,7 +120,7 @@ export function ModuleHome({
         <button
           type="button"
           className="axxa-icon-btn"
-          aria-label="Back"
+          aria-label={tr("Back")}
           onClick={onBack}
         >
           <Icon name="arrow-left" />
@@ -106,7 +134,7 @@ export function ModuleHome({
 
         {ehAgent && (
           <section className="axxa-home-block">
-            <span className="axxa-section-label">Skills</span>
+            <span className="axxa-section-label">{tr("Skills")}</span>
             {/* O que o agente sabe fazer é o que ele TEM à mão — por isso as
                 skills abrem a home dele, do mesmo jeito que os aparelhos
                 abrem a tela de Code na referência. */}
@@ -116,7 +144,7 @@ export function ModuleHome({
               onClick={onOpenSkills}
             >
               <Icon name="plus" size={18} />
-              <span>Add skill</span>
+              <span>{tr("Add skill")}</span>
             </button>
           </section>
         )}
@@ -125,8 +153,8 @@ export function ModuleHome({
             teclado não cobre o resultado (ver SearchSheet.tsx). */}
         <SearchField
           value={query}
-          placeholder="Search"
-          label={`Search ${moduleLabel(modulo)}`}
+          placeholder={tr("Search")}
+          label={tr("Search {module}", { module: moduleLabel(modulo) })}
           found={visiveis.length}
           onChange={setQuery}
           onOpen={() => setBuscando(true)}
@@ -134,23 +162,23 @@ export function ModuleHome({
 
         {ehAgent && (
           <div className="axxa-home-headrow">
-            <span className="axxa-section-label">Sessions</span>
+            <span className="axxa-section-label">{tr("Sessions")}</span>
             <button
               type="button"
               className="axxa-home-filter"
-              aria-label="Filter sessions by period"
+              aria-label={tr("Filter sessions by period")}
               onClick={(e) =>
                 openActions(
                   e,
                   PERIODOS.map((p) => ({
-                    label: p.label,
+                    label: tr(p.label),
                     checked: p.id === periodo.id,
                     run: () => setPeriodo(p),
                   }))
                 )
               }
             >
-              <span>{periodo.label}</span>
+              <span>{tr(periodo.label)}</span>
               <Icon name="chevron-down" size={16} />
             </button>
           </div>
@@ -172,8 +200,8 @@ export function ModuleHome({
               {minhas.length === 0
                 ? moduleEmptyLine(modulo)
                 : procurando
-                  ? "Nothing matches that search."
-                  : `Nothing in ${periodo.label.toLowerCase()}.`}
+                  ? tr("Nothing matches that search.")
+                  : tr(periodo.vazio)}
             </p>
           </div>
         )}
@@ -196,8 +224,8 @@ export function ModuleHome({
           mais pra ler e ignorar. Quem precisa, digita e funciona. */}
       <SearchSheet
         open={buscando}
-        title={`Search ${moduleLabel(modulo)}`}
-        placeholder="Search"
+        title={tr("Search {module}", { module: moduleLabel(modulo) })}
+        placeholder={tr("Search")}
         value={query}
         found={visiveis.length}
         invalid={busca.invalida}
@@ -221,8 +249,10 @@ export function ModuleHome({
             <Icon name="search" size={42} />
             <p>
               {query.trim()
-                ? "Nothing matches that search."
-                : `Type to search ${moduleLabel(modulo)}.`}
+                ? tr("Nothing matches that search.")
+                : tr("Type to search {module}.", {
+                    module: moduleLabel(modulo),
+                  })}
             </p>
           </div>
         )}

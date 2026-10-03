@@ -105,20 +105,21 @@ import { filterModels, groupModels } from "./modelGroups";
 // O limite de favoritos é UM número, e ele mora onde se marca o favorito.
 import { FAVORITE_LIMIT } from "./SettingsTab";
 import { texto } from "../core/texto";
+import { localeDaInterface, marca, tr } from "../i18n/tr";
 
 /** Título da folha do "+" em cada nível. */
 const PLUS_SHEET_TITLE: Record<string, string> = {
-  root: "Add context",
-  notes: "Attach note",
-  skills: "Use a skill",
-  artifacts: "Attach artifact",
+  root: marca("Add context"),
+  notes: marca("Attach note"),
+  skills: marca("Use a skill"),
+  artifacts: marca("Attach artifact"),
 };
 
 /** Título da folha de modelos em cada nível. */
 const MODEL_SHEET_TITLE: Record<string, string> = {
-  root: "Select model",
-  list: "All models",
-  effort: "Effort",
+  root: marca("Select model"),
+  list: marca("All models"),
+  effort: marca("Effort"),
 };
 
 export function ChatView({
@@ -712,15 +713,15 @@ export function ChatView({
   ) => {
     const nome = PROVIDERS.find((p) => p.id === id)?.name ?? id;
     if (!insistiu) {
-      new Notice(`${nome} — ${motivo}`);
+      new Notice(`${nome} — ${tr(motivo)}`);
       return;
     }
     const ir = await new ConfirmModal(plugin.app, {
-      title: `${nome} is not set up`,
-      body: `${motivo}
+      title: tr("{name} is not set up", { name: nome }),
+      body: `${tr(motivo)}
 
-Open Settings › Providers to add it, then run the connection test.`,
-      confirmLabel: "Open settings",
+${tr("Open Settings › Providers to add it, then run the connection test.")}`,
+      confirmLabel: tr("Open settings"),
     }).openAndWait();
     if (ir) {
       closeSheet();
@@ -738,7 +739,7 @@ Open Settings › Providers to add it, then run the connection test.`,
       if (!dataUrl.startsWith("data:")) return;
       addAttachment({ type: "pdf", name: file.name, dataUrl });
     };
-    leitor.onerror = () => new Notice("Could not read that file.");
+    leitor.onerror = () => new Notice(tr("Could not read that file."));
     leitor.readAsDataURL(file);
   };
 
@@ -746,29 +747,29 @@ Open Settings › Providers to add it, then run the connection test.`,
    *  dava ao modelo o endereço — e ele não navega. */
   const anexarLink = async () => {
     const digitado = await new PromptModal(plugin.app, {
-      title: "Attach link",
-      label: "Address",
+      title: tr("Attach link"),
+      label: tr("Address"),
       placeholder: "https://…",
-      submitLabel: "Fetch",
+      submitLabel: tr("Fetch"),
     }).openAndWait();
     const url = normalizeUrl(digitado ?? "");
     if (!url) {
-      if (digitado) new Notice("That doesn't look like an address.");
+      if (digitado) new Notice(tr("That doesn't look like an address."));
       return;
     }
-    const aviso = new Notice(`Fetching ${url}…`, 0);
+    const aviso = new Notice(tr("Fetching {url}…", { url }), 0);
     try {
       // `requestUrl` do Obsidian: sem CORS, que é o que faz isso funcionar no
       // celular.
       const res = await requestUrl({ url });
       const texto = htmlToText(res.text ?? "");
       if (!texto) {
-        new Notice("Nothing readable at that address.");
+        new Notice(tr("Nothing readable at that address."));
         return;
       }
       addAttachment(linkNote(url, htmlTitle(res.text ?? ""), texto));
     } catch {
-      new Notice("Could not reach that address.");
+      new Notice(tr("Could not reach that address."));
     } finally {
       aviso.hide();
     }
@@ -795,7 +796,7 @@ Open Settings › Providers to add it, then run the connection test.`,
         content: `Arquivo gerado pelo plugin: ${a.path}`,
       });
     } catch {
-      new Notice("Could not read that file.");
+      new Notice(tr("Could not read that file."));
     }
   };
 
@@ -812,7 +813,7 @@ Open Settings › Providers to add it, then run the connection test.`,
     if (imagens.length > 0) {
       e.preventDefault();
       if (!modeloVeImagem) {
-        new Notice("This model can't read images.");
+        new Notice(tr("This model can't read images."));
         return;
       }
       for (const img of imagens) anexarImagem(img);
@@ -830,7 +831,7 @@ Open Settings › Providers to add it, then run the connection test.`,
   const anexarNota = async (path: string) => {
     const nota = await readNote(plugin.app, path);
     if (!nota) {
-      new Notice(`Note not found: ${path}`);
+      new Notice(tr("Note not found: {path}", { path }));
       return;
     }
     addAttachment({ type: "note", path: nota.path, content: nota.content });
@@ -850,7 +851,7 @@ Open Settings › Providers to add it, then run the connection test.`,
         name: file.name,
       });
     };
-    leitor.onerror = () => new Notice("Could not read that image.");
+    leitor.onerror = () => new Notice(tr("Could not read that image."));
     leitor.readAsDataURL(file);
   };
 
@@ -875,7 +876,7 @@ Open Settings › Providers to add it, then run the connection test.`,
     if (outraRespondendo) {
       // O motor roda um turno por vez. Enfileirar aqui mandaria o texto pra a
       // fila da OUTRA conversa — some da tela e aparece onde ninguém pediu.
-      new Notice("Another chat is still answering — try again in a moment.");
+      new Notice(tr("Another chat is still answering — try again in a moment."));
       return;
     }
     if (isLoading) {
@@ -1042,7 +1043,9 @@ Open Settings › Providers to add it, then run the connection test.`,
     const tem = atuais.includes(model);
     if (!tem && atuais.length >= FAVORITE_LIMIT) {
       new Notice(
-        `${FAVORITE_LIMIT} favorites per provider is the limit — unstar one first.`
+        tr("{n} favorites per provider is the limit — unstar one first.", {
+          n: FAVORITE_LIMIT,
+        })
       );
       return;
     }
@@ -1076,7 +1079,7 @@ Open Settings › Providers to add it, then run the connection test.`,
         <button
           type="button"
           className="axxa-icon-btn"
-          aria-label="Back"
+          aria-label={tr("Back")}
           onClick={onBackHome}
         >
           <Icon name="arrow-left" />
@@ -1090,19 +1093,19 @@ Open Settings › Providers to add it, then run the connection test.`,
                 coisa sendo nomeada. Um "New chat" fixo desmentia o trilho:
                 você escolhia Agent e a barra continuava falando de chat. */}
             {currentChatId
-              ? currentChatTitle || "Untitled"
-              : moduleFabLabel(cfg.mode)}
+              ? currentChatTitle || tr("Untitled")
+              : tr(moduleFabLabel(cfg.mode))}
           </span>
           {locked && (
             <span className="axxa-topbar-meta">
-              {moduleLabel(cfg.mode)} · {cfg.model}
+              {tr(moduleLabel(cfg.mode))} · {cfg.model}
             </span>
           )}
         </div>
         <button
           type="button"
           className="axxa-icon-btn"
-          aria-label="New chat"
+          aria-label={tr("New chat")}
           disabled={empty && !currentChatId}
           onClick={() => session.newChat()}
         >
@@ -1111,7 +1114,7 @@ Open Settings › Providers to add it, then run the connection test.`,
       </header>
 
       <div className="axxa-messages" ref={scrollRef}>
-        {loadingChat && <p className="axxa-empty-line">Loading…</p>}
+        {loadingChat && <p className="axxa-empty-line">{tr("Loading…")}</p>}
         {empty ? (
           <StarterScreen plugin={plugin} session={session} />
         ) : (
@@ -1126,6 +1129,7 @@ Open Settings › Providers to add it, then run the connection test.`,
               glow={m.id === avisoId}
               actions={actionsByResponse.get(m.id)}
               onOpenTools={abrirAcoes}
+              idioma={localeDaInterface()}
             />
           ))
         )}
@@ -1160,7 +1164,7 @@ Open Settings › Providers to add it, then run the connection test.`,
               onClick={voltarPraBaixo}
             >
               <Icon name="arrow-down" size={15} />
-              {avisoId ? "Answer ready" : "Jump to latest"}
+              {avisoId ? tr("Answer ready") : tr("Jump to latest")}
             </button>
           )}
           {/* `[[` — as notas aparecem ACIMA do campo, como no editor do
@@ -1204,7 +1208,7 @@ Open Settings › Providers to add it, then run the connection test.`,
                   <button
                     type="button"
                     className="axxa-pill-chip-x"
-                    aria-label="Cancel queued message"
+                    aria-label={tr("Cancel queued message")}
                     onClick={() => {
                       removeQueued(i);
                       setDraft((d) => (d.trim() ? d : q));
@@ -1235,7 +1239,7 @@ Open Settings › Providers to add it, then run the connection test.`,
                     <button
                       type="button"
                       className="axxa-pill-chip-x"
-                      aria-label="Remove attachment"
+                      aria-label={tr("Remove attachment")}
                       onClick={() => removeAttachment(i)}
                     >
                       <Icon name="x" size={13} />
@@ -1259,7 +1263,7 @@ Open Settings › Providers to add it, then run the connection test.`,
                 ref={textareaRef}
                 rows={1}
                 value={draft}
-                placeholder={modulePlaceholder(cfg.mode)}
+                placeholder={tr(modulePlaceholder(cfg.mode))}
                 onFocus={onComposerFocus}
                 onChange={(e) => {
                   setDraft(e.currentTarget.value);
@@ -1307,7 +1311,7 @@ Open Settings › Providers to add it, then run the connection test.`,
                 <button
                   type="button"
                   className="axxa-round-btn"
-                  aria-label="Add to chat"
+                  aria-label={tr("Add to chat")}
                   onClick={() => openSheet("plus")}
                 >
                   <Icon name="plus" size={22} />
@@ -1350,7 +1354,7 @@ Open Settings › Providers to add it, then run the connection test.`,
 
                 <div className="axxa-pills">
                   <Pill
-                    label={prettyModelName(cfg.model) || "no model"}
+                    label={prettyModelName(cfg.model) || tr("no model")}
                     logo={
                       PROVIDERS.find((p) => p.id === cfg.provider)?.icon
                     }
@@ -1362,7 +1366,7 @@ Open Settings › Providers to add it, then run the connection test.`,
                   <button
                     type="button"
                     className="axxa-round-btn"
-                    aria-label="Voice mode"
+                    aria-label={tr("Voice mode")}
                     onClick={() => void startVoice()}
                   >
                     <Icon name="mic" size={20} />
@@ -1378,7 +1382,7 @@ Open Settings › Providers to add it, then run the connection test.`,
                       <button
                         type="button"
                         className="axxa-round-btn"
-                        aria-label="Send when this finishes"
+                        aria-label={tr("Send when this finishes")}
                         onPointerDown={(e) => e.preventDefault()}
                         onClick={() => void submit()}
                       >
@@ -1388,7 +1392,7 @@ Open Settings › Providers to add it, then run the connection test.`,
                     <button
                       type="button"
                       className="axxa-send is-stop"
-                      aria-label="Stop"
+                      aria-label={tr("Stop")}
                       onPointerDown={(e) => e.preventDefault()}
                       onClick={() => session.stop()}
                     >
@@ -1399,7 +1403,7 @@ Open Settings › Providers to add it, then run the connection test.`,
                   <button
                     type="button"
                     className="axxa-send"
-                    aria-label="Send"
+                    aria-label={tr("Send")}
                     disabled={!draft.trim()}
                     // Sem isto o toque tira o foco do campo e o Android fecha o
                     // teclado a cada mensagem enviada.
@@ -1428,14 +1432,14 @@ Open Settings › Providers to add it, then run the connection test.`,
           inteira aqui dentro — com seta pra voltar. Sem favorito não há de
           onde descer, então a lista já vem no primeiro nível. */}
       <Sheet
-        title={MODEL_SHEET_TITLE[modelView]}
+        title={tr(MODEL_SHEET_TITLE[modelView])}
         open={sheet === "model"}
         onClose={closeSheet}
         onBack={modelView === "root" ? undefined : () => setModelView("root")}
       >
         {modelView === "root" && !locked && (
           <SheetSeg
-            label="Provider"
+            label={tr("Provider")}
             activeId={pickProvider}
             onPick={setPickProvider}
             onBlocked={(id, motivo, insistiu) =>
@@ -1456,9 +1460,9 @@ Open Settings › Providers to add it, then run the connection test.`,
             {EFFORT_LEVELS.map((l) => (
               <SheetRow
                 key={l}
-                title={EFFORT_LABELS[l]}
+                title={tr(EFFORT_LABELS[l])}
                 note={describeEffort(l, plugin.settings.effortConfigs)}
-                tag={l === plugin.settings.defaultEffort ? "Default" : undefined}
+                tag={l === plugin.settings.defaultEffort ? tr("Default") : undefined}
                 selected={l === cfg.effort}
                 onClick={() => {
                   session.setEffort(l);
@@ -1488,8 +1492,10 @@ Open Settings › Providers to add it, then run the connection test.`,
             {locked ? (
               <SheetGroup>
                 <SheetNote>
-                  This chat is locked to {prettyModelName(cfg.model)} — start a
-                  new chat to pick another model. Effort still changes freely.
+                  {tr(
+                    "This chat is locked to {model} — start a new chat to pick another model. Effort still changes freely.",
+                    { model: prettyModelName(cfg.model) }
+                  )}
                 </SheetNote>
               </SheetGroup>
             ) : favorites.length > 0 ? (
@@ -1513,8 +1519,13 @@ Open Settings › Providers to add it, then run the connection test.`,
               <SheetGroup>
                 <SheetNote>
                   {rest.length > 0
-                    ? `No favorites for this provider yet — star up to ${FAVORITE_LIMIT} in Settings › Providers, or open the full list below.`
-                    : "Nothing marked to show for this provider yet — pick what appears here in Settings → Providers."}
+                    ? tr(
+                        "No favorites for this provider yet — star up to {n} in Settings › Providers, or open the full list below.",
+                        { n: FAVORITE_LIMIT }
+                      )
+                    : tr(
+                        "Nothing marked to show for this provider yet — pick what appears here in Settings → Providers."
+                      )}
                 </SheetNote>
               </SheetGroup>
             )}
@@ -1526,15 +1537,15 @@ Open Settings › Providers to add it, then run the connection test.`,
               {!locked && rest.length > 0 && (
                 <SheetNavRow
                   icon="list"
-                  title="All models"
+                  title={tr("All models")}
                   note={`${todosOsModelos.length}`}
                   onClick={() => setModelView("list")}
                 />
               )}
               <SheetNavRow
                 icon="timer"
-                title="Effort"
-                note={EFFORT_LABELS[effort] ?? cfg.effort}
+                title={tr("Effort")}
+                note={tr(EFFORT_LABELS[effort] ?? cfg.effort)}
                 onClick={() => setModelView("effort")}
               />
               {/* As SUAS notas como contexto. Mora aqui porque esta folha é
@@ -1547,8 +1558,8 @@ Open Settings › Providers to add it, then run the connection test.`,
                   conversa. */}
               <SheetToggleRow
                 icon="library"
-                title="Use my notes"
-                note={cfg.vault ? "On" : "Off"}
+                title={tr("Use my notes")}
+                note={cfg.vault ? tr("On") : tr("Off")}
                 on={cfg.vault}
                 onToggle={(on) => session.setVault(on)}
               />
@@ -1564,7 +1575,7 @@ Open Settings › Providers to add it, then run the connection test.`,
           cartões vazados na fileira, e as linhas num cartão cheio com brasão
           redondo e seta. */}
       <Sheet
-        title={PLUS_SHEET_TITLE[plusView]}
+        title={tr(PLUS_SHEET_TITLE[plusView])}
         open={sheet === "plus"}
         onClose={closeSheet}
         onBack={plusView === "root" ? undefined : () => setPlusView("root")}
@@ -1573,7 +1584,7 @@ Open Settings › Providers to add it, then run the connection test.`,
           <>
             <SheetSearch
               value={noteQuery}
-              placeholder="Search notes"
+              placeholder={tr("Search notes")}
               found={notasAchadas.length}
               autoFocus
               onChange={setNoteQuery}
@@ -1593,7 +1604,7 @@ Open Settings › Providers to add it, then run the connection test.`,
                 />
               ))}
               {notasAchadas.length === 0 && (
-                <SheetNote>No note matches that.</SheetNote>
+                <SheetNote>{tr("No note matches that.")}</SheetNote>
               )}
             </SheetGroup>
           </>
@@ -1612,8 +1623,9 @@ Open Settings › Providers to add it, then run the connection test.`,
             ))}
             {plugin.skills.length === 0 && (
               <SheetNote>
-                No skills yet — they live as notes in your vault, and show up
-                here once you create one.
+                {tr(
+                  "No skills yet — they live as notes in your vault, and show up here once you create one."
+                )}
               </SheetNote>
             )}
           </SheetGroup>
@@ -1634,8 +1646,10 @@ Open Settings › Providers to add it, then run the connection test.`,
             ))}
             {artefatos.length === 0 && (
               <SheetNote>
-                Nothing generated yet — images, audio and video made here land
-                in {GENERATION_DIR} and show up in this list.
+                {tr(
+                  "Nothing generated yet — images, audio and video made here land in {folder} and show up in this list.",
+                  { folder: GENERATION_DIR }
+                )}
               </SheetNote>
             )}
           </SheetGroup>
@@ -1644,7 +1658,7 @@ Open Settings › Providers to add it, then run the connection test.`,
             <SheetTiles>
               <SheetTile
                 icon="file-text"
-                label="Notes"
+                label={tr("Notes")}
                 onClick={() => {
                   setNoteQuery("");
                   setPlusView("notes");
@@ -1652,9 +1666,9 @@ Open Settings › Providers to add it, then run the connection test.`,
               />
               <SheetTile
                 icon="camera"
-                label="Camera"
+                label={tr("Camera")}
                 disabled={!modeloVeImagem}
-                hint={modeloVeImagem ? undefined : "unavailable"}
+                hint={modeloVeImagem ? undefined : tr("unavailable")}
                 onClick={() => {
                   closeSheet();
                   cameraRef.current?.click();
@@ -1662,9 +1676,9 @@ Open Settings › Providers to add it, then run the connection test.`,
               />
               <SheetTile
                 icon="image"
-                label="Image"
+                label={tr("Image")}
                 disabled={!modeloVeImagem}
-                hint={modeloVeImagem ? undefined : "unavailable"}
+                hint={modeloVeImagem ? undefined : tr("unavailable")}
                 onClick={() => {
                   closeSheet();
                   imageRef.current?.click();
@@ -1686,7 +1700,7 @@ Open Settings › Providers to add it, then run the connection test.`,
                     badge
                     chevron
                     icon="file-check"
-                    title="This note"
+                    title={tr("This note")}
                     note={aberta.basename}
                     onClick={() => {
                       void anexarNota(aberta.path);
@@ -1702,8 +1716,8 @@ Open Settings › Providers to add it, then run the connection test.`,
                 title="PDF"
                 note={
                   modeloLePdf
-                    ? "From this device"
-                    : "This model can't read PDFs"
+                    ? tr("From this device")
+                    : tr("This model can't read PDFs")
                 }
                 onClick={() => {
                   closeSheet();
@@ -1715,7 +1729,7 @@ Open Settings › Providers to add it, then run the connection test.`,
                 chevron
                 icon="link"
                 title="Link"
-                note="Fetch a page as context"
+                note={tr("Fetch a page as context")}
                 onClick={() => {
                   closeSheet();
                   void anexarLink();
@@ -1728,8 +1742,8 @@ Open Settings › Providers to add it, then run the connection test.`,
                 title="Skill"
                 note={
                   plugin.skills.length > 0
-                    ? `${plugin.skills.length} in your vault`
-                    : "None yet"
+                    ? tr("{n} in your vault", { n: plugin.skills.length })
+                    : tr("None yet")
                 }
                 onClick={() => setPlusView("skills")}
               />
@@ -1737,8 +1751,8 @@ Open Settings › Providers to add it, then run the connection test.`,
                 badge
                 chevron
                 icon="box"
-                title="Artifact"
-                note="Images, audio and video made here"
+                title={tr("Artifact")}
+                note={tr("Images, audio and video made here")}
                 onClick={() => setPlusView("artifacts")}
               />
             </SheetGroup>
@@ -1752,9 +1766,9 @@ Open Settings › Providers to add it, then run the connection test.`,
         title={
           toolAt !== null && tools
             ? actionTitle(tools[toolAt])
-            : `Ran ${tools?.length ?? 0} ${
-                (tools?.length ?? 0) === 1 ? "action" : "actions"
-              }`
+            : (tools?.length ?? 0) === 1
+              ? tr("Ran 1 action")
+              : tr("Ran {n} actions", { n: tools?.length ?? 0 })
         }
         open={tools !== null}
         onClose={() => {
@@ -1797,9 +1811,9 @@ Open Settings › Providers to add it, then run the connection test.`,
                 note={actionNote(a)}
                 tag={
                   actionFailed(a)
-                    ? "failed"
+                    ? tr("failed")
                     : a.kind === "activity" && a.activity.undone
-                      ? "undone"
+                      ? tr("undone")
                       : undefined
                 }
                 onClick={() => setToolAt(i)}
@@ -1809,14 +1823,14 @@ Open Settings › Providers to add it, then run the connection test.`,
         )}
       </Sheet>
 
-      <Sheet title="Effort" open={sheet === "effort"} onClose={closeSheet}>
+      <Sheet title={tr("Effort")} open={sheet === "effort"} onClose={closeSheet}>
         <SheetGroup>
           {EFFORT_LEVELS.map((l) => (
             <SheetRow
               key={l}
-              title={EFFORT_LABELS[l]}
+              title={tr(EFFORT_LABELS[l])}
               note={describeEffort(l, plugin.settings.effortConfigs)}
-              tag={l === plugin.settings.defaultEffort ? "Default" : undefined}
+              tag={l === plugin.settings.defaultEffort ? tr("Default") : undefined}
               selected={l === cfg.effort}
               onClick={() => {
                 session.setEffort(l);
@@ -1867,7 +1881,7 @@ function ModelRow({
         onFavorito
           ? {
               icon: favorito ? "star" : "star-off",
-              label: favorito ? "Remove from favorites" : "Add to favorites",
+              label: favorito ? tr("Remove from favorites") : tr("Add to favorites"),
               on: favorito,
               onClick: onFavorito,
             }
@@ -1929,18 +1943,18 @@ function ListaDeModelos({
       {models.length >= BUSCA_A_PARTIR_DE && (
         <SheetSearch
           value={query}
-          placeholder="Search models"
+          placeholder={tr("Search models")}
           found={filtrados.length}
           onChange={onQuery}
         />
       )}
       {grupos.length > 1 && (
         <SheetTabs
-          label="Model category"
+          label={tr("Model category")}
           activeId={ativa?.label ?? ""}
           items={grupos.map((g) => ({
             id: g.label,
-            label: g.label,
+            label: tr(g.label),
             count: g.models.length,
           }))}
           onPick={onAba}
@@ -1963,7 +1977,7 @@ function ListaDeModelos({
       )}
       {filtrados.length === 0 && (
         <SheetGroup>
-          <SheetNote>No model matches that.</SheetNote>
+          <SheetNote>{tr("No model matches that.")}</SheetNote>
         </SheetGroup>
       )}
     </>
@@ -2004,7 +2018,7 @@ function Pill({
 function activityText(a: ActivityMeta): string {
   if (a.phase === "pending") return a.pendingText;
   if (a.phase === "done") return a.doneText ?? a.pendingText;
-  return a.failedText ?? "Failed";
+  return a.failedText ?? tr("Failed");
 }
 
 /** O que o agente fez numa rodada: a chamada de tool OU a narração dela. As
@@ -2020,12 +2034,12 @@ export type TurnAction =
 function actionTitle(a: TurnAction): string {
   if (a.kind === "step") return a.step.name;
   if (a.kind === "activity") return activityText(a.activity);
-  return "Reasoning";
+  return tr("Reasoning");
 }
 
 function actionNote(a: TurnAction): string | undefined {
   if (a.kind === "step") return toolSummary(a.step);
-  if (a.kind === "reasoning") return `${a.text.length} chars`;
+  if (a.kind === "reasoning") return tr("{n} chars", { n: a.text.length });
   return undefined;
 }
 
@@ -2053,7 +2067,7 @@ function actionIcon(a: TurnAction): string {
 /** Resumo de uma linha dos argumentos — o suficiente pra reconhecer a ação. */
 function toolSummary(step: AIToolStep): string {
   const args = Object.entries(step.arguments ?? {});
-  if (args.length === 0) return step.ok ? "done" : "failed";
+  if (args.length === 0) return step.ok ? tr("done") : tr("failed");
   const [chave, valor] = args[0];
   const texto = typeof valor === "string" ? valor : JSON.stringify(valor);
   return `${chave}: ${texto}`.slice(0, 80);
@@ -2083,8 +2097,8 @@ function UndoChip({
       disabled={rodando}
       aria-label={
         ids.length === 1
-          ? "Undo the agent's change"
-          : `Undo the agent's ${ids.length} changes`
+          ? tr("Undo the agent's change")
+          : tr("Undo the agent's {n} changes", { n: ids.length })
       }
       onClick={() => {
         setRodando(true);
@@ -2092,7 +2106,7 @@ function UndoChip({
       }}
     >
       <Icon name="undo-2" size={15} />
-      <span>Undo</span>
+      <span>{tr("Undo")}</span>
     </button>
   );
 }
@@ -2118,13 +2132,13 @@ function ToolDetail({
       {action.kind !== "reasoning" && (
         <p className={ok ? "axxa-tool-state is-ok" : "axxa-tool-state"}>
           <Icon name={ok ? "circle-check" : "circle-alert"} size={15} />
-          {ok ? "Completed" : "Failed"}
+          {ok ? tr("Completed") : tr("Failed")}
         </p>
       )}
       {desfeita && (
         <p className="axxa-tool-state is-undone">
           <Icon name="undo-2" size={15} />
-          Undone
+          {tr("Undone")}
         </p>
       )}
       {desfazivel && (
@@ -2142,23 +2156,23 @@ function ToolDetail({
           }}
         >
           <Icon name="undo-2" size={16} />
-          <span>Undo this change</span>
+          <span>{tr("Undo this change")}</span>
         </button>
       )}
       {action.kind === "step" ? (
         <>
-          <p className="axxa-tool-label">Arguments</p>
+          <p className="axxa-tool-label">{tr("Arguments")}</p>
           <pre className="axxa-tool-block">
             {JSON.stringify(action.step.arguments ?? {}, null, 2)}
           </pre>
-          <p className="axxa-tool-label">Result</p>
+          <p className="axxa-tool-label">{tr("Result")}</p>
           <pre className="axxa-tool-block">
-            {action.step.result || "(empty)"}
+            {action.step.result || tr("(empty)")}
           </pre>
         </>
       ) : action.kind === "activity" ? (
         <>
-          <p className="axxa-tool-label">What happened</p>
+          <p className="axxa-tool-label">{tr("What happened")}</p>
           <pre className="axxa-tool-block">
             {action.activity.detail || activityText(action.activity)}
           </pre>
@@ -2183,7 +2197,7 @@ function ReadAloudButton({
     <button
       type="button"
       className={speaking ? "axxa-msg-listen is-on" : "axxa-msg-listen"}
-      aria-label={speaking ? "Stop" : "Read aloud"}
+      aria-label={speaking ? tr("Stop") : tr("Read aloud")}
       onClick={() => {
         if (speaking) {
           stopSpeaking();
@@ -2195,7 +2209,7 @@ function ReadAloudButton({
       }}
     >
       <Icon name={speaking ? "square" : "volume-2"} size={15} />
-      <span>{speaking ? "Stop" : "Listen"}</span>
+      <span>{speaking ? tr("Stop") : tr("Listen")}</span>
     </button>
   );
 }
@@ -2220,6 +2234,9 @@ const MessageRow = memo(function MessageRow({
   /** Tudo que o agente fez nesta rodada — narrações + tool calls. */
   actions?: TurnAction[];
   onOpenTools?: (actions: TurnAction[]) => void;
+  /** O idioma da interface: a linha é memo, e sem ele no props uma troca de
+   *  idioma deixava "Ran 3 actions" e "Listen" no idioma velho até reabrir. */
+  idioma?: string;
 }) {
   switch (msg.type) {
     case "user":
@@ -2246,7 +2263,7 @@ const MessageRow = memo(function MessageRow({
                 onOpenTools?.([{ kind: "reasoning", text: msg.reasoning ?? "" }])
               }
             >
-              <span>Reasoning</span>
+              <span>{tr("Reasoning")}</span>
               <Icon name="chevron-right" size={15} />
             </button>
           )}
@@ -2262,7 +2279,7 @@ const MessageRow = memo(function MessageRow({
           {plugin.settings.ttsEnabled && !msg.isError && msg.content.trim() && (
             <ReadAloudButton plugin={plugin} text={msg.content} />
           )}
-          {msg.truncated && <small className="axxa-msg-note">truncated</small>}
+          {msg.truncated && <small className="axxa-msg-note">{tr("truncated")}</small>}
           {actions && actions.length > 0 && (
             <div className="axxa-tools-row">
               {/* O que o agente FEZ vira um chip: quem quer ver abre a folha, e
@@ -2273,8 +2290,9 @@ const MessageRow = memo(function MessageRow({
                 onClick={() => onOpenTools?.(actions)}
               >
                 <span>
-                  Ran {actions.length}{" "}
-                  {actions.length === 1 ? "action" : "actions"}
+                  {actions.length === 1
+                    ? tr("Ran 1 action")
+                    : tr("Ran {n} actions", { n: actions.length })}
                 </span>
                 <Icon name="chevron-right" size={15} />
               </button>
@@ -2314,7 +2332,7 @@ const MessageRow = memo(function MessageRow({
                 onOpenTools?.([{ kind: "activity", activity: msg.activity }])
               }
             >
-              <span>details</span>
+              <span>{tr("details")}</span>
               <Icon name="chevron-right" size={14} />
             </button>
           )}

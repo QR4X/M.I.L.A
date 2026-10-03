@@ -9,18 +9,21 @@
 // Hierarquia: DEFAULT_EFFORT_CONFIGS (built-in) ← user overrides (settings).
 // resolveEffortConfig() faz o merge — usado por todo lugar que precisa.
 
+import { marca, tr } from "../i18n/tr";
+
 export type EffortLevel = "low" | "med" | "high" | "xhigh" | "max";
 
 export const EFFORT_LEVELS: EffortLevel[] = ["low", "med", "high", "xhigh", "max"];
 
 /** Nome por extenso. Abreviar ("Med", "xHigh") economizava três letras num
- *  lugar onde sobra espaço, e obrigava a decifrar. */
+ *  lugar onde sobra espaço, e obrigava a decifrar. Só MARCADO (marca): quem
+ *  mostra chama tr(), na hora de desenhar. */
 export const EFFORT_LABELS: Record<EffortLevel, string> = {
-  low: "Low",
-  med: "Medium",
-  high: "High",
-  xhigh: "Extra high",
-  max: "Max",
+  low: marca("Low"),
+  med: marca("Medium"),
+  high: marca("High"),
+  xhigh: marca("Extra high"),
+  max: marca("Max"),
 };
 
 /** O desenho de cada nível: as barras de sinal enchendo, e a chama no topo —
@@ -36,11 +39,11 @@ export const EFFORT_ICONS: Record<EffortLevel, string> = {
 /** O jeito de cada nível em poucas palavras — o resto da descrição é número
  *  (ver describeEffort). */
 export const EFFORT_TAGLINES: Record<EffortLevel, string> = {
-  low: "Fast and economical",
-  med: "Balanced",
-  high: "Detailed",
-  xhigh: "Deep",
-  max: "Relentless",
+  low: marca("Fast and economical"),
+  med: marca("Balanced"),
+  high: marca("Detailed"),
+  xhigh: marca("Deep"),
+  max: marca("Relentless"),
 };
 
 /**
@@ -241,9 +244,14 @@ export function tokensCurtos(n: number): string {
 export function effortNumbers(cfg: EffortConfig): string {
   const tok =
     cfg.maxTokens === 0
-      ? `up to ${cfg.contextReservePercent}% of context`
-      : `≤${tokensCurtos(cfg.maxTokens)} tok`;
-  const voltas = cfg.agentMaxTurns === 0 ? "no turn cap" : `${cfg.agentMaxTurns} turns`;
+      ? tr("up to {pct}% of context", { pct: cfg.contextReservePercent })
+      : tr("≤{n} tok", { n: tokensCurtos(cfg.maxTokens) });
+  const voltas =
+    cfg.agentMaxTurns === 0
+      ? tr("no turn cap")
+      : cfg.agentMaxTurns === 1
+        ? tr("1 turn")
+        : tr("{n} turns", { n: cfg.agentMaxTurns });
   return `${tok} · ${voltas}`;
 }
 
@@ -257,15 +265,27 @@ export function describeEffort(
   userConfigs?: Partial<Record<EffortLevel, Partial<EffortConfig>>>
 ): string {
   const lvl = isEffortLevel(level) ? level : "med";
-  return `${EFFORT_TAGLINES[lvl]} (${effortNumbers(resolveEffortConfig(lvl, userConfigs))})`;
+  return `${tr(EFFORT_TAGLINES[lvl])} (${effortNumbers(resolveEffortConfig(lvl, userConfigs))})`;
 }
 
 /** As descrições de FÁBRICA (sem nada editado). Quem mostra o nível pra
- *  pessoa usa describeEffort com as settings. */
+ *  pessoa usa describeEffort com as settings. Getters: a descrição passa pelo
+ *  tr(), então é montada na LEITURA — no import ela ficaria presa no idioma
+ *  daquela hora. */
 export const EFFORT_DESCRIPTIONS: Record<EffortLevel, string> = {
-  low: describeEffort("low"),
-  med: describeEffort("med"),
-  high: describeEffort("high"),
-  xhigh: describeEffort("xhigh"),
-  max: describeEffort("max"),
+  get low() {
+    return describeEffort("low");
+  },
+  get med() {
+    return describeEffort("med");
+  },
+  get high() {
+    return describeEffort("high");
+  },
+  get xhigh() {
+    return describeEffort("xhigh");
+  },
+  get max() {
+    return describeEffort("max");
+  },
 };

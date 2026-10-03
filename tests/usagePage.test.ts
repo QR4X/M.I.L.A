@@ -445,7 +445,7 @@ describe("o desenho da página de uso", () => {
   it("a fileira mostra as três; o See all abre a lista inteira numa folha", () => {
     expect(VIEW).toContain("opcoesAVista(d.ops, f[d.chave])");
     expect(VIEW).toMatch(/d\.ops\.length > A_VISTA/);
-    expect(VIEW).toContain("See all {d.ops.length}");
+    expect(VIEW).toContain('tr("See all {n}", { n: d.ops.length })');
     expect(VIEW).toMatch(/<Sheet\b/);
   });
 

@@ -9,6 +9,7 @@
 
 import type { Provider, ProviderMessage } from "../providers/base";
 import { lerObjeto, lerOpcoes, lerPergunta } from "./parse";
+import { tr } from "../i18n/tr";
 
 /** Uma rodada da conversa com a assistente. */
 export interface TurnoAssistente {
@@ -69,7 +70,9 @@ export async function pedirAjuda(
       p.apiKey
     );
   } catch (e) {
-    return { erro: (e as Error).message || "The assistant could not answer." };
+    return {
+      erro: (e as Error).message || tr("The assistant could not answer."),
+    };
   }
 
   const obj = lerObjeto(resposta.content ?? "");
@@ -78,7 +81,9 @@ export async function pedirAjuda(
     // contrato. Dizer isso é melhor que "erro": a saída é trocar de modelo, e
     // a pessoa só sabe disso se a gente contar.
     return {
-      erro: "The assistant answered in prose instead of the expected format. A stronger model usually fixes it.",
+      erro: tr(
+        "The assistant answered in prose instead of the expected format. A stronger model usually fixes it."
+      ),
     };
 
   const pergunta = lerPergunta(obj);

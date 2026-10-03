@@ -60,6 +60,7 @@ import {
 } from "../assistant/store";
 import type { ModoAssistente } from "../assistant/prompt";
 import type { TurnoAssistente } from "../assistant/run";
+import { marca, tr } from "../i18n/tr";
 
 // O nome do modelo é o NOSSO, nunca o da API.
 //
@@ -107,37 +108,37 @@ export interface AssistantPanelProps {
 }
 
 const CONVITE: Record<AlvoAssistente, string> = {
-  skill: "Describe the skill you want, in a line.",
-  project: "What is this project about?",
-  description: "Anything to steer it? (optional)",
-  instructions: "Anything to steer it? (optional)",
-  notes: "Anything to look for? (optional)",
+  skill: marca("Describe the skill you want, in a line."),
+  project: marca("What is this project about?"),
+  description: marca("Anything to steer it? (optional)"),
+  instructions: marca("Anything to steer it? (optional)"),
+  notes: marca("Anything to look for? (optional)"),
 };
 
 const EXEMPLO: Record<AlvoAssistente, string> = {
-  skill: "A weekly review that reads my notes and tells me what stalled",
-  project: "My master's thesis on Kuhn and scientific revolutions",
-  description: "Optional — it writes from the prompt above",
-  instructions: "Optional — it writes from the project and its notes",
-  notes: "Optional — it looks at the project's name and instructions",
+  skill: marca("A weekly review that reads my notes and tells me what stalled"),
+  project: marca("My master's thesis on Kuhn and scientific revolutions"),
+  description: marca("Optional — it writes from the prompt above"),
+  instructions: marca("Optional — it writes from the project and its notes"),
+  notes: marca("Optional — it looks at the project's name and instructions"),
 };
 
 /** O título do painel e o verbo do botão. Achar notas não é escrever — um
  *  "Write it" que devolve uma lista de arquivos promete uma coisa e faz outra. */
 const TITULO: Record<AlvoAssistente, string> = {
-  skill: "Write it for me",
-  project: "Write it for me",
-  description: "Write it for me",
-  instructions: "Write it for me",
-  notes: "Find notes for me",
+  skill: marca("Write it for me"),
+  project: marca("Write it for me"),
+  description: marca("Write it for me"),
+  instructions: marca("Write it for me"),
+  notes: marca("Find notes for me"),
 };
 
 const VERBO: Record<AlvoAssistente, string> = {
-  skill: "Write it",
-  project: "Write it",
-  description: "Write it",
-  instructions: "Write it",
-  notes: "Find them",
+  skill: marca("Write it"),
+  project: marca("Write it"),
+  description: marca("Write it"),
+  instructions: marca("Write it"),
+  notes: marca("Find them"),
 };
 
 /**
@@ -204,14 +205,14 @@ export function AssistantPanel({
   const cabecalho = (
     <div className="axxa-assist-head">
       <Icon name="sparkles" size={16} />
-      <span>{TITULO[para]}</span>
+      <span>{tr(TITULO[para])}</span>
       {/* Quem escreve, e a troca — no lugar onde se percebe que precisa
           trocar. */}
       {modelo && modelo.opcoes.length > 1 && (
         <button
           type="button"
           className="axxa-assist-modelo"
-          title={`Writing with ${modelo.atual}`}
+          title={tr("Writing with {model}", { model: modelo.atual })}
           onClick={(e) =>
             openActions(
               e,
@@ -221,7 +222,7 @@ export function AssistantPanel({
               // identidade.
               modelo.opcoes.map((m) => ({
                 label: modelo.livres?.includes(m)
-                  ? `${prettyModelName(m)} · free`
+                  ? tr("{model} · free", { model: prettyModelName(m) })
                   : prettyModelName(m),
                 icon: modelLogo(m),
                 checked: m === modelo.atual,
@@ -238,7 +239,7 @@ export function AssistantPanel({
       <button
         type="button"
         className="axxa-icon-btn"
-        aria-label="Close"
+        aria-label={tr("Close")}
         onClick={() => {
           // Fechar não cancela: o que está a caminho continua e o resultado
           // espera o formulário. Só a pergunta pendente some junto — ela só
@@ -362,7 +363,7 @@ export function AssistantPanel({
             onClick={() => setDigitando(true)}
           >
             <Icon name="pencil" size={14} />
-            <span>Let me type</span>
+            <span>{tr("Let me type")}</span>
           </button>
         </div>
       )}
@@ -376,8 +377,10 @@ export function AssistantPanel({
           className="axxa-assist-campo"
           value={texto}
           rows={perguntando ? 2 : 3}
-          placeholder={perguntando ? "Or say it your way…" : EXEMPLO[para]}
-          aria-label={perguntando ? run.pergunta : CONVITE[para]}
+          placeholder={
+            perguntando ? tr("Or say it your way…") : tr(EXEMPLO[para])
+          }
+          aria-label={perguntando ? run.pergunta : tr(CONVITE[para])}
           disabled={ocupado}
           onChange={(e) => setTexto(e.currentTarget.value)}
         />
@@ -401,7 +404,7 @@ export function AssistantPanel({
                   onClick={() => responder(texto, "guiado")}
                 >
                   <Icon name="message-circle-question" size={15} />
-                  <span>Grill me</span>
+                  <span>{tr("Grill me")}</span>
                 </button>
               )}
               {/* Voltar pras pastilhas: escolher "eu escrevo" e mudar de ideia
@@ -416,7 +419,7 @@ export function AssistantPanel({
                   }}
                 >
                   <Icon name="chevron-left" size={15} />
-                  <span>Options</span>
+                  <span>{tr("Options")}</span>
                 </button>
               )}
               <button
@@ -428,7 +431,7 @@ export function AssistantPanel({
                 }
               >
                 <Icon name="sparkles" size={16} />
-                <span>{perguntando ? "Send" : VERBO[para]}</span>
+                <span>{perguntando ? tr("Send") : tr(VERBO[para])}</span>
               </button>
             </>
           )}
@@ -441,7 +444,7 @@ export function AssistantPanel({
       {ocupado && (
         <p className="axxa-assist-note">
           <Icon name="check" size={14} />
-          <span>You can close this — it keeps writing.</span>
+          <span>{tr("You can close this — it keeps writing.")}</span>
         </p>
       )}
 
@@ -470,7 +473,7 @@ export function AssistantPanel({
  */
 export function AssistantSpark({
   onClick,
-  titulo = "Write it for me",
+  titulo = tr("Write it for me"),
   ocupado,
 }: {
   onClick: () => void;
@@ -479,7 +482,7 @@ export function AssistantSpark({
    *  quem fechou o painel saber que ainda tem coisa vindo. */
   ocupado?: boolean;
 }) {
-  const rotulo = ocupado ? `${titulo} — writing…` : titulo;
+  const rotulo = ocupado ? tr("{title} — writing…", { title: titulo }) : titulo;
   return (
     <button
       type="button"

@@ -36,6 +36,7 @@ import { AssistantPanel, ComAssistente, useRun } from "./AssistantPanel";
 import { useSheetFit } from "./Sheet";
 import { limparRun } from "../assistant/store";
 import { useAssistant } from "./useAssistant";
+import { marca, tr } from "../i18n/tr";
 
 /**
  * Os passos da CRIAÇÃO, um por tela.
@@ -51,12 +52,12 @@ import { useAssistant } from "./useAssistant";
  * vez ela responde.
  */
 export const PASSOS_SKILL = [
-  { id: "body", label: "Prompt" },
-  { id: "name", label: "Name" },
-  { id: "description", label: "Description" },
-  { id: "mode", label: "Opens in" },
-  { id: "color", label: "Color" },
-  { id: "icon", label: "Icon" },
+  { id: "body", label: marca("Prompt") },
+  { id: "name", label: marca("Name") },
+  { id: "description", label: marca("Description") },
+  { id: "mode", label: marca("Opens in") },
+  { id: "color", label: marca("Color") },
+  { id: "icon", label: marca("Icon") },
 ] as const;
 
 export type PassoSkill = (typeof PASSOS_SKILL)[number]["id"];
@@ -141,7 +142,7 @@ export function SkillForm({
         onBack={() => setProcurando(false)}
         onPick={(icon) => set({ icon })}
       >
-        <SheetField label="Color">
+        <SheetField label={tr("Color")}>
           <SheetSwatches
             colors={PROJECT_COLORS}
             value={draft.color}
@@ -174,25 +175,25 @@ export function SkillForm({
         </span>
         <span className="axxa-thing-text">
           <span className="axxa-thing-name">
-            {draft.name.trim() || "Untitled skill"}
+            {draft.name.trim() || tr("Untitled skill")}
           </span>
           <span className="axxa-thing-note">
             {draft.description.trim() ||
               (draft.body.trim()
                 ? draft.body.trim().split("\n")[0]
-                : "No prompt yet")}
+                : tr("No prompt yet"))}
           </span>
         </span>
       </div>
 
       {mostra("name") && (
         <SheetField
-          label="Name"
-          hint={passo ? "How you'll find it in the list." : undefined}
+          label={tr("Name")}
+          hint={passo ? tr("How you'll find it in the list.") : undefined}
         >
           <SheetInput
             value={draft.name}
-            placeholder="Weekly review"
+            placeholder={tr("Weekly review")}
             // No wizard o foco é do campo do PASSO, não sempre do nome: chegar
             // no passo do nome com o teclado já aberto é uma tela a menos pra
             // atravessar, e chegar no do ícone com ele aberto é meia tela de
@@ -209,8 +210,8 @@ export function SkillForm({
           começar por ele é o que permite uma resposta só encerrar a fila. */}
       {mostra("body") && (
       <SheetField
-        label="Prompt"
-        hint="What gets written for you when you use the skill."
+        label={tr("Prompt")}
+        hint={tr("What gets written for you when you use the skill.")}
       >
         {/* A assistente mora DENTRO deste campo: é ele que ela escreve, e é
             olhando pra ele vazio que a pessoa percebe que não sabe começar. */}
@@ -239,9 +240,9 @@ export function SkillForm({
             // campo que rola e um campo que parece quebrado.
             rows={7}
             autoFocus={focar && passo === "body"}
-            placeholder={
+            placeholder={tr(
               "Go through this week's notes and tell me:\n- what moved\n- what stalled\n- what I should drop"
-            }
+            )}
             onChange={(body) => set({ body })}
           />
         </ComAssistente>
@@ -249,7 +250,10 @@ export function SkillForm({
       )}
 
       {mostra("description") && (
-      <SheetField label="Description" hint="One line, shown in the list.">
+      <SheetField
+        label={tr("Description")}
+        hint={tr("One line, shown in the list.")}
+      >
         {/* Aqui ela escreve A PARTIR do que já está na tela: o prompt acima é
             a matéria-prima, então o botão nasce ligado e o campo de entrada
             vira ajuste fino em vez de requisito. */}
@@ -273,7 +277,7 @@ export function SkillForm({
             comSpark
             value={draft.description}
             autoFocus={focar && passo === "description"}
-            placeholder="Optional"
+            placeholder={tr("Optional")}
             onChange={(description) => set({ description })}
           />
         </ComAssistente>
@@ -284,15 +288,15 @@ export function SkillForm({
           vai cair quando ela tocar nele. */}
       {mostra("mode") && (
       <SheetField
-        label="Opens in"
-        hint="Using the skill switches to this mode."
+        label={tr("Opens in")}
+        hint={tr("Using the skill switches to this mode.")}
       >
         <SheetChoices
-          label="Mode"
+          label={tr("Mode")}
           value={draft.mode}
           onPick={(mode) => set({ mode })}
           items={[
-            { id: "", label: "Wherever I am" },
+            { id: "", label: tr("Wherever I am") },
             ...CHAT_MODES.map((m) => ({
               id: m,
               label: MODULES[m].short,
@@ -310,7 +314,7 @@ export function SkillForm({
           pergunta por tela, e o cartão de prévia já mostra o ícone tingido,
           então não se perde nada vendo uma de cada vez. */}
       {mostra("color") && (
-        <SheetField label="Color">
+        <SheetField label={tr("Color")}>
           <SheetSwatches
             colors={PROJECT_COLORS}
             value={draft.color}
@@ -321,7 +325,7 @@ export function SkillForm({
       )}
 
       {mostra("icon") && (
-        <SheetField label="Icon">
+        <SheetField label={tr("Icon")}>
           <SheetIconGrid
             icons={SKILL_ICONS}
             value={draft.icon}

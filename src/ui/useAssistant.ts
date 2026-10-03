@@ -39,6 +39,7 @@ import { PROJECT_COLORS, PROJECT_ICONS } from "../projects";
 import { SKILL_ICONS } from "../skills/skillFile";
 import { ICON_CATALOG } from "../iconCatalog";
 import { vaultNotes } from "./notePicker";
+import { tr } from "../i18n/tr";
 
 /** Resultado de uma rodada, do jeito que o painel entende. */
 export interface RodadaAssistente<T> {
@@ -92,7 +93,7 @@ export function useAssistant(plugin: AxxaPlugin) {
    *  monta e desconfia do que volta. */
   const rodar = useCallback(
     async (sistema: string, turnos: TurnoAssistente[]) => {
-      if (!alvo) return { erro: indisponivel ?? "Assistant not available." };
+      if (!alvo) return { erro: indisponivel ?? tr("Assistant not available.") };
       return pedirAjuda({
         provider: getProvider(alvo.provider),
         apiKey: plugin.providerCredential(alvo.provider),
@@ -124,7 +125,9 @@ export function useAssistant(plugin: AxxaPlugin) {
       );
       return draft
         ? { draft }
-        : { erro: "The assistant did not write a prompt. Try saying more." };
+        : {
+            erro: tr("The assistant did not write a prompt. Try saying more."),
+          };
     },
     [rodar, idioma]
   );
@@ -158,7 +161,9 @@ export function useAssistant(plugin: AxxaPlugin) {
       );
       return draft
         ? { draft }
-        : { erro: "The assistant did not name the project. Try saying more." };
+        : {
+            erro: tr("The assistant did not name the project. Try saying more."),
+          };
     },
     [rodar, plugin, s.assistantSeesVault, idioma]
   );
@@ -187,7 +192,9 @@ export function useAssistant(plugin: AxxaPlugin) {
       const texto = lerTexto(r.bruto ?? null, teto);
       return texto
         ? { draft: texto }
-        : { erro: "The assistant came back empty. Try again, or say more." };
+        : {
+            erro: tr("The assistant came back empty. Try again, or say more."),
+          };
     },
     [rodar]
   );
@@ -221,7 +228,9 @@ export function useAssistant(plugin: AxxaPlugin) {
     ): Promise<RodadaAssistente<string[]>> => {
       if (!s.assistantSeesVault)
         return {
-          erro: "Let the assistant see your note names first (below) — it never reads what is inside them.",
+          erro: tr(
+            "Let the assistant see your note names first (below) — it never reads what is inside them."
+          ),
         };
       const caminhos = vaultNotes(plugin.app)
         .sort((a, b) => b.mtime - a.mtime)
@@ -240,7 +249,9 @@ export function useAssistant(plugin: AxxaPlugin) {
       return notas.length
         ? { draft: notas }
         : {
-            erro: "No note in the vault fits yet — try naming the project, or saying what it is about.",
+            erro: tr(
+              "No note in the vault fits yet — try naming the project, or saying what it is about."
+            ),
           };
     },
     [rodar, plugin, s.assistantSeesVault, idioma]

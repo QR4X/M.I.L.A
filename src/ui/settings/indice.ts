@@ -4,13 +4,15 @@
 // em pedaços. Sem DOM — a árvore das settings importa daqui.
 
 import type { PickItem } from "./tree";
+import { marca, tr } from "../../i18n/tr";
 
-/** Os 4 perfis de rag/quant.ts, do mais fiel ao mais leve. */
+/** Os 4 perfis de rag/quant.ts, do mais fiel ao mais leve. O rótulo é só
+ *  MARCADO (marca): a árvore traduz ao montar o menu. */
 export const QUANT_ITENS: PickItem[] = [
-  { value: "precision", label: "Precision — full detail", icon: "target" },
-  { value: "balanced", label: "Balanced — 4× smaller", icon: "scale" },
-  { value: "light", label: "Light — smaller vectors", icon: "feather" },
-  { value: "minimal", label: "Minimal — smallest", icon: "minimize-2" },
+  { value: "precision", label: marca("Precision — full detail"), icon: "target" },
+  { value: "balanced", label: marca("Balanced — 4× smaller"), icon: "scale" },
+  { value: "light", label: marca("Light — smaller vectors"), icon: "feather" },
+  { value: "minimal", label: marca("Minimal — smallest"), icon: "minimize-2" },
 ];
 
 /** O que o índice carregado tem hoje — o que a busca está usando agora. */
@@ -36,16 +38,17 @@ export function pendenciaDoIndice(
   // Vetores de um modelo não conversam com os de outro: trocar o modelo só
   // vale quando o índice é refeito com ele.
   if (s.ragEmbeddingModel && atual.model && s.ragEmbeddingModel !== atual.model) {
-    partes.push("the new embedding model");
+    partes.push(tr("the new embedding model"));
   }
   if ((s.ragQuantProfile || "balanced") !== (atual.profile || "balanced")) {
-    partes.push("the new precision");
+    partes.push(tr("the new precision"));
   }
   const pedacos = s.ragStreamShards === true;
   if (pedacos !== atual.streamed) {
-    partes.push(pedacos ? "search in pieces" : "a single index file");
+    partes.push(pedacos ? tr("search in pieces") : tr("a single index file"));
   }
-  return partes.length > 0
-    ? `Update the index to apply ${partes.join(" and ")}.`
-    : null;
+  if (partes.length === 0) return null;
+  // "A and B and C": cada pedaço traduzido, e o "and" também.
+  const quais = partes.reduce((a, b) => tr("{a} and {b}", { a, b }));
+  return tr("Update the index to apply {changes}.", { changes: quais });
 }

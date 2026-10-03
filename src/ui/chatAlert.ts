@@ -15,6 +15,8 @@
 // A prioridade não é estética: uma conversa parada esperando você é a única
 // que não anda sozinha, então ela fala mais alto que as outras duas.
 
+import { marca } from "../i18n/tr";
+
 export type ChatAlert = "waiting" | "running" | "unread" | null;
 
 export function chatAlert(p: {
@@ -33,9 +35,9 @@ export function chatAlert(p: {
 
 /** O que cada estado diz. Frases curtas: elas dividem a linha com o modelo. */
 export const ALERT_LABEL: Record<Exclude<ChatAlert, null>, string> = {
-  waiting: "Needs you",
-  running: "Responding",
-  unread: "New reply",
+  waiting: marca("Needs you"),
+  running: marca("Responding"),
+  unread: marca("New reply"),
 };
 
 /**

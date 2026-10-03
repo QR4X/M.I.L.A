@@ -8,6 +8,7 @@ import { ProviderError } from "../providers/base";
 import { getTranslations } from "../i18n";
 import type { AIErrorCode } from "../store/chat";
 import { texto } from "./texto";
+import { tr } from "../i18n/tr";
 
 /** ID único — randomUUID quando disponível, fallback time+random. */
 export function makeId(): string {
@@ -25,6 +26,8 @@ export function makeId(): string {
  * iconDone:    troca pra check com pop animation no fim (default global "check-circle-2")
  * pendingText: ação em gerúndio + path resumido
  * doneText:    ação no particípio + path resumido (sem "✓", o ícone faz isso)
+ * failedText:  "falhou em" + o mesmo alvo — montado aqui, e não tirado do
+ *              pendingText por regex: traduzido, o gerúndio não casa mais
  */
 export function agentActivitySpec(
   toolName: string,
@@ -34,6 +37,7 @@ export function agentActivitySpec(
   iconDone: string;
   pendingText: string;
   doneText: string;
+  failedText: string;
 } {
   const path = texto(args.path) || texto(args.from) || texto(args.folder);
   // Encurta path long pra cabe na timeline (mantém basename)
@@ -42,70 +46,91 @@ export function agentActivitySpec(
   // v0.1.228: aplica o mesmo encurtamento ao destino do move (`to`).
   const alvo = texto(args.to);
   const shortTo = alvo ? shorten(alvo) : "?";
+  const query = texto(args.query).slice(0, 40);
+  const noCaminho = { path: shortPath };
 
   switch (toolName) {
     case "vault_search":
       return {
         iconPending: "radar",
         iconDone: "search-check",
-        pendingText: `Searching "${texto(args.query).slice(0, 40)}"`,
-        doneText: `Searched "${texto(args.query).slice(0, 40)}"`,
+        pendingText: tr("Searching \"{query}\"", { query }),
+        doneText: tr("Searched \"{query}\"", { query }),
+        failedText: tr("Failed on \"{query}\"", { query }),
       };
     case "vault_list":
-      return {
-        iconPending: "folder-search",
-        iconDone: "folder-check",
-        pendingText: `Listing ${shortPath || "root"}`,
-        doneText: `Listed ${shortPath || "root"}`,
-      };
+      return shortPath
+        ? {
+            iconPending: "folder-search",
+            iconDone: "folder-check",
+            pendingText: tr("Listing {path}", noCaminho),
+            doneText: tr("Listed {path}", noCaminho),
+            failedText: tr("Failed on {path}", noCaminho),
+          }
+        : {
+            iconPending: "folder-search",
+            iconDone: "folder-check",
+            pendingText: tr("Listing root"),
+            doneText: tr("Listed root"),
+            failedText: tr("Failed on root"),
+          };
     case "vault_read":
       return {
         iconPending: "eye",
         iconDone: "file-check-2",
-        pendingText: `Reading ${shortPath}`,
-        doneText: `Read ${shortPath}`,
+        pendingText: tr("Reading {path}", noCaminho),
+        doneText: tr("Read {path}", noCaminho),
+        failedText: tr("Failed on {path}", noCaminho),
       };
     case "vault_create":
       return {
         iconPending: "file-plus-2",
         iconDone: "file-check-2",
-        pendingText: `Creating ${shortPath}`,
-        doneText: `Created ${shortPath}`,
+        pendingText: tr("Creating {path}", noCaminho),
+        doneText: tr("Created {path}", noCaminho),
+        failedText: tr("Failed on {path}", noCaminho),
       };
     case "vault_edit":
       return {
         iconPending: "file-pen-line",
         iconDone: "file-check-2",
-        pendingText: `Editing ${shortPath}`,
-        doneText: `Edited ${shortPath}`,
+        pendingText: tr("Editing {path}", noCaminho),
+        doneText: tr("Edited {path}", noCaminho),
+        failedText: tr("Failed on {path}", noCaminho),
       };
-    case "vault_move":
+    case "vault_move": {
+      const rota = { from: shortPath, to: shortTo };
       return {
         iconPending: "move",
         iconDone: "check-circle-2",
-        pendingText: `Moving ${shortPath} → ${shortTo}`,
-        doneText: `Moved ${shortPath} → ${shortTo}`,
+        pendingText: tr("Moving {from} → {to}", rota),
+        doneText: tr("Moved {from} → {to}", rota),
+        failedText: tr("Failed on {from} → {to}", rota),
       };
+    }
     case "vault_delete":
       return {
         iconPending: "trash-2",
         iconDone: "circle-check-big",
-        pendingText: `Deleting ${shortPath}`,
-        doneText: `Deleted ${shortPath}`,
+        pendingText: tr("Deleting {path}", noCaminho),
+        doneText: tr("Deleted {path}", noCaminho),
+        failedText: tr("Failed on {path}", noCaminho),
       };
     case "vault_create_folder":
       return {
         iconPending: "folder-plus",
         iconDone: "folder-check",
-        pendingText: `Creating folder ${shortPath}`,
-        doneText: `Created folder ${shortPath}`,
+        pendingText: tr("Creating folder {path}", noCaminho),
+        doneText: tr("Created folder {path}", noCaminho),
+        failedText: tr("Failed on folder {path}", noCaminho),
       };
     case "web_search":
       return {
         iconPending: "globe",
         iconDone: "globe",
-        pendingText: `Searching the web for "${texto(args.query).slice(0, 40)}"`,
-        doneText: `Searched the web for "${texto(args.query).slice(0, 40)}"`,
+        pendingText: tr("Searching the web for \"{query}\"", { query }),
+        doneText: tr("Searched the web for \"{query}\"", { query }),
+        failedText: tr("Failed on web search \"{query}\"", { query }),
       };
     case "web_fetch": {
       let host = texto(args.url);
@@ -114,19 +139,22 @@ export function agentActivitySpec(
       } catch {
         // URL inválida: a tool recusa e a linha mostra o que veio.
       }
+      const site = { host: shorten(host) };
       return {
         iconPending: "link",
         iconDone: "link",
-        pendingText: `Opening ${shorten(host)}`,
-        doneText: `Read ${shorten(host)}`,
+        pendingText: tr("Opening {host}", site),
+        doneText: tr("Read {host}", site),
+        failedText: tr("Failed on {host}", site),
       };
     }
     default:
       return {
         iconPending: "wrench",
         iconDone: "check-circle-2",
-        pendingText: `Running ${toolName}`,
-        doneText: `${toolName} completed`,
+        pendingText: tr("Running {tool}", { tool: toolName }),
+        doneText: tr("{tool} completed", { tool: toolName }),
+        failedText: tr("Failed on {tool}", { tool: toolName }),
       };
   }
 }
@@ -144,17 +172,20 @@ export function summarizeToolResult(toolName: string, result: string): string {
     case "vault_list": {
       // Padrão: "Contents of X (Y items):"
       const m = /\((\d+)\s+items?\)/.exec(result);
-      return m ? `${m[1]} item${m[1] === "1" ? "" : "s"}` : "";
+      if (!m) return "";
+      return m[1] === "1" ? tr("1 item") : tr("{n} items", { n: m[1] });
     }
     case "vault_read":
-      return `${result.length >= 1000 ? (result.length / 1000).toFixed(1) + "k" : result.length} chars`;
+      return tr("{n} chars", {
+        n: result.length >= 1000 ? (result.length / 1000).toFixed(1) + "k" : result.length,
+      });
     case "vault_create": {
       const m = /\((\d+)\s+chars\)/.exec(result);
-      return m ? `${m[1]} chars` : "";
+      return m ? tr("{n} chars", { n: m[1] }) : "";
     }
     case "vault_edit": {
       const m = /\(([+-]\d+)\s+chars\)/.exec(result);
-      return m ? `${m[1]} chars` : "";
+      return m ? tr("{n} chars", { n: m[1] }) : "";
     }
     default:
       return "";

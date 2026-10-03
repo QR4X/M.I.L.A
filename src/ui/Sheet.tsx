@@ -28,6 +28,7 @@ import { Icon } from "./Icon";
 import { SearchField } from "./SearchField";
 import { screen, tap, warn } from "./haptics";
 import { drawerInnerOf, syncSheetStrip } from "./sheetStrip";
+import { tr } from "../i18n/tr";
 
 /**
  * O jeito de o CONTEÚDO pedir a folha grande.
@@ -590,7 +591,7 @@ export function Sheet({
       >
         <div
           className="axxa-sheet-drag"
-          title="Drag to resize"
+          title={tr("Drag to resize")}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -602,7 +603,7 @@ export function Sheet({
           <button
             type="button"
             className="axxa-icon-btn"
-            aria-label={interno || onBack ? "Back" : "Close"}
+            aria-label={interno || onBack ? tr("Back") : tr("Close")}
             onClick={interno ? interno.voltar : (onBack ?? onClose)}
           >
             <Icon name={interno || onBack ? "chevron-left" : "x"} />
@@ -644,7 +645,7 @@ export function Sheet({
             <button
               type="button"
               className="axxa-icon-btn"
-              aria-label="Close"
+              aria-label={tr("Close")}
               onClick={onClose}
             >
               <Icon name="x" />

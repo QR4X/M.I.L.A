@@ -15,14 +15,15 @@ import { providerConfigured, PROVIDERS } from "../core/providersMeta";
 import { Icon } from "./Icon";
 import { Segmented } from "./Segmented";
 import { openPluginSettings } from "./modals";
+import { tr } from "../i18n/tr";
 
 /** Saudação pela hora local — o chat abre falando com você, não com o void. */
 function greeting(): string {
   const h = new Date().getHours();
-  if (h < 5) return "Still up";
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+  if (h < 5) return tr("Still up");
+  if (h < 12) return tr("Good morning");
+  if (h < 18) return tr("Good afternoon");
+  return tr("Good evening");
 }
 
 export function StarterScreen({
@@ -43,26 +44,28 @@ export function StarterScreen({
       {/* O MESMO controle que filtra a lista na home (ver Segmented.tsx) —
           aqui com o nome inteiro, que cabe em três colunas. */}
       <Segmented
-        options={CHAT_MODES.map((m) => ({ id: m, label: MODULES[m].label }))}
+        options={CHAT_MODES.map((m) => ({ id: m, label: tr(MODULES[m].label) }))}
         value={cfg.mode}
-        label="Chat mode"
+        label={tr("Chat mode")}
         onChange={(id) => session.setMode(id as ChatMode)}
       />
 
       <div className="axxa-starter-hero">
         <Icon name={mode.icon} size={26} className="axxa-starter-mark" />
         <h2 className="axxa-starter-title">{greeting()}.</h2>
-        <p className="axxa-starter-sub">{mode.tagline}</p>
+        <p className="axxa-starter-sub">{tr(mode.tagline)}</p>
       </div>
 
       {!hasKey && (
         <div className="axxa-callout">
           <Icon name="key-round" size={16} />
           <span>
-            No API key for {providerName} yet — add one to start.
+            {tr("No API key for {provider} yet — add one to start.", {
+              provider: providerName,
+            })}
           </span>
           <button type="button" onClick={() => openPluginSettings(plugin)}>
-            Open settings
+            {tr("Open settings")}
           </button>
         </div>
       )}

@@ -49,7 +49,7 @@ import { esquecerDesfazeres } from "./agent/undo";
 import { registrarComandosDoEditor } from "./editor/comandos";
 import { esquecerPedidos } from "./editor/ponte";
 import { LOCALES, resolverIdioma } from "./i18n";
-import { definirIdiomaDaInterface } from "./i18n/tr";
+import { definirIdiomaDaInterface, tr } from "./i18n/tr";
 
 /** Resultado do último teste de credencial de um provider. */
 export interface ProviderStatus {
@@ -702,7 +702,7 @@ export default class AxxaPlugin extends Plugin {
     const s = this.settings;
     this.indexing = new AbortController();
     this.notifyListeners();
-    const notice = new Notice("Indexing vault…", 0);
+    const notice = new Notice(tr("Indexing vault…"), 0);
     try {
       this.vectorIndex = await indexVault(this.vectorIndex, {
         app: this.app,
@@ -720,21 +720,37 @@ export default class AxxaPlugin extends Plugin {
         shardSize: s.ragStreamShards ? RAG_SHARD_SIZE : 0,
         signal: this.indexing.signal,
         onProgress: (p) => {
+          const n = {
+            done: p.filesEmbedded,
+            total: p.filesToEmbed,
+            chunks: p.chunksEmbedded,
+          };
           notice.setMessage(
-            `Indexing (${p.phase}): ${p.filesEmbedded}/${p.filesToEmbed} files · ${p.chunksEmbedded} chunks`
+            p.phase === "scanning"
+              ? tr("Indexing (scanning): {done}/{total} files · {chunks} chunks", n)
+              : p.phase === "embedding"
+                ? tr("Indexing (embedding): {done}/{total} files · {chunks} chunks", n)
+                : tr("Indexing (done): {done}/{total} files · {chunks} chunks", n)
           );
         },
       });
       notice.hide();
-      new Notice(`Index ready: ${this.vectorIndex.size} chunks.`);
+      const trechos = this.vectorIndex.size;
+      new Notice(
+        trechos === 1
+          ? tr("Index ready: 1 chunk.")
+          : tr("Index ready: {n} chunks.", { n: trechos })
+      );
     } catch (err) {
       notice.hide();
       if (err instanceof DOMException && err.name === "AbortError") {
-        new Notice("Indexing cancelled.");
+        new Notice(tr("Indexing cancelled."));
       } else {
         console.error("[axxa] indexVault falhou:", err);
         new Notice(
-          `Indexing failed: ${err instanceof Error ? err.message : String(err)}`
+          tr("Indexing failed: {error}", {
+            error: err instanceof Error ? err.message : String(err),
+          })
         );
       }
     } finally {
@@ -836,11 +852,11 @@ export default class AxxaPlugin extends Plugin {
               // Só avisa UMA vez por dispositivo — senão o Notice volta a cada
               // onload enquanto o índice continuar grande. v0.1.228
               if (this.settings.ragMobileSkipNoticeShown) return;
-              const en = resolverIdioma(this.settings.language) === "en-us";
               new Notice(
-                en
-                  ? `RAG index too large for mobile (${mb.toFixed(0)} MB) — semantic search is off here to avoid a crash. Use desktop or shrink the index.`
-                  : `Índice RAG grande demais pro mobile (${mb.toFixed(0)} MB) — busca semântica desligada aqui pra evitar crash. Use no desktop ou reduza o índice.`
+                tr(
+                  "RAG index too large for mobile ({mb} MB) — semantic search is off here to avoid a crash. Use desktop or shrink the index.",
+                  { mb: mb.toFixed(0) }
+                )
               );
               this.settings.ragMobileSkipNoticeShown = true;
               void this.saveSettings().catch((err) =>
@@ -1014,7 +1030,7 @@ export default class AxxaPlugin extends Plugin {
     // "Open AXXA Agent" viraria "AXXA Agent: Open AXXA Agent".
     this.addCommand({
       id: "open-panel",
-      name: "Open panel",
+      name: tr("Open panel"),
       callback: () => this.activateView(),
     });
 
@@ -1084,15 +1100,21 @@ export default class AxxaPlugin extends Plugin {
 
   /** O aviso de quando o gasto do dia cruza 80% e 100% do limite. */
   private avisarGasto(marco: 80 | 100, gasto: number, limite: number): void {
+    const valores = { limit: usd(limite), spent: usd(gasto) };
     if (marco === 80) {
-      new Notice(`You've used 80% of today's ${usd(limite)} spending limit (${usd(gasto)}).`, 8000);
+      new Notice(tr("You've used 80% of today's {limit} spending limit ({spent}).", valores), 8000);
       return;
     }
     new Notice(
-      `Today's ${usd(limite)} spending limit is reached (${usd(gasto)}). ` +
-        (this.settings.travarNoLimite
-          ? "Paid models pause until midnight; free and local ones still work."
-          : "Turn on “Stop paid models at the limit” in settings to pause them."),
+      this.settings.travarNoLimite
+        ? tr(
+            "Today's {limit} spending limit is reached ({spent}). Paid models pause until midnight; free and local ones still work.",
+            valores
+          )
+        : tr(
+            "Today's {limit} spending limit is reached ({spent}). Turn on “Stop paid models at the limit” in settings to pause them.",
+            valores
+          ),
       12000
     );
   }
@@ -1110,7 +1132,10 @@ export default class AxxaPlugin extends Plugin {
     const { total } = gastoDeHoje(s.usoDoDia ?? {}, new Date());
     if (total < limite) return;
     throw new ProviderError(
-      `Today's ${usd(limite)} spending limit is reached (${usd(total)} spent), so paid models are paused until midnight. Free and local models still work, or raise the limit in Settings › Chat › Daily spending.`,
+      tr(
+        "Today's {limit} spending limit is reached ({spent} spent), so paid models are paused until midnight. Free and local models still work, or raise the limit in Settings › Chat › Daily spending.",
+        { limit: usd(limite), spent: usd(total) }
+      ),
       "unknown"
     );
   }
@@ -1257,12 +1282,7 @@ export default class AxxaPlugin extends Plugin {
 
     if (leaf) void workspace.revealLeaf(leaf);
     else {
-      const en = resolverIdioma(this.settings.language) === "en-us";
-      new Notice(
-        en
-          ? "Couldn't open the AXXA panel — try toggling the right sidebar."
-          : "Não consegui abrir o painel do AXXA — tente abrir a barra lateral direita."
-      );
+      new Notice(tr("Couldn't open the AXXA panel — try toggling the right sidebar."));
     }
   }
 
@@ -1357,8 +1377,13 @@ export default class AxxaPlugin extends Plugin {
             console.error(
               "[axxa] data.json existe mas não foi lido — settings NÃO serão gravadas até reiniciar."
             );
+            // O idioma escolhido mora justamente no arquivo que não deu pra
+            // ler: o aviso sai no do Obsidian ("auto"), o melhor palpite.
+            definirIdiomaDaInterface(resolverIdioma(DEFAULT_SETTINGS.language));
             new Notice(
-              "AXXA: couldn't read your settings file. Nothing will be overwritten — restart Obsidian, and check data.backup.json next to it if needed.",
+              tr(
+                "AXXA: couldn't read your settings file. Nothing will be overwritten — restart Obsidian, and check data.backup.json next to it if needed."
+              ),
               15000
             );
           }
@@ -1450,7 +1475,9 @@ export default class AxxaPlugin extends Plugin {
     if (mudou) {
       await this.saveSettings();
       new Notice(
-        "AXXA moved its files into a hidden .axxa folder — your chats are out of the vault's search and file list now.",
+        tr(
+          "AXXA moved its files into a hidden .axxa folder — your chats are out of the vault's search and file list now."
+        ),
         10000
       );
     }
@@ -1567,11 +1594,10 @@ export default class AxxaPlugin extends Plugin {
       // que deu certo — aí é um problema novo.
       if (!this.avisoDeSaveDado) {
         this.avisoDeSaveDado = true;
-        const en = resolverIdioma(this.settings.language) === "en-us";
         new Notice(
-          en
-            ? "AXXA could not save your settings — the change is active now but will be lost when you reopen Obsidian. Check the vault's disk space and permissions."
-            : "A AXXA não conseguiu gravar as configurações — a mudança vale agora, mas se perde ao reabrir o Obsidian. Confira o espaço em disco e as permissões do vault.",
+          tr(
+            "AXXA could not save your settings — the change is active now but will be lost when you reopen Obsidian. Check the vault's disk space and permissions."
+          ),
           12000
         );
       }

@@ -17,6 +17,7 @@
 // retangular e o mês não é.
 
 import type { ChatSummary } from "../core/chatPersistence";
+import { localeDaInterface } from "../i18n/tr";
 
 export interface Celula {
   /** "YYYY-MM-DD", ou null quando não é um dia do mês (ou ainda não chegou). */
@@ -127,7 +128,7 @@ export function heatmapDoMes(
     linhas,
     pico,
     total,
-    rotulo: primeiro.toLocaleDateString("en-US", { month: "long" }),
+    rotulo: primeiro.toLocaleDateString(localeDaInterface(), { month: "long" }),
   };
 }
 

@@ -18,6 +18,7 @@ import type {
   PermissionLevel,
   ToolDefinition,
 } from "./types";
+import { marca } from "../i18n/tr";
 
 export function evaluatePermission(
   tool: ToolDefinition,
@@ -103,9 +104,9 @@ export function decideToolGate(
 /** O nível como aparece na UI — que é em inglês (era metade português).
  *  Cada texto diz o que `evaluatePermission` faz de verdade. */
 export const PERMISSION_LABELS: Record<PermissionLevel, string> = {
-  ask: "Ask — confirms every change",
-  vault: "Vault — edits freely, deletes ask",
-  yolo: "YOLO — runs everything, deletes go to the trash",
+  ask: marca("Ask — confirms every change"),
+  vault: marca("Vault — edits freely, deletes ask"),
+  yolo: marca("YOLO — runs everything, deletes go to the trash"),
 };
 
 /** O desenho de cada nível no menu de escolha das settings. */

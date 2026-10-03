@@ -4,6 +4,8 @@
 // — a família dá a cor/identidade no seletor (arena), agrupando por "linhagem".
 // 1ª regex que casa vence (mais específico → mais genérico).
 
+import { marca } from "../i18n/tr";
+
 export interface ModelFamily {
   id: string;
   label: string;
@@ -23,7 +25,7 @@ const FAMILIES: [RegExp, ModelFamily][] = [
   [/claude/, { id: "claude", label: "Claude", color: "#cc7a52", icon: "asterisk" }],
   // ── OpenAI
   [/(dall-e|gpt-image)/, { id: "dalle", label: "DALL·E", color: "#f472b6", icon: "image" }],
-  [/(tts|whisper|audio)/, { id: "oai-audio", label: "Audio", color: "#4cc9f0", icon: "audio-lines" }],
+  [/(tts|whisper|audio)/, { id: "oai-audio", label: marca("Audio"), color: "#4cc9f0", icon: "audio-lines" }],
   [/(^|[^a-z])o[1-9]/, { id: "o-series", label: "o-series", color: "#7aa2ff", icon: "brain" }],
   [/gpt-5/, { id: "gpt5", label: "GPT-5", color: "#10a37f", icon: "hexagon" }],
   [/gpt-4o/, { id: "gpt4o", label: "GPT-4o", color: "#19c37d", icon: "circle-dot" }],
@@ -31,7 +33,7 @@ const FAMILIES: [RegExp, ModelFamily][] = [
   [/gpt/, { id: "gpt", label: "GPT", color: "#1aa179", icon: "circle" }],
   // ── Google
   [/(imagen|nano-?banana|gemini[\w.-]*image)/, { id: "imagen", label: "Imagen", color: "#ec4899", icon: "image" }],
-  [/(veo|sora)/, { id: "video", label: "Video", color: "#a855f7", icon: "clapperboard" }],
+  [/(veo|sora)/, { id: "video", label: marca("Video"), color: "#a855f7", icon: "clapperboard" }],
   [/gemini-[\d.]*flash/, { id: "gem-flash", label: "Flash", color: "#5b9bff", icon: "zap" }],
   [/gemini-[\d.]*pro|gemini-3/, { id: "gem-pro", label: "Gemini Pro", color: "#4285f4", icon: "sparkle" }],
   [/(gemini|gemma)/, { id: "gemini", label: "Gemini", color: "#4285f4", icon: "sparkle" }],
@@ -46,7 +48,7 @@ const FAMILIES: [RegExp, ModelFamily][] = [
 
 const FALLBACK: ModelFamily = {
   id: "other",
-  label: "Other",
+  label: marca("Other"),
   color: "#8a8a96",
   icon: "box",
 };

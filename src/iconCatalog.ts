@@ -14,6 +14,8 @@
 // realmente embarca (1883 ícones Lucide, lidos do obsidian.asar) antes de
 // entrarem aqui, e o teste guarda a forma deles.
 
+import { marca } from "./i18n/tr";
+
 export interface IconCategory {
   id: string;
   /** O que aparece na pílula. */
@@ -34,7 +36,7 @@ export const ICON_CATALOG: IconCategory[] = [
   {
     id: "work",
     icon: "briefcase",
-    label: "Work",
+    label: marca("Work"),
     icons: [
       "briefcase", "target", "clipboard-list", "presentation", "handshake",
       "building-2", "users", "calendar", "clock", "check-check", "trending-up",
@@ -45,7 +47,7 @@ export const ICON_CATALOG: IconCategory[] = [
   {
     id: "study",
     icon: "graduation-cap",
-    label: "Study",
+    label: marca("Study"),
     icons: [
       "graduation-cap", "book", "book-open", "library", "notebook-pen",
       "highlighter", "microscope", "flask-conical", "atom", "brain",
@@ -56,7 +58,7 @@ export const ICON_CATALOG: IconCategory[] = [
   {
     id: "writing",
     icon: "pencil",
-    label: "Writing",
+    label: marca("Writing"),
     icons: [
       "pencil", "pen-line", "feather", "type", "quote", "file-text",
       "notebook", "bookmark", "scroll", "newspaper", "list", "align-left",
@@ -66,7 +68,7 @@ export const ICON_CATALOG: IconCategory[] = [
   {
     id: "code",
     icon: "terminal",
-    label: "Code",
+    label: marca("Code"),
     icons: [
       "terminal", "braces", "code", "git-branch", "database", "server", "bug",
       "cpu", "binary", "package", "cloud", "globe", "keyboard", "wifi",
@@ -76,7 +78,7 @@ export const ICON_CATALOG: IconCategory[] = [
   {
     id: "creative",
     icon: "palette",
-    label: "Creative",
+    label: marca("Creative"),
     icons: [
       "palette", "brush", "camera", "film", "music", "mic", "headphones",
       "image", "wand-2", "scissors", "shapes", "pen-tool", "sparkles",
@@ -87,7 +89,7 @@ export const ICON_CATALOG: IconCategory[] = [
   {
     id: "home",
     icon: "home",
-    label: "Home",
+    label: marca("Home"),
     icons: [
       "home", "bed", "sofa", "lamp", "shopping-cart", "shirt",
       "washing-machine", "hammer", "wrench", "plug", "key", "door-open",
@@ -97,7 +99,7 @@ export const ICON_CATALOG: IconCategory[] = [
   {
     id: "health",
     icon: "heart-pulse",
-    label: "Health",
+    label: marca("Health"),
     icons: [
       "heart", "heart-pulse", "stethoscope", "dumbbell", "activity", "pill",
       "bike", "footprints", "moon", "sun", "bath", "syringe",
@@ -106,7 +108,7 @@ export const ICON_CATALOG: IconCategory[] = [
   {
     id: "nature",
     icon: "leaf",
-    label: "Nature",
+    label: marca("Nature"),
     icons: [
       "leaf", "sprout", "tree-pine", "trees", "flower", "droplet", "mountain",
       "waves", "snowflake", "bird", "fish", "paw-print", "sunrise", "wind",
@@ -117,7 +119,7 @@ export const ICON_CATALOG: IconCategory[] = [
   {
     id: "travel",
     icon: "plane",
-    label: "Travel",
+    label: marca("Travel"),
     icons: [
       "plane", "car", "train-front", "ship", "sailboat", "map", "map-pin",
       "compass", "luggage", "tent", "ticket", "backpack", "hotel", "fuel",
@@ -127,7 +129,7 @@ export const ICON_CATALOG: IconCategory[] = [
   {
     id: "life",
     icon: "user",
-    label: "Life",
+    label: marca("Life"),
     icons: [
       "user", "baby", "heart-handshake", "hand-heart", "gift",
       "party-popper", "smile", "flag", "shield", "bell", "hourglass",
@@ -137,7 +139,7 @@ export const ICON_CATALOG: IconCategory[] = [
   {
     id: "food",
     icon: "utensils",
-    label: "Food",
+    label: marca("Food"),
     icons: [
       "utensils", "utensils-crossed", "chef-hat", "cooking-pot", "soup",
       "pizza", "sandwich", "egg", "salad", "apple", "carrot", "wheat",
@@ -148,7 +150,7 @@ export const ICON_CATALOG: IconCategory[] = [
   {
     id: "symbols",
     icon: "star",
-    label: "Symbols",
+    label: marca("Symbols"),
     icons: [
       "star", "crown", "gem", "award", "badge-check", "check", "x", "info",
       "alert-triangle", "asterisk", "hash", "at-sign", "percent", "infinity",

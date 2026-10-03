@@ -235,6 +235,58 @@ export class Modal {
 export class FuzzySuggestModal extends Modal {
   setPlaceholder() {}
 }
+/** A lista de escolha (o "Translate selection…" do editor). */
+export class SuggestModal<T> extends Modal {
+  setPlaceholder(_p?: string) {}
+  getSuggestions(_q: string): T[] {
+    return [];
+  }
+}
+export class MarkdownView {}
+/**
+ * O idioma do Obsidian (o "Same as Obsidian" da interface segue ele). No
+ * preview, `?lang=pt` na URL simula um Obsidian em português.
+ */
+export function getLanguage(): string {
+  try {
+    return new URLSearchParams(location.search).get("lang") ?? "en";
+  } catch {
+    return "en";
+  }
+}
+/** O interruptor solto (o editor de esforço usa fora de um Setting). */
+export class ToggleComponent {
+  toggleEl: HTMLElement;
+  private valor = false;
+  private handler: ((v: boolean) => void) | null = null;
+  constructor(container: HTMLElement) {
+    this.toggleEl = document.createElement("div");
+    this.toggleEl.className = "checkbox-container";
+    container.appendChild(this.toggleEl);
+    this.toggleEl.addEventListener("click", () => {
+      this.setValue(!this.valor);
+    });
+  }
+  getValue() {
+    return this.valor;
+  }
+  setValue(v: boolean) {
+    const mudou = v !== this.valor;
+    this.valor = v;
+    this.toggleEl.classList.toggle("is-enabled", v);
+    // Como no Obsidian: setValue que muda o valor chama o onChange.
+    if (mudou) this.handler?.(v);
+    return this;
+  }
+  setDisabled(v: boolean) {
+    this.toggleEl.classList.toggle("is-disabled", v);
+    return this;
+  }
+  onChange(fn: (v: boolean) => void) {
+    this.handler = fn;
+    return this;
+  }
+}
 /**
  * Setting e SettingGroup com o DOM REAL de cada versão (app.js 1.12.7 e
  * 1.13.7): o app.css pinta os cartões por essas classes, então uma árvore

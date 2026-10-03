@@ -265,8 +265,12 @@ describe("o desenho do gráfico", () => {
 
   it("o número não depende de mouse: vai no title E no rótulo acessível", () => {
     // No celular não há hover; o toque leva o valor pra linha de leitura.
-    expect(VIEW).toMatch(/aria-label=\{`\$\{c\.titulo\}[^`]*sent/);
-    expect(VIEW).toMatch(/title=\{`\$\{c\.titulo\}[^`]*sent/);
+    expect(VIEW).toMatch(
+      /aria-label=\{tr\("\{when\}[^"]*\{sent\} sent[^"]*",\s*\{\s*when: c\.titulo,\s*sent: formatCompact\(c\.entrada\)/
+    );
+    expect(VIEW).toMatch(
+      /title=\{tr\("\{when\}[^"]*\{sent\} sent[^"]*",\s*\{\s*when: c\.titulo,\s*sent: formatCompact\(c\.entrada\)/
+    );
     expect(VIEW).toContain("axxa-chart-readout");
   });
 

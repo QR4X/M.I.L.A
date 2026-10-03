@@ -13,6 +13,7 @@ import {
   type ButtonComponent,
 } from "obsidian";
 import type AxxaPlugin from "../main";
+import { tr } from "../i18n/tr";
 
 /**
  * O botão de uma ação destrutiva, com a MESMA cara que o Obsidian daria.
@@ -99,13 +100,13 @@ export class PromptModal extends Modal {
     const acoes = this.contentEl.createDiv({ cls: "axxa-prompt-actions" });
     const cancelar = acoes.createEl("button", {
       cls: "axxa-prompt-btn",
-      text: "Cancel",
+      text: tr("Cancel"),
     });
     cancelar.type = "button";
     cancelar.onclick = () => this.close();
     const ok = acoes.createEl("button", {
       cls: "axxa-prompt-btn is-cta",
-      text: this.opts.submitLabel ?? "OK",
+      text: this.opts.submitLabel ?? tr("OK"),
     });
     ok.type = "button";
     ok.onclick = () => this.submit();
@@ -161,9 +162,9 @@ export class ConfirmModal extends Modal {
     this.titleEl.setText(this.opts.title);
     if (this.opts.body) this.contentEl.createEl("p", { text: this.opts.body });
     new Setting(this.contentEl)
-      .addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()))
+      .addButton((b) => b.setButtonText(tr("Cancel")).onClick(() => this.close()))
       .addButton((b) => {
-        b.setButtonText(this.opts.confirmLabel ?? "Confirm").onClick(() =>
+        b.setButtonText(this.opts.confirmLabel ?? tr("Confirm")).onClick(() =>
           this.finish(true)
         );
         if (this.opts.danger) marcarPerigoso(b);
@@ -204,6 +205,6 @@ export function openPluginSettings(plugin: AxxaPlugin): void {
     app.setting?.openTabById?.(plugin.manifest.id);
   } catch (err) {
     console.error("[axxa] abrir Settings falhou:", err);
-    new Notice("Open Settings → Community plugins → AXXA Agent.");
+    new Notice(tr("Open Settings → Community plugins → AXXA Agent."));
   }
 }

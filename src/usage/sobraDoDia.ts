@@ -18,6 +18,7 @@
 //     diz quanto foi hoje e que não há teto diário publicado.
 
 import type { EstadoDaChave } from "../providers/openrouter";
+import { tr } from "../i18n/tr";
 import { geminiTemTierGratis } from "./freeTag";
 import { openaiFreeAllowance, openaiFreeTierForModel } from "./freeTokens";
 import {
@@ -152,13 +153,13 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
   if (limiteGasto > 0 || gasto.total > 0) {
     cartoes.push({
       provider: "spend",
-      nome: "Paid models",
+      nome: tr("Paid models"),
       viraEm: faltaParaVirar(agora, fuso),
-      viraOnde: "midnight, your time",
+      viraOnde: tr("midnight, your time"),
       medidores: [
         {
           id: "spend-today",
-          rotulo: "Spent today",
+          rotulo: tr("Spent today"),
           usado: gasto.total,
           limite: limiteGasto || undefined,
           restante: limiteGasto ? Math.max(0, limiteGasto - gasto.total) : undefined,
@@ -168,16 +169,18 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
         },
       ],
       nota: [
-        "Counted in this vault from public token prices. Gemini counts at paid prices, so a free-tier project may cost less.",
+        tr("Counted in this vault from public token prices. Gemini counts at paid prices, so a free-tier project may cost less."),
         gasto.semPreco > 0
-          ? `${gasto.semPreco} ${gasto.semPreco === 1 ? "request" : "requests"} on models without a public price ${gasto.semPreco === 1 ? "isn't" : "aren't"} included.`
+          ? gasto.semPreco === 1
+            ? tr("1 request on models without a public price isn't included.")
+            : tr("{n} requests on models without a public price aren't included.", { n: gasto.semPreco })
           : "",
         limiteGasto > 0
           ? e.travarNoLimite
-            ? "At the limit, paid models pause until midnight."
-            : "At the limit you get a heads-up; turn on “Stop paid models at the limit” in settings to pause them."
-          : "Set a limit to get a heads-up at 80% and 100%.",
-        "Resets at midnight, your time.",
+            ? tr("At the limit, paid models pause until midnight.")
+            : tr("At the limit you get a heads-up; turn on “Stop paid models at the limit” in settings to pause them.")
+          : tr("Set a limit to get a heads-up at 80% and 100%."),
+        tr("Resets at midnight, your time."),
       ]
         .filter(Boolean)
         .join(" "),
@@ -191,15 +194,16 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
       provider: "openai",
       nome: "OpenAI",
       viraEm: viraUtc,
-      viraOnde: "00:00 UTC",
+      viraOnde: tr("00:00 UTC"),
       medidores: [],
     };
     if (!e.openai.dataSharing) {
-      base.vazio =
-        "No free tokens to track. If your organization shares API data with OpenAI, turn that on in settings.";
+      base.vazio = tr(
+        "No free tokens to track. If your organization shares API data with OpenAI, turn that on in settings."
+      );
       base.viraEm = null;
     } else if (!cota.eligible) {
-      base.vazio = "Free tokens start at usage tier 1.";
+      base.vazio = tr("Free tokens start at usage tier 1.");
       base.viraEm = null;
     } else {
       const balde = (qual: "big" | "mini") => {
@@ -215,7 +219,7 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
       base.medidores = [
         {
           id: "openai-big",
-          rotulo: "Flagship models",
+          rotulo: tr("Flagship models"),
           usado: grandes,
           limite: cota.bigPerDay,
           restante: sobra(cota.bigPerDay, grandes),
@@ -224,7 +228,7 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
         },
         {
           id: "openai-mini",
-          rotulo: "Mini models",
+          rotulo: tr("Mini models"),
           usado: minis,
           limite: cota.miniPerDay,
           restante: sobra(cota.miniPerDay, minis),
@@ -232,8 +236,9 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
           fonte: "local",
         },
       ];
-      base.nota =
-        "Free daily tokens for sharing API data with OpenAI. Flagship: GPT-5, GPT-4.1, GPT-4o, o1, o3. Mini: their mini and nano versions, and o4-mini. Counted in this vault: other apps on the same OpenAI organization draw from the same quota, so the real number may be lower. Resets at 00:00 UTC.";
+      base.nota = tr(
+        "Free daily tokens for sharing API data with OpenAI. Flagship: GPT-5, GPT-4.1, GPT-4o, o1, o3. Mini: their mini and nano versions, and o4-mini. Counted in this vault: other apps on the same OpenAI organization draw from the same quota, so the real number may be lower. Resets at 00:00 UTC."
+      );
     }
     cartoes.push(base);
   }
@@ -260,7 +265,7 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
       provider: "gemini",
       nome: "Gemini",
       viraEm: faltaParaVirar(agora, PACIFICO),
-      viraOnde: "midnight Pacific",
+      viraOnde: tr("midnight Pacific"),
       medidores: modelos.map(({ model, r }): Medidor => {
         const chave = chaveDoLimite("gemini", model);
         const limite = tetoInformado(e.limites, chave);
@@ -274,12 +279,14 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
           unidade: "requests",
           fonte: "local",
           limiteEditavel: chave,
-          ...(geminiTemTierGratis(model) ? {} : { nota: "Paid only" }),
+          ...(geminiTemTierGratis(model) ? {} : { nota: tr("Paid only") }),
         };
       }),
-      vazio: modelos.length === 0 ? "Nothing used since midnight Pacific." : undefined,
-      nota: "Requests per day, per model and per Google Cloud project. The free tier only exists on projects without billing, and Google shows its numbers in AI Studio, not in the docs: set each model's limit here to see what's left. Resets at midnight Pacific.",
-      link: { rotulo: "Your limits in AI Studio", url: AI_STUDIO_LIMITES },
+      vazio: modelos.length === 0 ? tr("Nothing used since midnight Pacific.") : undefined,
+      nota: tr(
+        "Requests per day, per model and per Google Cloud project. The free tier only exists on projects without billing, and Google shows its numbers in AI Studio, not in the docs: set each model's limit here to see what's left. Resets at midnight Pacific."
+      ),
+      link: { rotulo: tr("Your limits in AI Studio"), url: AI_STUDIO_LIMITES },
     });
   }
 
@@ -299,7 +306,7 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
       const usado = g.usados ?? Math.max(0, g.limite - (g.restantes ?? g.limite));
       medidor = {
         id: "openrouter-free",
-        rotulo: "Free models",
+        rotulo: tr("Free models"),
         usado,
         limite: g.limite,
         restante: g.restantes ?? sobra(g.limite, usado),
@@ -310,7 +317,7 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
       const limite = g?.limite ?? e.cotaOpenRouter?.limit;
       medidor = {
         id: "openrouter-free",
-        rotulo: "Free models",
+        rotulo: tr("Free models"),
         usado: local,
         limite,
         restante: sobra(limite, local),
@@ -322,13 +329,16 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
       provider: "openrouter",
       nome: "OpenRouter",
       viraEm: viraUtc,
-      viraOnde: "00:00 UTC",
+      viraOnde: tr("00:00 UTC"),
       medidores: [medidor],
-      nota:
-        (medidor.fonte === "live"
-          ? "Counted by OpenRouter for this key, across every app that uses it. "
-          : "Counted on this device: OpenRouter didn't answer, so other apps using this key aren't included. ") +
-        "Models ending in :free allow 20 requests a minute and 50 a day, or 1,000 a day once you've bought $10 in credits. Resets at 00:00 UTC.",
+      nota: [
+        medidor.fonte === "live"
+          ? tr("Counted by OpenRouter for this key, across every app that uses it.")
+          : tr("Counted on this device: OpenRouter didn't answer, so other apps using this key aren't included."),
+        tr(
+          "Models ending in :free allow 20 requests a minute and 50 a day, or 1,000 a day once you've bought $10 in credits. Resets at 00:00 UTC."
+        ),
+      ].join(" "),
     };
     if (viva && (viva.creditoRestante !== undefined || viva.gastoHoje !== undefined)) {
       cartao.credito = {
@@ -347,17 +357,19 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
       provider: "nim",
       nome: "NVIDIA NIM",
       viraEm: null,
-      semDia: "no daily cap",
+      semDia: tr("no daily cap"),
       medidores: [
         {
           id: "nim-today",
-          rotulo: "All models",
+          rotulo: tr("All models"),
           usado: hoje,
           unidade: "requests",
           fonte: "local",
         },
       ],
-      nota: "Free endpoints allow 40 requests a minute. NVIDIA publishes no daily cap, so this is just what you used today (your local day).",
+      nota: tr(
+        "Free endpoints allow 40 requests a minute. NVIDIA publishes no daily cap, so this is just what you used today (your local day)."
+      ),
     });
   }
 

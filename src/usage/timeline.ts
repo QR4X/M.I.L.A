@@ -12,20 +12,31 @@
 // desenho tem que continuar sendo legível quando o recorte cresce.
 
 import type { UsageBucket } from "./aggregate";
+import { marca, tr } from "../i18n/tr";
 
 const DIA_MS = 86_400_000;
 
+// Marcados pra tradução: quem mostra passa por tr() (ver nomeDoMes).
 export const MESES = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  marca("Jan"), marca("Feb"), marca("Mar"), marca("Apr"), marca("May"), marca("Jun"),
+  marca("Jul"), marca("Aug"), marca("Sep"), marca("Oct"), marca("Nov"), marca("Dec"),
 ];
 
-/** "2026-09-11" → "Sep 11" (ou "Sep 11, 2026"). */
+/** O mês curto no idioma da interface ("Sep"); fora da faixa, null. */
+function nomeDoMes(m: number): string | null {
+  const nome = MESES[m - 1];
+  return nome ? tr(nome) : null;
+}
+
+/** "2026-09-11" → "Sep 11" (ou "Sep 11, 2026"). A ordem é do idioma: em
+ *  português o dia vem antes ("11 set"). */
 export function diaCurto(iso: string, comAno = false): string {
   const [a, m, d] = iso.split("-").map(Number);
-  if (!a || !m || !d) return iso;
-  const s = `${MESES[m - 1]} ${d}`;
-  return comAno ? `${s}, ${a}` : s;
+  const mes = nomeDoMes(m);
+  if (!a || !mes || !d) return iso;
+  return comAno
+    ? tr("{month} {day}, {year}", { month: mes, day: d, year: a })
+    : tr("{month} {day}", { month: mes, day: d });
 }
 
 /** De quanto em quanto tempo as colunas contam. */
@@ -90,7 +101,7 @@ function inicioDoPasso(t: number, passo: Passo): number {
 function rotuloDe(inicio: string, passo: Passo): string {
   if (passo === "month") {
     const m = Number(inicio.split("-")[1]);
-    return MESES[m - 1] ?? inicio;
+    return nomeDoMes(m) ?? inicio;
   }
   return diaCurto(inicio);
 }
@@ -100,9 +111,13 @@ function tituloDe(inicio: string, fim: string, passo: Passo): string {
   if (passo === "day") return diaCurto(inicio, true);
   if (passo === "month") {
     const m = Number(inicio.split("-")[1]);
-    return `${MESES[m - 1] ?? inicio} ${ano}`;
+    return `${nomeDoMes(m) ?? inicio} ${ano}`;
   }
-  return `${diaCurto(inicio)} – ${diaCurto(fim)}, ${ano}`;
+  return tr("{start} – {end}, {year}", {
+    start: diaCurto(inicio),
+    end: diaCurto(fim),
+    year: ano,
+  });
 }
 
 /**

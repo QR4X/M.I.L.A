@@ -69,6 +69,7 @@ import { AssistantPanel, ComAssistente, useRun } from "./AssistantPanel";
 import { limparRun } from "../assistant/store";
 import { useAssistant } from "./useAssistant";
 import type { MenuAction } from "./menu";
+import { tr } from "../i18n/tr";
 
 export function ProjectsView({
   plugin,
@@ -235,9 +236,11 @@ export function ProjectsView({
 
   const apagar = async (p: Project) => {
     const ok = await new ConfirmModal(plugin.app, {
-      title: `Delete project "${p.name}"?`,
-      body: "The notes and chats stay where they are — only the grouping goes.",
-      confirmLabel: "Delete",
+      title: tr("Delete project \"{name}\"?", { name: p.name }),
+      body: tr(
+        "The notes and chats stay where they are — only the grouping goes."
+      ),
+      confirmLabel: tr("Delete"),
       danger: true,
     }).openAndWait();
     if (!ok) return;
@@ -263,7 +266,7 @@ export function ProjectsView({
       createdAt: new Date().toISOString(),
     };
     await update((prev) => [copia, ...prev]);
-    new Notice(`Duplicated as "${copia.name}"`);
+    new Notice(tr("Duplicated as \"{name}\"", { name: copia.name }));
   };
 
   /** Exporta o índice do projeto e diz onde ele caiu. */
@@ -275,9 +278,11 @@ export function ProjectsView({
         chats,
         new Date()
       );
-      new Notice(`Exported to ${caminho}`);
+      new Notice(tr("Exported to {path}", { path: caminho }));
     } catch (e) {
-      new Notice(`Could not export: ${(e as Error).message}`);
+      new Notice(
+        tr("Could not export: {error}", { error: (e as Error).message })
+      );
     }
   };
 
@@ -295,7 +300,7 @@ export function ProjectsView({
    */
   const acoesDoProjeto = (p: Project): MenuAction[] => [
     {
-      label: "New chat here",
+      label: tr("New chat here"),
       icon: "message-circle-plus",
       run: () => {
         void session.newChatInProject(p);
@@ -303,7 +308,7 @@ export function ProjectsView({
       },
     },
     {
-      label: "Instructions",
+      label: tr("Instructions"),
       icon: "scroll-text",
       run: () => {
         setAbertoId(p.id);
@@ -311,18 +316,22 @@ export function ProjectsView({
       },
     },
     {
-      label: "Notes",
+      label: tr("Notes"),
       icon: "library",
       run: () => {
         setAbertoId(p.id);
         setVendoNotas(true);
       },
     },
-    { label: "Edit", icon: "pencil", run: () => editar(p) },
-    { label: "Duplicate", icon: "copy", run: () => void duplicar(p) },
-    { label: "Export to vault", icon: "download", run: () => void exportar(p) },
+    { label: tr("Edit"), icon: "pencil", run: () => editar(p) },
+    { label: tr("Duplicate"), icon: "copy", run: () => void duplicar(p) },
     {
-      label: "Delete",
+      label: tr("Export to vault"),
+      icon: "download",
+      run: () => void exportar(p),
+    },
+    {
+      label: tr("Delete"),
       icon: "trash-2",
       danger: true,
       run: () => void apagar(p),
@@ -350,7 +359,7 @@ export function ProjectsView({
   const abrirNota = (path: string) => {
     const f = plugin.app.vault.getAbstractFileByPath(path);
     if (f instanceof TFile) void plugin.app.workspace.getLeaf(true).openFile(f);
-    else new Notice(`Not found: ${path}`);
+    else new Notice(tr("Not found: {path}", { path }));
   };
 
   const notasAchadas = useMemo(() => {
@@ -382,13 +391,13 @@ export function ProjectsView({
     // O passo no título, como no de skills: "New project" cinco vezes seguidas
     // não distingue uma tela da seguinte.
     form: editandoId
-      ? "Edit project"
-      : `New project · ${PASSOS_PROJETO[passo].label}`,
-    instrucoes: "Custom instructions",
-    escolher: "Add a note",
-    notas: "Project notes",
-    projeto: aberto?.name ?? "Project",
-    lista: escolhaPara ? "Add to project" : "Projects",
+      ? tr("Edit project")
+      : tr("New project · {step}", { step: tr(PASSOS_PROJETO[passo].label) }),
+    instrucoes: tr("Custom instructions"),
+    escolher: tr("Add a note"),
+    notas: tr("Project notes"),
+    projeto: aberto?.name ?? tr("Project"),
+    lista: escolhaPara ? tr("Add to project") : tr("Projects"),
   };
 
   /** A seta de voltar de cada nível — ela desfaz o toque que trouxe você. */
@@ -458,18 +467,21 @@ export function ProjectsView({
           total={PASSOS_PROJETO.length}
           onPasso={setPasso}
           problema={problema}
-          label="Create project"
+          label={tr("Create project")}
           onSubmit={() => void salvar()}
         />
       ) : (
         <SheetSubmit
-          label="Save project"
+          label={tr("Save project")}
           problema={problema}
           onSubmit={() => void salvar()}
         />
       )
     ) : nivel === "instrucoes" ? (
-      <SheetSubmit label="Save instructions" onSubmit={salvarInstrucoes} />
+      <SheetSubmit
+        label={tr("Save instructions")}
+        onSubmit={salvarInstrucoes}
+      />
     ) : nivel === "projeto" && aberto ? (
       <div className="axxa-sheet-foot">
         {/* Editar e apagar ficam à esquerda e em texto, e não num ⋯ da barra
@@ -483,7 +495,7 @@ export function ProjectsView({
           }
         >
           <Icon name="settings-2" size={16} />
-          <span>Project settings</span>
+          <span>{tr("Project settings")}</span>
         </button>
         <button
           type="button"
@@ -494,7 +506,7 @@ export function ProjectsView({
           }}
         >
           <Icon name="plus" size={20} />
-          <span>New chat here</span>
+          <span>{tr("New chat here")}</span>
         </button>
       </div>
     ) : undefined;
@@ -519,7 +531,12 @@ export function ProjectsView({
       // a conversa de um projeto aberto).
       action={
         nivel === "lista"
-          ? { icon: "plus", label: "New project", text: "New", onClick: criar }
+          ? {
+              icon: "plus",
+              label: tr("New project"),
+              text: tr("New"),
+              onClick: criar,
+            }
           : undefined
       }
       mark={
@@ -557,8 +574,10 @@ export function ProjectsView({
       {nivel === "instrucoes" && (
         <>
           <SheetField
-            label="Instructions"
-            hint="Sent with every new chat in this project — it adds to how the app already works, it does not replace it."
+            label={tr("Instructions")}
+            hint={tr(
+              "Sent with every new chat in this project — it adds to how the app already works, it does not replace it."
+            )}
           >
             {/* Ela escreve A PARTIR do projeto: o nome e as notas já
                 anexadas são a matéria-prima, e o que estiver escrito vai
@@ -590,9 +609,9 @@ export function ProjectsView({
                 comSpark
                 value={instrucoes ?? ""}
                 rows={9}
-                placeholder={
+                placeholder={tr(
                   "Answer in Portuguese.\nCite the note you took it from.\nShort paragraphs, no bullet lists."
-                }
+                )}
                 onChange={setInstrucoes}
               />
             </ComAssistente>
@@ -604,7 +623,7 @@ export function ProjectsView({
         <>
           <SheetSearch
             value={noteQuery}
-            placeholder="Search notes"
+            placeholder={tr("Search notes")}
             found={notasAchadas.length}
             autoFocus={nivel === "escolher"}
             onChange={setNoteQuery}
@@ -628,7 +647,7 @@ export function ProjectsView({
               />
             ))}
             {notasAchadas.length === 0 && (
-              <SheetNote>No note matches that.</SheetNote>
+              <SheetNote>{tr("No note matches that.")}</SheetNote>
             )}
           </SheetGroup>
         </>
@@ -645,7 +664,7 @@ export function ProjectsView({
               note={path}
               action={{
                 icon: "x",
-                label: `Remove ${path}`,
+                label: tr("Remove {path}", { path }),
                 onClick: () => {
                   if (aberto) void tirarNota(aberto, path);
                 },
@@ -655,15 +674,16 @@ export function ProjectsView({
           ))}
           {(aberto?.sources ?? []).length === 0 && (
             <SheetNote>
-              No notes yet. What you add here goes in as context on every new
-              chat in this project.
+              {tr(
+                "No notes yet. What you add here goes in as context on every new chat in this project."
+              )}
             </SheetNote>
           )}
           <SheetRow
             icon="plus"
             badge
             chevron
-            title="Add a note"
+            title={tr("Add a note")}
             onClick={() => {
               setNoteQuery("");
               setEscolhendo(true);
@@ -688,7 +708,11 @@ export function ProjectsView({
           <div className="axxa-info-pills">
             <span className="axxa-info-pill">
               <Icon name="hard-drive" size={14} />
-              <span>Lives in this vault · since {aberto.createdAt.slice(0, 10)}</span>
+              <span>
+                {tr("Lives in this vault · since {date}", {
+                  date: aberto.createdAt.slice(0, 10),
+                })}
+              </span>
             </span>
           </div>
 
@@ -697,10 +721,14 @@ export function ProjectsView({
               quem tem zero não é a mesma de quem tem seis. */}
           <p className="axxa-boxnote">
             {aberto.sources.length === 0
-              ? "Pick the notes this project is about. They go in as context every time you start a chat here."
+              ? tr(
+                  "Pick the notes this project is about. They go in as context every time you start a chat here."
+                )
               : aberto.sources.length === 1
-                ? "1 note goes in as context on every new chat here."
-                : `${aberto.sources.length} notes go in as context on every new chat here.`}
+                ? tr("1 note goes in as context on every new chat here.")
+                : tr("{n} notes go in as context on every new chat here.", {
+                    n: aberto.sources.length,
+                  })}
           </p>
 
           {/* Os dois lados do projeto, lado a lado: o que ele SABE e como ele
@@ -711,16 +739,16 @@ export function ProjectsView({
               className="axxa-duo-card"
               onClick={() => setVendoNotas(true)}
             >
-              <span className="axxa-duo-title">Project notes</span>
+              <span className="axxa-duo-title">{tr("Project notes")}</span>
               <span className="axxa-duo-note">
                 {aberto.sources.length === 0
-                  ? "Nothing yet"
-                  : `${aberto.sources.length} note${
-                      aberto.sources.length === 1 ? "" : "s"
-                    }`}
+                  ? tr("Nothing yet")
+                  : aberto.sources.length === 1
+                    ? tr("1 note")
+                    : tr("{n} notes", { n: aberto.sources.length })}
               </span>
               <span className="axxa-duo-action">
-                {aberto.sources.length === 0 ? "Add notes" : "See notes"}
+                {aberto.sources.length === 0 ? tr("Add notes") : tr("See notes")}
               </span>
             </button>
             <button
@@ -728,14 +756,16 @@ export function ProjectsView({
               className="axxa-duo-card"
               onClick={() => setInstrucoes(aberto.instructions ?? "")}
             >
-              <span className="axxa-duo-title">Custom instructions</span>
+              <span className="axxa-duo-title">{tr("Custom instructions")}</span>
               <span className="axxa-duo-note">
                 {aberto.instructions?.trim()
                   ? aberto.instructions.trim().split("\n")[0]
-                  : "Nothing yet"}
+                  : tr("Nothing yet")}
               </span>
               <span className="axxa-duo-action">
-                {aberto.instructions?.trim() ? "Edit" : "Add instructions"}
+                {aberto.instructions?.trim()
+                  ? tr("Edit")
+                  : tr("Add instructions")}
               </span>
             </button>
           </div>
@@ -744,7 +774,7 @@ export function ProjectsView({
             <>
               {/* Rótulo DA FOLHA, não da home: dentro dela o versalete
                   miúdo é a letra de grupo, e o da home é palavra normal. */}
-              <span className="axxa-sheet-group-label">Chats</span>
+              <span className="axxa-sheet-group-label">{tr("Chats")}</span>
               <ChatList
                 plugin={plugin}
                 session={session}
@@ -755,7 +785,7 @@ export function ProjectsView({
           ) : (
             <div className="axxa-home-empty">
               <Icon name="message-circle" size={42} />
-              <p>Ask anything. Chats in this project show up here.</p>
+              <p>{tr("Ask anything. Chats in this project show up here.")}</p>
             </div>
           )}
 
@@ -786,7 +816,7 @@ export function ProjectsView({
                               : x
                           )
                         );
-                        new Notice(`Added to ${p.name}.`);
+                        new Notice(tr("Added to {name}.", { name: p.name }));
                         onEscolha?.();
                         return;
                       }
@@ -813,7 +843,7 @@ export function ProjectsView({
                                 : "axxa-proj-card-when"
                             }
                           >
-                            {jaAqui ? "Already here" : info.quando}
+                            {jaAqui ? tr("Already here") : info.quando}
                           </span>
                         </span>
                         {/* E o DO QUE SE TRATA logo abaixo do nome, no lugar
@@ -829,7 +859,7 @@ export function ProjectsView({
                               : "axxa-proj-card-about is-empty"
                           }
                         >
-                          {info.sobre ?? "No instructions yet"}
+                          {info.sobre ?? tr("No instructions yet")}
                         </span>
                       </span>
                     </span>
@@ -837,14 +867,14 @@ export function ProjectsView({
                       <span className="axxa-proj-card-stat">
                         <Icon name="file-text" size={14} />
                         {p.sources.length === 1
-                          ? "1 note"
-                          : `${p.sources.length} notes`}
+                          ? tr("1 note")
+                          : tr("{n} notes", { n: p.sources.length })}
                       </span>
                       <span className="axxa-proj-card-stat">
                         <Icon name="message-circle" size={14} />
                         {info.conversas === 1
-                          ? "1 chat"
-                          : `${info.conversas} chats`}
+                          ? tr("1 chat")
+                          : tr("{n} chats", { n: info.conversas })}
                       </span>
                       {/* O preço de abrir uma conversa aqui: tudo que o
                           projeto soma ao prompt (instruções + o conteúdo das
@@ -854,7 +884,9 @@ export function ProjectsView({
                       {tokensPorProjeto[p.id] !== undefined && (
                         <span
                           className="axxa-proj-card-stat"
-                          title="Input tokens each new chat here starts with: the instructions plus the full text of its notes."
+                          title={tr(
+                            "Input tokens each new chat here starts with: the instructions plus the full text of its notes."
+                          )}
                         >
                           {/* Seta pra CIMA: é o que SAI do aparelho pro
                               modelo a cada conversa nova — do ponto de vista de
@@ -869,7 +901,7 @@ export function ProjectsView({
                   <button
                     type="button"
                     className="axxa-icon-btn axxa-proj-card-more"
-                    aria-label={`Actions for ${p.name}`}
+                    aria-label={tr("Actions for {name}", { name: p.name })}
                     onClick={(e) =>
                       /* Sem "Open": tocar no cartão já abre o projeto, e
                          gastar a primeira posição do menu repetindo o gesto
@@ -889,8 +921,9 @@ export function ProjectsView({
             <div className="axxa-home-empty">
               <Icon name="folder-open" size={42} />
               <p>
-                A project keeps notes and chats about the same thing together.
-                Its notes go in as context every time you start a chat there.
+                {tr(
+                  "A project keeps notes and chats about the same thing together. Its notes go in as context every time you start a chat there."
+                )}
               </p>
             </div>
           )}
