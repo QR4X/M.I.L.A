@@ -27,6 +27,7 @@ const BOOL_KEYS = [
   "ttsEnabled",
   "openaiDataSharing",
   "agentDiffApproval",
+  "agentWeb",
   "ragAutoReindex",
   "mobileFullscreen",
   "hapticsEnabled",
@@ -83,6 +84,9 @@ export function readControl(s: AxxaSettings, key: ControlKey): boolean | string 
       return s.mobileFullscreen === true;
     case "hapticsEnabled":
       return s.hapticsEnabled !== false;
+    // Nasceu ligada (0.9.23): quem já tinha data.json lê o padrão.
+    case "agentWeb":
+      return s.agentWeb !== false;
     case "language":
       return s.language || "en-us";
     // O menu fala string; o tier é número.

@@ -71,7 +71,8 @@ export const EN_US = {
     stepsSummary: (n: number) => `${n} agent action${n === 1 ? "" : "s"}`,
     // ConfirmationModal (aprovação de mudanças do Agent) — P1-03.
     confirmTitle: "Review Agent change",
-    confirmTitleIrreversible: "⚠️ Irreversible action",
+    confirmTitleIrreversible: "⚠️ Delete this?",
+    confirmTitleWeb: "Allow this web request?",
     confirmDeny: "Deny",
     confirmApproveAll: "Approve all",
     confirmApprove: "Approve",
@@ -82,6 +83,10 @@ export const EN_US = {
     confirmLabelFrom: "From",
     confirmLabelTo: "To",
     confirmLabelDelete: "Delete",
+    confirmLabelWebSearch: "Search the web (Tavily)",
+    confirmLabelWebFetch: "Open page",
+    webPrompt:
+      " You can also search the web (web_search) and open public pages (web_fetch) when the task needs outside or recent information: open the pages you rely on, and cite their URLs.",
     confirmTruncated: (n: number) => `+${n} chars not shown`,
     permissionLevel: "Agent permission level",
     permissionLevelDesc:

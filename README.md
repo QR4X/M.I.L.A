@@ -104,7 +104,7 @@ Model lists come live from each provider. Badges show what each model can do (vi
 
 ## Agent safety
 
-The agent uses eight tools: `vault_search`, `vault_list`, `vault_read`, `vault_create`, `vault_edit`, `vault_move`, `vault_delete` and `vault_create_folder`. Three permission levels decide what it can do without asking:
+The agent uses eight tools on your vault: `vault_search`, `vault_list`, `vault_read`, `vault_create`, `vault_edit`, `vault_move`, `vault_delete` and `vault_create_folder`. With **Web access** on (Settings › Agent), it also has two on the web: `web_search`, which needs your own [Tavily](https://tavily.com) key (1,000 free searches a month), and `web_fetch`, which opens a public page. Web requests show you the address or the search first in Ask and Vault, and local addresses (your computer, your home network) are always refused. Three permission levels decide what it can do without asking:
 
 - **Ask** (default): every change waits for your OK.
 - **Vault**: creates, edits and moves run on their own; deletes still ask.
@@ -127,19 +127,21 @@ When you use a third-party provider, its own terms and privacy policy apply.
 
 Per Obsidian's developer policies, in plain terms:
 
-- **Network use.** Requests go only to the AI providers you configure (OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM, ElevenLabs for optional read-aloud voices, and your own Ollama endpoint) and to any web page you ask it to fetch with **+ › Link**. What each one receives:
+- **Network use.** Requests go only to the AI providers you configure (OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM, ElevenLabs for optional read-aloud voices, and your own Ollama endpoint), to any web page you ask it to fetch with **+ › Link**, and, with the agent's **Web access** on, to the search and pages described below. What each one receives:
   - the chat provider: your messages, the notes, files, images, PDFs and web pages you attach, and the vault excerpts described under *Automatic context*;
   - the embedding provider (Vault Q&A): the text of your notes while the index is built, and the images too if you pick an image-capable embedding model, plus each search query;
   - OpenAI's transcription API: your voice recordings, when you dictate;
   - OpenAI or ElevenLabs: the text of an answer, when you press Listen;
   - OpenRouter's key endpoint (`openrouter.ai/api/v1/key`), with your OpenRouter key, when you fetch OpenRouter's models or open Usage: it only reads your key's free-request quota, credit left and today's spend;
-  - NVIDIA's public model catalog (`api.ngc.nvidia.com`), when you fetch NIM's model list: a search for the models NVIDIA marks *Free Endpoint*, so the list can tell which ones are really free. No key and nothing of yours goes with it.
+  - NVIDIA's public model catalog (`api.ngc.nvidia.com`), when you fetch NIM's model list: a search for the models NVIDIA marks *Free Endpoint*, so the list can tell which ones are really free. No key and nothing of yours goes with it;
+  - Tavily's search API (`api.tavily.com`), with your Tavily key, when the agent searches the web: the search the agent wrote;
+  - a web page the agent opens (`web_fetch`): a plain request for that address, which you see and approve first unless your permission level is YOLO.
 
   There is no telemetry and nothing is sent to us. Answers are rendered as Markdown, so an image link inside an answer is loaded from wherever it points.
 - **Accounts and payment.** The plugin is free, but it needs your own key for at least one provider (Ollama, running locally, needs none). Most providers bill API usage per token; some offer free models or quotas.
 - **Vault enumeration.** The plugin reads your vault's file list (Obsidian's `getMarkdownFiles` / `getFiles`) to build the Vault Q&A index, for the keyword half of vault search (Vault Q&A, Agent context and the agent's `vault_search`), for the note picker (**+ › Notes**, `[[` mentions and project sources) and, only if you turn on *Let it see your note names* (off by default), so the creation assistant can suggest notes for a project. The list itself stays on your device, with three exceptions: in that last case the paths of up to 300 recent notes (never their content) go to the assistant's model; in Agent mode the `vault_list` tool sends the names of the files in a folder (the vault root included) to the chat model, without asking; and `vault_search` sends the paths and excerpts of the notes it finds.
 - **Automatic context.** In Vault Q&A and Agent conversations, a per-chat vault switch starts **on**: excerpts of the notes that match your message are sent with it to the chat provider. In Chat it starts **off**.
-- **Files read and written.** Chats and the Vault Q&A index are saved inside your vault, in the hidden `.axxa/` folder by default. When you ask for them, exports go to `axxa-ai/exports/`, usage reports to `axxa-ai/reports/` and skills to `axxa-ai/skills/`. In Agent mode the model can read any text file in your vault and create, edit, move and delete notes and folders through its tools. Changes ask for confirmation according to the permission level you set (and **Approve all** in that dialog stops asking for reversible changes until the session ends), but deletes always ask.
+- **Files read and written.** Chats and the Vault Q&A index are saved inside your vault, in the hidden `.axxa/` folder by default. When you ask for them, exports go to `axxa-ai/exports/`, usage reports to `axxa-ai/reports/` and skills to `axxa-ai/skills/`. In Agent mode the model can read any text file in your vault and create, edit, move and delete notes and folders through its tools. Changes ask for confirmation according to the permission level you set (and **Approve all** in that dialog stops asking for reversible changes until the session ends); deletes ask at every level except YOLO, and even there when Obsidian is set to delete files permanently. Every change the agent makes can be undone from the chat while Obsidian stays open.
 
 <details>
 <summary>Why the plugin uses <code>fetch</code>, and the one Node API it touches</summary>

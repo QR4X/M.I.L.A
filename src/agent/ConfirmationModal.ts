@@ -72,8 +72,13 @@ export class ConfirmationModal extends Modal {
 
     const irreversible = !!opts.definition.irreversible;
     const strings = opts.strings;
+    // Pedido à web não é "mudança": nada no vault muda, mas algo SAI dele.
     contentEl.createEl("h2", {
-      text: irreversible ? strings.confirmTitleIrreversible : strings.confirmTitle,
+      text: irreversible
+        ? strings.confirmTitleIrreversible
+        : opts.definition.network
+          ? strings.confirmTitleWeb
+          : strings.confirmTitle,
     });
 
     const summaryEl = contentEl.createDiv({ cls: "axxa-confirm-summary" });
@@ -193,6 +198,18 @@ export class ConfirmationModal extends Modal {
       }
       case "vault_delete": {
         pathRow(strings.confirmLabelDelete, path, "axxa-confirm-path-del");
+        return;
+      }
+      // A web mostra o que SAI: a consulta inteira, a URL inteira — é nela que
+      // um dado vazaria, então ela não pode chegar cortada.
+      case "web_search": {
+        pathRow(strings.confirmLabelWebSearch, "");
+        block(texto(args.query), "ctx", { kind: "plain" });
+        return;
+      }
+      case "web_fetch": {
+        pathRow(strings.confirmLabelWebFetch, "");
+        block(texto(args.url), "ctx", { kind: "plain" });
         return;
       }
       default: {

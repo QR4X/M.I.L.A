@@ -200,6 +200,7 @@ export interface SettingsUi {
   assistantModel: RowRender;
   ttsProvider: RowRender;
   elevenKey: RowRender;
+  tavilyKey: RowRender;
   elevenFetch: RowRender;
   elevenVoice: RowRender;
   testVoice: RowRender;
@@ -787,6 +788,19 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       "Preview every change the agent wants to write.",
       "agentDiffApproval",
       { aliases: ["diff", "preview", "aprovação"] }
+    ),
+    toggle(
+      "Web access",
+      "Let the agent search the web and open public pages when a task needs it. In Ask and Vault, each request shows you the address or the search first; local addresses are always refused.",
+      "agentWeb",
+      { aliases: ["web", "internet", "search", "busca", "url", "fetch"] }
+    ),
+    custom(
+      "Tavily key",
+      null,
+      "For web search, from tavily.com › API keys: 1,000 free searches a month, no card needed. Without it the agent can still open pages. Stored in the OS keychain (not in data.json).",
+      ui.tavilyKey,
+      { visible: () => s().agentWeb !== false, aliases: [...KEY_ALIASES, "tavily", "web search"] }
     ),
   ]);
 

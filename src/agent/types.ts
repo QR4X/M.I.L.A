@@ -50,6 +50,8 @@ export interface ToolContext {
     geminiApiKey?: string;
     nimApiKey?: string;
   };
+  /** As ferramentas de web (agent/web.ts): a chave da busca. */
+  web?: { tavilyApiKey: string };
 }
 
 /** Definição de uma ferramenta — vai pro `tools` array do provider request. */
@@ -76,6 +78,9 @@ export interface ToolDefinition {
   /** true = apagar. Pergunta sempre, exceto no YOLO com o apagado indo pra
    *  uma lixeira (ver decideToolGate). */
   irreversible?: boolean;
+  /** true = sai pra internet (agent/web.ts). Pergunta no Ask e no Vault —
+   *  a URL é por onde uma instrução plantada numa nota vazaria dado. */
+  network?: boolean;
 }
 
 /** Tool call vinda do provider — agent quer rodar uma tool. */

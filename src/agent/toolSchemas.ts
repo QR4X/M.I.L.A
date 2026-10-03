@@ -152,6 +152,44 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     destructive: true,
   },
   {
+    name: "web_search",
+    description:
+      "Searches the web and returns the top results (title, URL and a short excerpt). Use it when the task needs information that is not in the vault or may have changed recently. Then open the most relevant results with web_fetch before relying on them, and cite the URLs in your answer. The user may be asked to confirm each search.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "What to search for, as you would type it in a search engine.",
+        },
+        maxResults: {
+          type: "number",
+          description: "How many results to return (1-10, default 5).",
+        },
+      },
+      required: ["query"],
+    },
+    destructive: false,
+    network: true,
+  },
+  {
+    name: "web_fetch",
+    description:
+      "Opens a public web page and returns its readable text (up to about 20,000 characters), with the page title and URL. Use it to read a link the user gave you or a result from web_search. Only http(s) pages on the public internet; local addresses are refused. The user may be asked to confirm each page.",
+    parameters: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "The full page address, starting with https:// or http://.",
+        },
+      },
+      required: ["url"],
+    },
+    destructive: false,
+    network: true,
+  },
+  {
     name: "generate_image",
     description:
       "Gera uma imagem a partir de um prompt de texto e a renderiza NA CONVERSA (salva no vault). Use quando o usuário pedir uma imagem, ilustração, mockup, logo, ícone, capa, etc. O usuário confirma o modelo num modal antes de gerar — você NÃO escolhe o modelo. Escreva um prompt visual rico e específico. Não precisa trocar de modelo de chat.",

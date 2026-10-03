@@ -134,12 +134,21 @@ export async function runAgentTurn(
       })
     : "";
 
+  // As ferramentas de web só entram com a web ligada nas settings — e a busca
+  // só com a chave da Tavily. Fora da lista, o modelo nem sabe que existem.
+  const webLigada = plugin.settings.agentWeb !== false;
+  const tavily = (plugin.settings.tavilyApiKey ?? "").trim();
+  const foraDaLista = (nome: string) =>
+    UNAVAILABLE_TOOLS.has(nome) ||
+    ((nome === "web_search" || nome === "web_fetch") && !webLigada) ||
+    (nome === "web_search" && !tavily);
+
   const history: ProviderMessage[] = [
     {
       role: "system",
       content: buildAgentSystemPrompt(
         useChatStore.getState().sessionPersona,
-        t.agent.systemPrompt,
+        t.agent.systemPrompt + (webLigada ? t.agent.webPrompt : ""),
         { suffix: t.systemPrompt.vaultQaSuffix, block: vaultContextBlock },
         useChatStore.getState().sessionInstructions
       ),
@@ -152,9 +161,7 @@ export async function runAgentTurn(
     ),
   ];
 
-  const tools = TOOL_DEFINITIONS.filter(
-    (td) => !UNAVAILABLE_TOOLS.has(td.name)
-  ).map((td) => ({
+  const tools = TOOL_DEFINITIONS.filter((td) => !foraDaLista(td.name)).map((td) => ({
     name: td.name,
     description: td.description,
     parameters: td.parameters,
@@ -281,7 +288,7 @@ export async function runAgentTurn(
         spec: ReturnType<typeof agentActivitySpec>;
       }> = [];
       for (const call of response.toolCalls) {
-        if (UNAVAILABLE_TOOLS.has(call.name)) {
+        if (foraDaLista(call.name)) {
           const resultText = `Tool "${call.name}" is not available in this build. Do NOT retry — tell the user.`;
           addMessage({
             type: "ai-comment",
@@ -438,6 +445,7 @@ export async function runAgentTurn(
                   geminiApiKey: plugin.settings.geminiApiKey,
                   nimApiKey: plugin.settings.nimApiKey,
                 },
+                web: { tavilyApiKey: tavily },
               },
               call.arguments
             );

@@ -60,7 +60,8 @@ export const PT_BR: Translations = {
     loopDetectedDone: "Repetição detectada — pedi pro agente repensar",
     stepsSummary: (n: number) => `${n} ação${n === 1 ? "" : "ões"} do agente`,
     confirmTitle: "Revisar mudança do agente",
-    confirmTitleIrreversible: "⚠️ Ação irreversível",
+    confirmTitleIrreversible: "⚠️ Apagar isto?",
+    confirmTitleWeb: "Permitir este acesso à web?",
     confirmDeny: "Negar",
     confirmApproveAll: "Aprovar tudo",
     confirmApprove: "Aprovar",
@@ -71,6 +72,10 @@ export const PT_BR: Translations = {
     confirmLabelFrom: "De",
     confirmLabelTo: "Pra",
     confirmLabelDelete: "Apagar",
+    confirmLabelWebSearch: "Buscar na web (Tavily)",
+    confirmLabelWebFetch: "Abrir página",
+    webPrompt:
+      " Você também pode buscar na web (web_search) e abrir páginas públicas (web_fetch) quando a tarefa pedir informação de fora ou recente: abra as páginas em que se apoiar e cite as URLs.",
     confirmTruncated: (n: number) => `+${n} caracteres não mostrados`,
     permissionLevel: "Nível de permissão do agente",
     permissionLevelDesc:

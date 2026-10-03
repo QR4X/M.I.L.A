@@ -337,6 +337,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
       ),
       ttsProvider: this.slot("ttsWho", "chat", (row) => this.paintTtsProvider(row)),
       elevenKey: (row) => this.paintElevenKey(row),
+      tavilyKey: (row) => this.paintTavilyKey(row),
       elevenFetch: this.slot("elevenFetch", "chat", (row) => this.paintElevenFetch(row)),
       elevenVoice: this.slot("elevenVoice", "chat", (row) => this.paintElevenVoice(row)),
       testVoice: (row) => this.paintTestVoice(row),
@@ -1378,6 +1379,19 @@ export class AxxaSettingsTab extends PluginSettingTab {
           // chave. Os dois mudam com a digitação.
           this.repaint("ttsWho");
           this.refreshVisibility();
+        });
+    });
+  }
+
+  private paintTavilyKey(row: Setting): void {
+    const s = this.s;
+    row.addText((t) => {
+      t.inputEl.type = "password";
+      t.setPlaceholder("Starts with tvly")
+        .setValue(s.tavilyApiKey ?? "")
+        .onChange(async (v) => {
+          s.tavilyApiKey = v.trim();
+          await this.save();
         });
     });
   }

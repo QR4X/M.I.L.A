@@ -106,7 +106,7 @@ A lista de modelos vem ao vivo de cada provedor. Etiquetas mostram o que cada mo
 
 ## Segurança do agente
 
-O agente usa oito ferramentas: `vault_search`, `vault_list`, `vault_read`, `vault_create`, `vault_edit`, `vault_move`, `vault_delete` e `vault_create_folder`. Três níveis de permissão decidem o que ele faz sem perguntar:
+O agente usa oito ferramentas no seu vault: `vault_search`, `vault_list`, `vault_read`, `vault_create`, `vault_edit`, `vault_move`, `vault_delete` e `vault_create_folder`. Com o **Web access** ligado (Settings › Agent), ele ganha duas na web: `web_search`, que precisa da sua chave da [Tavily](https://tavily.com) (1.000 buscas grátis por mês), e `web_fetch`, que abre uma página pública. Nos níveis Ask e Vault, cada pedido à web mostra antes o endereço ou a busca, e endereço local (o seu computador, a sua rede de casa) é sempre recusado. Três níveis de permissão decidem o que ele faz sem perguntar:
 
 - **Ask** (padrão): toda mudança espera o seu OK.
 - **Vault**: criar, editar e mover rodam sozinhos; apagar ainda pergunta.
@@ -129,19 +129,21 @@ Ao usar um provedor terceiro, valem os termos e a política de privacidade dele.
 
 Pelas políticas de desenvolvedor do Obsidian, em linguagem direta:
 
-- **Uso de rede.** As requisições vão só pros provedores de IA que você configurar — OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM, ElevenLabs (opcional, vozes da leitura) e o seu Ollama — e pras páginas da web que você pedir pra buscar no **+ › Link**. O que cada um recebe:
+- **Uso de rede.** As requisições vão só pros provedores de IA que você configurar — OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM, ElevenLabs (opcional, vozes da leitura) e o seu Ollama —, pras páginas da web que você pedir pra buscar no **+ › Link** e, com o **Web access** do agente ligado, pra busca e as páginas descritas abaixo. O que cada um recebe:
   - o provedor do chat: as suas mensagens, as notas, arquivos, imagens, PDFs e páginas que você anexa, e os trechos do vault descritos em *Contexto automático*;
   - o provedor de embedding (Vault Q&A): o texto das suas notas enquanto o índice é montado — e as imagens também, se você escolher um modelo de embedding que aceita imagem — e cada busca;
   - a API de transcrição da OpenAI: as suas gravações de voz, quando você dita;
   - a OpenAI ou a ElevenLabs: o texto de uma resposta, quando você toca em Listen;
   - o endereço da chave do OpenRouter (`openrouter.ai/api/v1/key`), com a sua chave do OpenRouter, quando você busca os modelos do OpenRouter ou abre o Usage: ele só lê a cota de pedidos grátis da chave, o crédito que sobra e o gasto de hoje;
-  - o catálogo público de modelos da NVIDIA (`api.ngc.nvidia.com`), quando você busca a lista de modelos do NIM: uma busca pelos modelos que a NVIDIA marca *Free Endpoint*, pra lista saber quais são grátis de verdade. Sem chave, e nada seu vai junto.
+  - o catálogo público de modelos da NVIDIA (`api.ngc.nvidia.com`), quando você busca a lista de modelos do NIM: uma busca pelos modelos que a NVIDIA marca *Free Endpoint*, pra lista saber quais são grátis de verdade. Sem chave, e nada seu vai junto;
+  - a API de busca da Tavily (`api.tavily.com`), com a sua chave da Tavily, quando o agente busca na web: a busca que o agente escreveu;
+  - uma página que o agente abre (`web_fetch`): um pedido simples daquele endereço, que você vê e aprova antes, a menos que o nível de permissão seja YOLO.
 
   Não há telemetria e nada é enviado pra nós. As respostas são renderizadas como Markdown, então um link de imagem dentro de uma resposta é carregado de onde ele aponta.
 - **Contas e pagamento.** O plugin é gratuito, mas precisa da sua chave de pelo menos um provedor (o Ollama, rodando local, não precisa). A maioria cobra o uso da API por token; alguns oferecem modelos ou cotas gratuitas.
 - **Listagem do vault.** O plugin lê a lista de arquivos do vault (o `getMarkdownFiles` / `getFiles` do Obsidian) pra montar o índice do Vault Q&A, pra metade por palavra-chave da busca no vault (Vault Q&A, contexto do Agent e a ferramenta `vault_search` do agente), pro seletor de notas (**+ › Notes**, menções `[[` e fontes de projeto) e — só se você ligar *Let it see your note names*, que vem desligado — pra assistente de criação sugerir notas pra um projeto. A lista fica no aparelho, com três exceções: nesse último caso os caminhos de até 300 notas recentes (nunca o conteúdo) vão pro modelo da assistente; no modo Agent a ferramenta `vault_list` manda os nomes dos arquivos de uma pasta (a raiz inclusive) pro modelo do chat, sem perguntar; e a `vault_search` manda os caminhos e trechos das notas que acha.
 - **Contexto automático.** Nas conversas de Vault Q&A e Agent, um interruptor de vault por conversa nasce **ligado**: trechos das notas que combinam com a sua mensagem vão junto dela pro provedor do chat. No Chat ele nasce **desligado**.
-- **Arquivos lidos e gravados.** As conversas e o índice do Vault Q&A ficam dentro do vault, na pasta oculta `.axxa/` por padrão. Quando você pede, exportações vão pra `axxa-ai/exports/`, relatórios de uso pra `axxa-ai/reports/` e skills pra `axxa-ai/skills/`. No modo Agent o modelo pode ler qualquer arquivo de texto do vault e criar, editar, mover e apagar notas e pastas pelas ferramentas dele. Mudanças pedem confirmação conforme o nível de permissão escolhido — e o **Approve all** dessa confirmação deixa de perguntar pelas mudanças reversíveis até o fim da sessão —, mas apagar sempre pergunta.
+- **Arquivos lidos e gravados.** As conversas e o índice do Vault Q&A ficam dentro do vault, na pasta oculta `.axxa/` por padrão. Quando você pede, exportações vão pra `axxa-ai/exports/`, relatórios de uso pra `axxa-ai/reports/` e skills pra `axxa-ai/skills/`. No modo Agent o modelo pode ler qualquer arquivo de texto do vault e criar, editar, mover e apagar notas e pastas pelas ferramentas dele. Mudanças pedem confirmação conforme o nível de permissão escolhido — e o **Approve all** dessa confirmação deixa de perguntar pelas mudanças reversíveis até o fim da sessão —; apagar pergunta em todos os níveis menos no YOLO, e mesmo nele quando o Obsidian está configurado pra apagar de vez. Toda mudança do agente pode ser desfeita pela conversa enquanto o Obsidian estiver aberto.
 
 <details>
 <summary>Por que o plugin usa <code>fetch</code>, e a única API do Node que ele toca</summary>

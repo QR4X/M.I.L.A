@@ -200,6 +200,10 @@ export interface AxxaSettings {
   agentPermissionLevel: string;
   /** Preview/diff antes de gravar qualquer escrita do agente. */
   agentDiffApproval: boolean;
+  /** O agente pode buscar na web e abrir páginas (agent/web.ts). */
+  agentWeb: boolean;
+  /** Chave da busca na web (Tavily). Vai pro keychain, como as outras. */
+  tavilyApiKey: string;
   // ---- Mobile
   /** Tela cheia no mobile: esconde o chrome da gaveta e a navbar global. */
   mobileFullscreen: boolean;
@@ -300,6 +304,8 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   ragMobileSkipNoticeShown: false,
   agentPermissionLevel: "ask",
   agentDiffApproval: true,
+  agentWeb: true,
+  tavilyApiKey: "",
   mobileFullscreen: false,
 };
 
@@ -1210,6 +1216,7 @@ export default class AxxaPlugin extends Plugin {
     // próximo carregamento, pelo mesmo caminho das outras. O teste
     // tests/secretFields.test.ts impede uma chave nova de ficar de fora.
     "elevenApiKey",
+    "tavilyApiKey",
   ] as const;
 
   /** ID do segredo no SecretStorage (lowercase + dashes). Ex: axxa-openai-key. */

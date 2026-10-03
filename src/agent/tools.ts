@@ -25,6 +25,7 @@
 import { TFile, TFolder, type App, type TAbstractFile } from "obsidian";
 import type { ToolContext } from "./types";
 import { hybridSearch } from "../rag/hybrid";
+import { toolWebFetch, toolWebSearch } from "./web";
 
 const VAULT_ROOT_MAX_DEPTH = 32; // sanity check: ninguém precisa de 100 níveis
 
@@ -417,4 +418,7 @@ export const TOOL_REGISTRY: Record<string, ToolExecutor> = {
     toolVaultDelete(ctx.app, args as unknown as DeleteArgs),
   vault_create_folder: (ctx, args) =>
     toolVaultCreateFolder(ctx.app, args as unknown as CreateFolderArgs),
+  web_search: (ctx, args) =>
+    toolWebSearch(ctx, args as unknown as { query: string; maxResults?: number }),
+  web_fetch: (ctx, args) => toolWebFetch(ctx, args as unknown as { url: string }),
 };

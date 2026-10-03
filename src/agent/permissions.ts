@@ -85,6 +85,12 @@ export function decideToolGate(
     apagarVaiPraLixeira?: boolean;
   }
 ): ToolGate {
+  // Web: o que sai pra internet pergunta no Ask e no Vault (a URL é o canal
+  // de vazamento de uma instrução plantada numa nota). O yolo e o "aprovar
+  // todas" da rodada passam.
+  if (tool.network) {
+    return level === "yolo" || opts.approveAll ? "auto" : "confirm";
+  }
   // Apagar: só o yolo pula a pergunta, e só com lixeira. Nem o "aprovar
   // todas" do modal pula — ele vale pro que se desfaz sozinho.
   if (tool.irreversible) {

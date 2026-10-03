@@ -100,6 +100,27 @@ export function agentActivitySpec(
         pendingText: `Creating folder ${shortPath}`,
         doneText: `Created folder ${shortPath}`,
       };
+    case "web_search":
+      return {
+        iconPending: "globe",
+        iconDone: "globe",
+        pendingText: `Searching the web for "${texto(args.query).slice(0, 40)}"`,
+        doneText: `Searched the web for "${texto(args.query).slice(0, 40)}"`,
+      };
+    case "web_fetch": {
+      let host = texto(args.url);
+      try {
+        host = new URL(host).hostname;
+      } catch {
+        // URL inválida: a tool recusa e a linha mostra o que veio.
+      }
+      return {
+        iconPending: "link",
+        iconDone: "link",
+        pendingText: `Opening ${shorten(host)}`,
+        doneText: `Read ${shorten(host)}`,
+      };
+    }
     default:
       return {
         iconPending: "wrench",
