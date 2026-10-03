@@ -51,14 +51,12 @@ export const PT_BR: Translations = {
       "(no mesmo turno).",
     needsOpenAI:
       "O modo Agente precisa de um provider com tool calling. Use OpenAI, Anthropic, Gemini, OpenRouter, Nvidia NIM ou Ollama (modelo compatível).",
-    deniedAction: "🚫 Ação negada pelo usuário",
     maxTurnsReached: (n: number) =>
       `O agente bateu o limite de ${n} turnos sem terminar. Tente reformular a tarefa.`,
     unknownTool: (name: string) => `Ferramenta desconhecida: ${name}`,
     deniedTool: (name: string) => `Negado: ${name}`,
     loopDetectedPending: "Repetição detectada — pedindo pro agente repensar",
     loopDetectedDone: "Repetição detectada — pedi pro agente repensar",
-    stepsSummary: (n: number) => `${n} ação${n === 1 ? "" : "ões"} do agente`,
     confirmTitle: "Revisar mudança do agente",
     confirmTitleIrreversible: "⚠️ Apagar isto?",
     confirmTitleWeb: "Permitir este acesso à web?",
@@ -77,23 +75,12 @@ export const PT_BR: Translations = {
     webPrompt:
       " Você também pode buscar na web (web_search) e abrir páginas públicas (web_fetch) quando a tarefa pedir informação de fora ou recente: abra as páginas em que se apoiar e cite as URLs.",
     confirmTruncated: (n: number) => `+${n} caracteres não mostrados`,
-    permissionLevel: "Nível de permissão do agente",
-    permissionLevelDesc:
-      "Quanto controle o agente tem sobre o vault. Apagar sempre pede confirmação, seja qual for o nível.",
-    permissionAsk: "Perguntar — confirma toda ação que mexe num arquivo",
-    permissionVault: "Vault — lê e escreve à vontade, só apagar pergunta",
-    permissionYolo: "YOLO — roda tudo, o que apaga vai pra lixeira",
-    diffApproval: "Mostrar o diff nas confirmações",
-    diffApprovalDesc:
-      "Quando o agente pede confirmação (conforme o nível acima), incluir o antes/depois da mudança. Desligado = uma confirmação mais simples, sem a prévia. Apagar sempre pergunta, em qualquer nível.",
   },
 
   vault: {
     searching: (topK: number, effort: string) =>
       `Procurando até ${topK} notas no vault (esforço: ${effort})...`,
     searchDone: "Busca concluída",
-    foundContext: (count: number) =>
-      `${count} nota${count !== 1 ? "s" : ""} encontrada${count !== 1 ? "s" : ""} como contexto`,
     foundContextSemantic: (count: number) =>
       `${count} nota${count !== 1 ? "s" : ""} encontrada${count !== 1 ? "s" : ""} (semântica + palavra-chave)`,
     foundContextKeyword: (count: number) =>
@@ -124,17 +111,6 @@ export const PT_BR: Translations = {
         "O Gemini precisa de cobrança ativa na API pra esse modelo. Sua assinatura do Google AI Pro/Ultra NÃO cobre a API — ela é cobrada à parte no AI Studio. Ative a cobrança (plano pré-pago, mínimo US$ 10) e tente de novo.",
       contextOverflow:
         "Esta conversa não cabe mais na janela de contexto do modelo. Comece uma nova (esta fica salva), ou apague algumas mensagens/anexos antes de tentar de novo.",
-    },
-    retry: "Tentar de novo",
-    startNewChat: "Começar uma conversa nova",
-    regenNotForGeneration:
-      "Regerar não vale pra geração de mídia — mande o prompt de novo.",
-    openSettings: "Abrir as configurações",
-    openBilling: "Ativar a cobrança no AI Studio",
-    genUnsupported: (type: "image" | "audio" | "video", supported: string) => {
-      const label =
-        type === "image" ? "Imagem" : type === "audio" ? "Áudio" : "Vídeo";
-      return `Geração de ${label.toLowerCase()} ainda não é suportada no AXXA com este provider/modelo. Hoje dá pra: ${supported}.`;
     },
   },
 

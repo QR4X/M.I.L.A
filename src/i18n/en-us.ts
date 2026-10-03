@@ -60,7 +60,6 @@ export const EN_US = {
       "When you need to list many files, prefer parallel tool calls (same turn).",
     needsOpenAI:
       "Agent Mode requires a provider with tool calling. Use OpenAI, Anthropic, Gemini, OpenRouter, Nvidia NIM, or Ollama (compatible model).",
-    deniedAction: "🚫 Action denied by user",
     maxTurnsReached: (n: number) =>
       `Agent hit the limit of ${n} turns without finishing. Try rephrasing the task.`,
     // Chips de activity do agent loop (P1-03/P1-27) — antes hardcoded em PT.
@@ -68,8 +67,6 @@ export const EN_US = {
     deniedTool: (name: string) => `Denied: ${name}`,
     loopDetectedPending: "Loop detected — asking the agent to reconsider",
     loopDetectedDone: "Loop detected — asked the agent to reconsider",
-    stepsSummary: (n: number) => `${n} agent action${n === 1 ? "" : "s"}`,
-    // ConfirmationModal (aprovação de mudanças do Agent) — P1-03.
     confirmTitle: "Review Agent change",
     confirmTitleIrreversible: "⚠️ Delete this?",
     confirmTitleWeb: "Allow this web request?",
@@ -88,15 +85,6 @@ export const EN_US = {
     webPrompt:
       " You can also search the web (web_search) and open public pages (web_fetch) when the task needs outside or recent information: open the pages you rely on, and cite their URLs.",
     confirmTruncated: (n: number) => `+${n} chars not shown`,
-    permissionLevel: "Agent permission level",
-    permissionLevelDesc:
-      "How much control the Agent has over the vault. Delete always asks for confirmation regardless of the level.",
-    permissionAsk: "Ask — confirm every action that modifies a file",
-    permissionVault: "Vault — free read/write, only delete asks",
-    permissionYolo: "YOLO — runs everything, deletes go to the trash",
-    diffApproval: "Show diff in confirmations",
-    diffApprovalDesc:
-      "When the Agent asks for confirmation (per the permission level above), include a before/after diff of the change. Off = a simpler confirmation without the preview. Deletes always ask, on every level.",
   },
 
 
@@ -104,9 +92,6 @@ export const EN_US = {
     searching: (topK: number, effort: string) =>
       `Searching up to ${topK} notes in vault (effort: ${effort})...`,
     searchDone: "Search complete",
-    foundContext: (count: number) =>
-      // v0.1.228: plural por count !== 1 (inglês usa plural para 0: "0 notes")
-      `${count} note${count !== 1 ? "s" : ""} found as context`,
     foundContextSemantic: (count: number) =>
       `${count} note${count !== 1 ? "s" : ""} found (semantic + keyword)`,
     foundContextKeyword: (count: number) =>
@@ -137,17 +122,6 @@ export const EN_US = {
         "Gemini needs active API billing for this model. Your Google AI Pro/Ultra subscription does NOT cover the API — it's billed separately in AI Studio. Enable billing (Prepay plan, min $10) and try again.",
       contextOverflow:
         "This conversation no longer fits the model's context window. Start a new chat (this one stays saved), or delete some messages/attachments before retrying.",
-    },
-    retry: "Try again",
-    startNewChat: "Start new chat",
-    regenNotForGeneration:
-      "Regenerate isn't available for media generation — send the prompt again instead.",
-    openSettings: "Open Settings",
-    openBilling: "Enable billing in AI Studio",
-    genUnsupported: (type: "image" | "audio" | "video", supported: string) => {
-      // v0.1.228: identificadores em inglês na locale en-us
-      const label = type === "image" ? "Image" : type === "audio" ? "Audio" : "Video";
-      return `${label} generation isn't supported in AXXA yet with this provider/model. Available today: ${supported}.`;
     },
   },
 

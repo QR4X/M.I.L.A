@@ -5,6 +5,7 @@ import path from "path";
 // builtinModules vem do próprio Node desde o 9.3 — não precisa de pacote.
 import { builtinModules as builtins } from "node:module";
 import { report } from "./scripts/size-report.mjs";
+import { parteCurta } from "./scripts/chaveCurta.mjs";
 
 const prod = process.argv[2] === "production";
 
@@ -20,6 +21,28 @@ async function syncAssets() {
     : css;
   fs.writeFileSync(path.join("output", "styles.css"), outCss);
 }
+
+/**
+ * O dicionário pt-BR com CHAVES CURTAS: cada parte (src/i18n/ui-pt/*.ts, menos
+ * o index) troca as chaves em inglês pela chave curta (scripts/chaveCurta.mjs).
+ * A frase em inglês já está no código, no tr("…") que a mostra; repetida como
+ * chave, era ~30 KB a mais. Dois textos com a mesma chave param o build.
+ */
+const vistasNoDicionario = new Map();
+const dicionarioCurto = {
+  name: "axxa-dicionario-curto",
+  setup(build) {
+    build.onStart(() => vistasNoDicionario.clear());
+    // O filtro do esbuild é regex do Go (sem lookahead): o index, que só
+    // junta as partes, sai aqui dentro.
+    build.onLoad({ filter: /[\\/]src[\\/]i18n[\\/]ui-pt[\\/][^\\/]+\.ts$/ }, async (args) => {
+      if (/[\\/]index\.ts$/.test(args.path)) return undefined;
+      const ts = await fs.promises.readFile(args.path, "utf8");
+      const { codigo } = await parteCurta(ts, args.path, vistasNoDicionario);
+      return { contents: codigo, loader: "js" };
+    });
+  },
+};
 
 const copyAssetsPlugin = {
   name: "axxa-copy-assets",
@@ -64,7 +87,13 @@ const context = await esbuild.context({
     ...builtins,
   ],
   format: "cjs",
-  target: "es2018",
+  // ES2021: o próprio Obsidian (1.12, 1.13) já usa `?.`, `??` e `??=` no
+  // app.js — todo aparelho que roda o Obsidian roda isto. No es2018 cada um
+  // virava uma expressão longa: ~15 KB a mais.
+  target: "es2021",
+  // UTF-8 de verdade: no padrão (ascii) cada "ç", "—" e "·" virava \uXXXX,
+  // seis bytes em vez de dois. O Obsidian lê o main.js como UTF-8.
+  charset: "utf8",
   logLevel: "info",
   sourcemap: prod ? false : "inline",
   treeShaking: true,
@@ -74,7 +103,7 @@ const context = await esbuild.context({
   drop: prod ? ["console", "debugger"] : [],
   legalComments: "none",
   outfile: "output/main.js",
-  plugins: [copyAssetsPlugin],
+  plugins: [dicionarioCurto, copyAssetsPlugin],
 });
 
 if (prod) {
