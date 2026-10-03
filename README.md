@@ -26,7 +26,7 @@
 - **An agent that asks first.** It creates, edits, moves and deletes notes through a small set of tools. Changes wait for your OK, deletes go to your trash, and moves rewrite your `[[links]]`.
 - **Made for your phone.** Designed for the Obsidian mobile drawer first: the composer follows the keyboard, there is an optional fullscreen mode, and the agent works on the phone too.
 - **Six providers, your keys.** OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM and local Ollama. Keys live in your OS keychain.
-- **Small and fast.** `main.js` is about 0.5 MB, smaller than each of the 12 most-downloaded AI plugins (0.56 to 14.6 MB, median about 3.8 MB, measured October 2026).
+- **Small and fast.** `main.js` is about 0.5 MB. The 12 most-downloaded AI plugins weigh 0.56 to 14.6 MB, with a median of about 3.8 MB (measured October 2026).
 - **Everything is Markdown.** Chats, skills and cost reports are files in your vault, and a usage dashboard shows what you spend by provider, model and day, and what's left today on each free tier.
 
 <p align="center">
