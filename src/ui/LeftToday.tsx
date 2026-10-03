@@ -26,6 +26,7 @@ import type { EstadoDaChave } from "../providers/openrouter";
 import { prettyModelName } from "../providers/modelDescriptions";
 import { formatCompact } from "../usage/format";
 import {
+  CHAVE_LIMITE_GASTO,
   emQuanto,
   fracaoQueSobra,
   nivel,
@@ -33,6 +34,7 @@ import {
   type Cartao,
   type Medidor,
 } from "../usage/sobraDoDia";
+import { usd } from "../usage/gastoDoDia";
 import { providerIcon } from "./ChatList";
 import { Icon } from "./Icon";
 
@@ -60,11 +62,13 @@ function gravarAbertos(app: App, abertos: Set<string>): void {
 /** Pedidos são poucos e contados um a um: "1,000", não "1.0k". Tokens são
  *  muitos, e o compacto é o que se lê ("238k"). */
 function numero(n: number, unidade: Medidor["unidade"]): string {
+  if (unidade === "usd") return usd(n);
   return unidade === "tokens" ? formatCompact(n) : Math.round(n).toLocaleString("en-US");
 }
 
 function plural(n: number, unidade: Medidor["unidade"]): string {
   if (unidade === "tokens") return "tokens";
+  if (unidade === "usd") return "";
   return n === 1 ? "request" : "requests";
 }
 
@@ -121,6 +125,11 @@ export function LeftToday({ plugin }: { plugin: AxxaPlugin }) {
   }, [perguntar]);
 
   const salvarLimite = (chave: string, n: number | null) => {
+    if (chave === CHAVE_LIMITE_GASTO) {
+      s.limiteGastoDiario = n ?? 0;
+      void plugin.saveSettings();
+      return;
+    }
     const limites = (s.limitesDiarios ??= {});
     if (n == null) delete limites[chave];
     else limites[chave] = n;
@@ -135,6 +144,8 @@ export function LeftToday({ plugin }: { plugin: AxxaPlugin }) {
     limites: s.limitesDiarios ?? {},
     cotaOpenRouter: s.freeQuota?.openrouter,
     chaveOpenRouter: viva,
+    limiteGasto: s.limiteGastoDiario ?? 0,
+    travarNoLimite: s.travarNoLimite === true,
   });
   if (cartoes.length === 0) return null;
 
@@ -192,7 +203,7 @@ function CartaoDoDia({
         onClick={onAlternar}
       >
         <span className="axxa-card-mark" aria-hidden="true">
-          <Icon name={providerIcon(c.provider)} size={20} />
+          <Icon name={c.provider === "spend" ? "wallet" : providerIcon(c.provider)} size={20} />
         </span>
         <span className="axxa-left-name">{c.nome}</span>
         {aberto && (c.viraEm != null || c.semDia) && (
@@ -299,13 +310,18 @@ function LinhaDoMedidor({
 }) {
   const nome = nomeDo(m);
   const n = nivel(m);
+  const dinheiro = m.unidade === "usd";
   const valor =
     m.restante != null
       ? `${numero(m.restante, m.unidade)} left`
-      : `${numero(m.usado, m.unidade)} ${plural(m.usado, m.unidade)}`;
+      : dinheiro
+        ? `${numero(m.usado, m.unidade)} spent`
+        : `${numero(m.usado, m.unidade)} ${plural(m.usado, m.unidade)}`;
   const conta =
     m.limite != null
-      ? `${numero(m.usado, m.unidade)} of ${numero(m.limite, m.unidade)} ${plural(m.limite, m.unidade)} used`
+      ? dinheiro
+        ? `${numero(m.usado, m.unidade)} of ${numero(m.limite, m.unidade)} spent`
+        : `${numero(m.usado, m.unidade)} of ${numero(m.limite, m.unidade)} ${plural(m.limite, m.unidade)} used`
       : m.limiteEditavel
         ? "No daily limit set"
         : null;
@@ -321,6 +337,7 @@ function LinhaDoMedidor({
           atual={m.limite}
           nome={nome}
           ajuda={ajuda}
+          dinheiro={dinheiro}
           onSalvar={(v) => onSalvarLimite(m.limiteEditavel!, v)}
         />
       ) : (
@@ -351,11 +368,14 @@ function EditorDeLimite({
   atual,
   nome,
   ajuda,
+  dinheiro = false,
   onSalvar,
 }: {
   atual?: number;
   nome: string;
   ajuda?: { rotulo: string; url: string };
+  /** Teto em dólar (com centavos), não em pedidos. */
+  dinheiro?: boolean;
   onSalvar: (n: number | null) => void;
 }) {
   const [aberto, setAberto] = useState(false);
@@ -372,7 +392,9 @@ function EditorDeLimite({
       <button
         type="button"
         className="axxa-home-filter is-accent axxa-left-action"
-        aria-label={`${atual ? "Edit" : "Set"} the daily limit for ${nome}`}
+        aria-label={
+          dinheiro ? `${atual ? "Edit" : "Set"} the daily spending limit` : `${atual ? "Edit" : "Set"} the daily limit for ${nome}`
+        }
         onClick={() => {
           setTxt(atual ? String(atual) : "");
           setAberto(true);
@@ -385,9 +407,10 @@ function EditorDeLimite({
   // Lê o CAMPO, não o estado: o render que leva o último dígito pro estado
   // pode ainda não ter rodado quando o Enter chega.
   const salvar = () => {
-    const bruto = (campo.current?.value ?? txt).trim();
+    const bruto = (campo.current?.value ?? txt).trim().replace(",", ".");
     const v = Number(bruto);
-    onSalvar(bruto && Number.isFinite(v) && v > 0 ? Math.floor(v) : null);
+    const valido = bruto && Number.isFinite(v) && v > 0;
+    onSalvar(valido ? (dinheiro ? Math.round(v * 100) / 100 : Math.floor(v)) : null);
     setAberto(false);
   };
   return (
@@ -396,12 +419,12 @@ function EditorDeLimite({
         <input
           type="number"
           inputMode="numeric"
-          min={1}
-          step={1}
+          min={dinheiro ? 0 : 1}
+          step={dinheiro ? 0.5 : 1}
           className="axxa-left-input"
           value={txt}
-          placeholder="Per day"
-          aria-label={`Requests per day for ${nome}`}
+          placeholder={dinheiro ? "$ a day" : "Per day"}
+          aria-label={dinheiro ? "Daily spending limit in dollars" : `Requests per day for ${nome}`}
           ref={campo}
           onChange={(e) => setTxt(e.target.value)}
           onKeyDown={(e) => {

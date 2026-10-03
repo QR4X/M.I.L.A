@@ -20,3 +20,18 @@ export function definirAnotadorDeUso(fn: Anotador | null): void {
 export function anotarUso(provider: string, model: string, delta: Partial<Lancamento>): void {
   atual?.(provider, model, delta);
 }
+
+/** Quem decide se um pedido pode sair (o limite de gasto do dia): lança pra
+ *  barrar. O plugin liga ao carregar; sem guarda, tudo passa. */
+export type GuardaDeGasto = (provider: string, model: string) => void;
+
+let guarda: GuardaDeGasto | null = null;
+
+export function definirGuardaDeGasto(fn: GuardaDeGasto | null): void {
+  guarda = fn;
+}
+
+/** Antes de cada pedido de chat: passa, ou lança o motivo de não passar. */
+export function conferirGasto(provider: string, model: string): void {
+  guarda?.(provider, model);
+}

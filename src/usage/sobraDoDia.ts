@@ -27,6 +27,10 @@ import {
   somarDesde,
   type LivroDoDia,
 } from "./livroDoDia";
+import { gastoDesde } from "./gastoDoDia";
+
+/** A chave do limite de GASTO no editor de teto (não é um modelo). */
+export const CHAVE_LIMITE_GASTO = "__gasto";
 
 /** Onde a pessoa vê os limites do projeto dela no Gemini. */
 export const AI_STUDIO_LIMITES = "https://aistudio.google.com/rate-limit";
@@ -39,7 +43,7 @@ export function chaveDoLimite(provider: string, model: string): string {
   return `${provider}\u0001${model}`;
 }
 
-export type Unidade = "tokens" | "requests";
+export type Unidade = "tokens" | "requests" | "usd";
 
 /** Uma coisa medida: um balde da OpenAI, um modelo do Gemini, os grátis do
  *  OpenRouter, o dia do NIM. */
@@ -67,7 +71,7 @@ export interface Medidor {
 }
 
 export interface Cartao {
-  provider: "openai" | "gemini" | "openrouter" | "nim";
+  provider: "spend" | "openai" | "gemini" | "openrouter" | "nim";
   nome: string;
   /** Quanto falta pro dia da cota virar (ms); null = não há dia de cota. */
   viraEm: number | null;
@@ -100,8 +104,12 @@ export interface EntradaDoDia {
   cotaOpenRouter?: { limit: number; remaining?: number };
   /** O que a chave do OpenRouter disse agora (null/ausente = não disse). */
   chaveOpenRouter?: EstadoDaChave | null;
-  /** O fuso de quem usa — o "hoje" do NIM, que não tem dia de cota. */
+  /** O fuso de quem usa — o "hoje" do NIM e do orçamento. */
   fusoLocal?: string;
+  /** O limite de gasto do dia, em USD (0 = sem limite). */
+  limiteGasto?: number;
+  /** No limite, os modelos pagos param (senão, só avisa). */
+  travarNoLimite?: boolean;
 }
 
 const sobra = (limite: number | undefined, usado: number): number | undefined =>
@@ -134,6 +142,47 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
   const viraUtc = faltaParaVirar(agora, "UTC");
   const usouDesde = (provider: string, desde: Date) =>
     somarDesde(livro, desde, (p) => p === provider).r > 0;
+  const fuso = e.fusoLocal ?? fusoDaMaquina();
+  const meiaNoiteLocal = inicioDoDia(agora, fuso);
+
+  // ── O dinheiro (primeiro: é o que pode surpreender na conta) ──────────
+  // Aparece com limite definido, ou quando já houve gasto pago hoje.
+  const gasto = gastoDesde(livro, meiaNoiteLocal);
+  const limiteGasto = e.limiteGasto && e.limiteGasto > 0 ? e.limiteGasto : 0;
+  if (limiteGasto > 0 || gasto.total > 0) {
+    cartoes.push({
+      provider: "spend",
+      nome: "Paid models",
+      viraEm: faltaParaVirar(agora, fuso),
+      viraOnde: "midnight, your time",
+      medidores: [
+        {
+          id: "spend-today",
+          rotulo: "Spent today",
+          usado: gasto.total,
+          limite: limiteGasto || undefined,
+          restante: limiteGasto ? Math.max(0, limiteGasto - gasto.total) : undefined,
+          unidade: "usd",
+          fonte: "local",
+          limiteEditavel: CHAVE_LIMITE_GASTO,
+        },
+      ],
+      nota: [
+        "Counted in this vault from public token prices. Gemini counts at paid prices, so a free-tier project may cost less.",
+        gasto.semPreco > 0
+          ? `${gasto.semPreco} ${gasto.semPreco === 1 ? "request" : "requests"} on models without a public price ${gasto.semPreco === 1 ? "isn't" : "aren't"} included.`
+          : "",
+        limiteGasto > 0
+          ? e.travarNoLimite
+            ? "At the limit, paid models pause until midnight."
+            : "At the limit you get a heads-up; turn on “Stop paid models at the limit” in settings to pause them."
+          : "Set a limit to get a heads-up at 80% and 100%.",
+        "Resets at midnight, your time.",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    });
+  }
 
   // ── OpenAI ────────────────────────────────────────────────────────────
   if (e.comChave("openai") || usouDesde("openai", meiaNoiteUtc)) {
@@ -292,7 +341,6 @@ export function sobraDoDia(e: EntradaDoDia): Cartao[] {
   }
 
   // ── NIM ───────────────────────────────────────────────────────────────
-  const meiaNoiteLocal = inicioDoDia(agora, e.fusoLocal ?? fusoDaMaquina());
   if (e.comChave("nim") || usouDesde("nim", meiaNoiteLocal)) {
     const hoje = somarDesde(livro, meiaNoiteLocal, (p) => p === "nim").r;
     cartoes.push({

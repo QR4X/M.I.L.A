@@ -9,7 +9,7 @@ import { geminiProvider } from "./gemini";
 import { openrouterProvider } from "./openrouter";
 import { nimProvider } from "./nim";
 import { ollamaProvider } from "./ollama";
-import { anotarUso } from "../usage/anotador";
+import { anotarUso, conferirGasto } from "../usage/anotador";
 
 export const providers: Record<string, Provider> = {
   openai: openaiProvider,
@@ -37,11 +37,14 @@ export const providers: Record<string, Provider> = {
 function comRegistro(p: Provider): Provider {
   const w = Object.create(p) as Provider;
   w.chat = async (req, apiKey) => {
+    // O limite de gasto do dia barra ANTES de sair (ver usage/gastoDoDia.ts).
+    conferirGasto(p.id, req.model);
     const res = await p.chat(req, apiKey);
     anotarUso(p.id, req.model, { r: 1, i: res.usage?.input ?? 0, o: res.usage?.output ?? 0 });
     return res;
   };
   w.streamChat = async (req, apiKey, onToken, onUsage, signal, onReasoning) => {
+    conferirGasto(p.id, req.model);
     let aceito = false;
     let ultimo: Usage | null = null;
     try {

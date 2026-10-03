@@ -9,18 +9,20 @@ import {
   somarDesde,
   type LivroDoDia,
 } from "../src/usage/livroDoDia";
-import { definirAnotadorDeUso } from "../src/usage/anotador";
+import { definirAnotadorDeUso, definirGuardaDeGasto } from "../src/usage/anotador";
 import { getProvider, providers } from "../src/providers";
 import type { Provider } from "../src/providers/base";
 import { estadoDaChave } from "../src/providers/openrouter";
 import { embedItems } from "../src/rag/embeddings";
 import {
+  CHAVE_LIMITE_GASTO,
   emQuanto,
   nivel,
   sobraDoDia,
   type EntradaDoDia,
   type Medidor,
 } from "../src/usage/sobraDoDia";
+import { ehPago, gastoDesde, marcosCruzados, precoConhecido } from "../src/usage/gastoDoDia";
 
 // "Quanto sobra hoje" em cada lugar com cota grátis: o livro do dia (pedidos
 // e tokens por hora), o registro que o alimenta e os cartões da tela de Uso.
@@ -180,6 +182,27 @@ describe("o registro: o que o provider gasta vai pro livro", () => {
     expect(anotados).toEqual([]);
   });
 
+  it("a guarda do limite de gasto barra ANTES de sair — e nada é anotado", async () => {
+    let saiu = false;
+    providers.falso = falso({
+      chat: async () => {
+        saiu = true;
+        return { content: "x" };
+      },
+    });
+    definirGuardaDeGasto(() => {
+      throw new Error("limite batido");
+    });
+    try {
+      await expect(getProvider("falso").chat(req, "k")).rejects.toThrow("limite batido");
+      await expect(getProvider("falso").streamChat(req, "k", () => {})).rejects.toThrow("limite batido");
+    } finally {
+      definirGuardaDeGasto(null);
+    }
+    expect(saiu).toBe(false);
+    expect(anotados).toEqual([]);
+  });
+
   it("chat: um pedido com os tokens da resposta", async () => {
     providers.falso = falso({});
     await getProvider("falso").chat(req, "k");
@@ -289,11 +312,13 @@ describe("os cartões do Left today", () => {
     cartoes.find((c) => c.provider === provider)!.medidores.find((m) => m.id === id)!;
 
   it("ordem fixa, e só quem tem chave ou usou hoje", () => {
-    expect(sobraDoDia(base()).map((c) => c.provider)).toEqual(["openai", "gemini", "openrouter", "nim"]);
+    // o gpt-5 de hoje custou dinheiro: o cartão do gasto vem primeiro
+    expect(sobraDoDia(base()).map((c) => c.provider)).toEqual(["spend", "openai", "gemini", "openrouter", "nim"]);
     expect(sobraDoDia(base({ livro: {}, comChave: () => false }))).toEqual([]);
     expect(sobraDoDia(base({ livro: {}, comChave: (p) => p === "gemini" })).map((c) => c.provider)).toEqual(["gemini"]);
     // sem chave, mas usou hoje: aparece (a chave pode ter saído depois)
     expect(sobraDoDia(base({ comChave: () => false })).map((c) => c.provider)).toEqual([
+      "spend",
       "openai",
       "gemini",
       "openrouter",
@@ -305,17 +330,19 @@ describe("os cartões do Left today", () => {
     const c = sobraDoDia(base());
     expect(medidor(c, "openai", "openai-big")).toMatchObject({ usado: 1500, limite: 250_000, restante: 248_500 });
     expect(medidor(c, "openai", "openai-mini")).toMatchObject({ usado: 2000, limite: 2_500_000, restante: 2_498_000 });
-    expect(c[0].viraEm).toBe(8.5 * H);
+    expect(c.find((x) => x.provider === "openai")!.viraEm).toBe(8.5 * H);
     const t3 = sobraDoDia(base({ openai: { dataSharing: true, tier: 3 } }));
     expect(medidor(t3, "openai", "openai-big").limite).toBe(1_000_000);
   });
 
   it("OpenAI sem data-sharing: diz o porquê, sem medidor e sem relógio", () => {
-    const [o] = sobraDoDia(base({ openai: { dataSharing: false, tier: 1 } }));
+    const o = sobraDoDia(base({ openai: { dataSharing: false, tier: 1 } })).find((x) => x.provider === "openai")!;
     expect(o.medidores).toEqual([]);
     expect(o.vazio).toMatch(/shares API data/);
     expect(o.viraEm).toBeNull();
-    expect(sobraDoDia(base({ openai: { dataSharing: true, tier: 0 } }))[0].vazio).toMatch(/tier 1/);
+    expect(
+      sobraDoDia(base({ openai: { dataSharing: true, tier: 0 } })).find((x) => x.provider === "openai")!.vazio
+    ).toMatch(/tier 1/);
   });
 
   it("Gemini: por modelo, no dia do Pacífico; o pago diz que é pago", () => {
@@ -399,5 +426,66 @@ describe("os cartões do Left today", () => {
     expect(nivel(m(10))).toBe("baixo");
     expect(nivel(m(50))).toBe("ok");
     expect(nivel({ ...m(5), limite: undefined, restante: undefined })).toBeNull();
+  });
+});
+
+describe("o gasto do dia e o limite", () => {
+  const agora = new Date("2026-10-02T15:30:00Z");
+  const livro = (): LivroDoDia => {
+    const l: LivroDoDia = {};
+    // 1M de entrada + 1M de saída num modelo de preço conhecido
+    lancar(l, new Date("2026-10-02T12:00:00Z"), "openai", "gpt-5-nano", { r: 2, i: 1_000_000, o: 1_000_000 });
+    // ontem (no fuso de SP, antes das 03:00Z) não conta
+    lancar(l, new Date("2026-10-02T02:00:00Z"), "openai", "gpt-5-nano", { r: 1, i: 9_000_000, o: 0 });
+    // grátis e local: zero
+    lancar(l, new Date("2026-10-02T12:00:00Z"), "openrouter", "x/y:free", { r: 4, i: 500_000, o: 500_000 });
+    lancar(l, new Date("2026-10-02T12:00:00Z"), "ollama", "llama3.2", { r: 3, i: 900_000, o: 900_000 });
+    // sem preço público: fora da soma, mas contado
+    lancar(l, new Date("2026-10-02T12:00:00Z"), "nim", "algum/modelo-sem-preco", { r: 5, i: 10, o: 10 });
+    return l;
+  };
+
+  it("soma pelo preço público, no dia de quem usa; sem preço fica de fora (e contado)", () => {
+    const g = gastoDesde(livro(), inicioDoDia(agora, "America/Sao_Paulo"));
+    const p = precoConhecido("openai", "gpt-5-nano")!;
+    expect(g.total).toBeCloseTo(p.entrada + p.saida, 6);
+    expect(g.semPreco).toBe(5);
+    expect(precoConhecido("ollama", "qualquer")).toEqual({ entrada: 0, saida: 0 });
+    expect(ehPago("openrouter", "x/y:free")).toBe(false);
+    expect(ehPago("openai", "gpt-5-nano")).toBe(true);
+    expect(ehPago("nim", "algum/modelo-sem-preco")).toBe(false);
+  });
+
+  it("os marcos: 80% e 100%, uma vez cada, só ao cruzar", () => {
+    expect(marcosCruzados(0.5, 0.85, 1)).toEqual([80]);
+    expect(marcosCruzados(0.85, 1.2, 1)).toEqual([100]);
+    expect(marcosCruzados(0.1, 1.5, 1)).toEqual([80, 100]);
+    expect(marcosCruzados(0.85, 0.9, 1)).toEqual([]);
+    expect(marcosCruzados(0, 5, 0)).toEqual([]);
+  });
+
+  it("o cartão Paid models: bateria contra o limite, limite editável, a nota diz o que fica de fora", () => {
+    const base = {
+      livro: livro(),
+      agora,
+      comChave: () => false,
+      openai: { dataSharing: false, tier: 1 },
+      limites: {},
+      fusoLocal: "America/Sao_Paulo",
+    };
+    const p = precoConhecido("openai", "gpt-5-nano")!;
+    const total = p.entrada + p.saida;
+    const com = sobraDoDia({ ...base, limiteGasto: 2, travarNoLimite: true })[0];
+    expect(com.provider).toBe("spend");
+    expect(com.medidores[0]).toMatchObject({ unidade: "usd", limite: 2, limiteEditavel: CHAVE_LIMITE_GASTO });
+    expect(com.medidores[0].restante).toBeCloseTo(2 - total, 6);
+    expect(com.nota).toMatch(/5 requests on models without a public price aren't included/);
+    expect(com.nota).toMatch(/paid models pause until midnight/);
+    // sem limite e sem gasto pago: o cartão não aparece
+    expect(sobraDoDia({ ...base, livro: {}, limiteGasto: 0 }).map((c) => c.provider)).not.toContain("spend");
+    // sem limite mas com gasto: aparece, sem barra, com "Set limit"
+    const sem = sobraDoDia({ ...base, limiteGasto: 0 })[0];
+    expect(sem.medidores[0].limite).toBeUndefined();
+    expect(sem.nota).toMatch(/Set a limit/);
   });
 });

@@ -42,7 +42,9 @@ import { chatIndexSignature } from "./core/chatIndex";
 import { revisarOllamaPadrao } from "./core/ollamaPadrao";
 import { definirGratisConhecidos } from "./usage/pricing";
 import { lancar, podar, type LivroDoDia } from "./usage/livroDoDia";
-import { definirAnotadorDeUso } from "./usage/anotador";
+import { definirAnotadorDeUso, definirGuardaDeGasto } from "./usage/anotador";
+import { ehPago, gastoDeHoje, marcosCruzados, usd } from "./usage/gastoDoDia";
+import { ProviderError } from "./providers/base";
 import { esquecerDesfazeres } from "./agent/undo";
 import { registrarComandosDoEditor } from "./editor/comandos";
 import { esquecerPedidos } from "./editor/ponte";
@@ -102,6 +104,11 @@ export interface AxxaSettings {
    *  por dia) — o Gemini não publica os do tier grátis: eles moram no AI
    *  Studio de cada projeto. */
   limitesDiarios: Record<string, number>;
+  /** Limite de gasto do dia em USD (0 = sem limite) — ver usage/gastoDoDia. */
+  limiteGastoDiario: number;
+  /** No limite, os modelos pagos param até a meia-noite (os grátis e os
+   *  locais seguem). Desligado, o limite só avisa. */
+  travarNoLimite: boolean;
   // ---- A assistente de criação (skills e projetos)
   /**
    * Onde a ASSISTENTE roda — separada do modelo do chat de propósito.
@@ -264,6 +271,8 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   freeQuota: {},
   usoDoDia: {},
   limitesDiarios: {},
+  limiteGastoDiario: 0,
+  travarNoLimite: false,
   assistantProvider: "",
   assistantModel: "",
   // Desligada: mandar o nome das suas notas pra fora é escolha, não padrão.
@@ -1038,6 +1047,7 @@ export default class AxxaPlugin extends Plugin {
     // providers/index.ts). Grava agrupado — um gravar por resposta seria
     // um data.json reescrito a cada mensagem.
     definirAnotadorDeUso((provider, model, delta) => this.anotarUso(provider, model, delta));
+    definirGuardaDeGasto((provider, model) => this.conferirLimiteDeGasto(provider, model));
 
     // NÃO auto-abrimos o painel no startup — o Obsidian abre "normal". O AI
     // Agent abre sob demanda pela ribbon (ícone do robô) ou pelo comando
@@ -1049,8 +1059,17 @@ export default class AxxaPlugin extends Plugin {
   anotarUso(provider: string, model: string, delta: { r?: number; i?: number; o?: number }): void {
     const agora = new Date();
     const livro = (this.settings.usoDoDia ??= {});
+    const limite = this.settings.limiteGastoDiario ?? 0;
+    // O gasto só anda com tokens; pedido sem token (o "aceito" do começo do
+    // stream) não muda a conta, e não precisa recalcular nada.
+    const conta = limite > 0 && ((delta.i ?? 0) > 0 || (delta.o ?? 0) > 0);
+    const antes = conta ? gastoDeHoje(livro, agora).total : 0;
     lancar(livro, agora, provider, model, delta);
     podar(livro, agora);
+    if (conta) {
+      const depois = gastoDeHoje(livro, agora).total;
+      for (const marco of marcosCruzados(antes, depois, limite)) this.avisarGasto(marco, depois, limite);
+    }
     if (this.usoTimer !== null) return;
     this.usoTimer = window.setTimeout(() => {
       this.usoTimer = null;
@@ -1060,8 +1079,42 @@ export default class AxxaPlugin extends Plugin {
 
   private usoTimer: number | null = null;
 
+  /** O aviso de quando o gasto do dia cruza 80% e 100% do limite. */
+  private avisarGasto(marco: 80 | 100, gasto: number, limite: number): void {
+    if (marco === 80) {
+      new Notice(`You've used 80% of today's ${usd(limite)} spending limit (${usd(gasto)}).`, 8000);
+      return;
+    }
+    new Notice(
+      `Today's ${usd(limite)} spending limit is reached (${usd(gasto)}). ` +
+        (this.settings.travarNoLimite
+          ? "Paid models pause until midnight; free and local ones still work."
+          : "Turn on “Stop paid models at the limit” in settings to pause them."),
+      12000
+    );
+  }
+
+  /**
+   * A guarda dos pedidos (ver usage/anotador.ts): com o limite batido e a
+   * trava ligada, modelo PAGO não sai. Grátis, local e sem preço público
+   * passam — do último, o plugin não sabe o custo, e barrar às cegas seria
+   * pior que avisar.
+   */
+  conferirLimiteDeGasto(provider: string, model: string): void {
+    const s = this.settings;
+    const limite = s.limiteGastoDiario ?? 0;
+    if (!(limite > 0) || !s.travarNoLimite || !ehPago(provider, model)) return;
+    const { total } = gastoDeHoje(s.usoDoDia ?? {}, new Date());
+    if (total < limite) return;
+    throw new ProviderError(
+      `Today's ${usd(limite)} spending limit is reached (${usd(total)} spent), so paid models are paused until midnight. Free and local models still work, or raise the limit in Settings › Chat › Daily spending.`,
+      "unknown"
+    );
+  }
+
   onunload() {
     definirAnotadorDeUso(null);
+    definirGuardaDeGasto(null);
     // As cópias do Undo do agente não sobrevivem ao plugin (ver agent/undo.ts).
     esquecerDesfazeres();
     esquecerPedidos();

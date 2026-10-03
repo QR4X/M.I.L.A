@@ -201,6 +201,7 @@ export interface SettingsUi {
   ttsProvider: RowRender;
   elevenKey: RowRender;
   tavilyKey: RowRender;
+  spendLimit: RowRender;
   elevenFetch: RowRender;
   elevenVoice: RowRender;
   testVoice: RowRender;
@@ -525,6 +526,25 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       )
     )
   );
+
+  // O orçamento do dia: o limite em dólar e o que acontece quando ele chega.
+  // A conta sai dos preços públicos (ver usage/gastoDoDia.ts), e o Left today
+  // da tela de Uso mostra o quanto sobra.
+  group(chat, { heading: "Daily spending" }, [
+    custom(
+      "Daily limit",
+      null,
+      "In dollars, for paid models, counted from public token prices. You get a heads-up at 80% and at 100%. Empty means no limit.",
+      ui.spendLimit,
+      { aliases: ["budget", "orçamento", "gasto", "limite", "spending", "cost", "custo"] }
+    ),
+    toggle(
+      "Stop paid models at the limit",
+      "When today's spending reaches the limit, paid models pause until midnight. Free and local models keep working, and so do models without a public price.",
+      "travarNoLimite",
+      { aliases: ["budget", "orçamento", "travar", "pause", "block"] }
+    ),
+  ]);
 
   group(chat, { heading: "Assistant" }, [
     custom("Assistant model", "Model", "", ui.assistantModel, {

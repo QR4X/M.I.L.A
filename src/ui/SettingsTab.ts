@@ -338,6 +338,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
       ttsProvider: this.slot("ttsWho", "chat", (row) => this.paintTtsProvider(row)),
       elevenKey: (row) => this.paintElevenKey(row),
       tavilyKey: (row) => this.paintTavilyKey(row),
+      spendLimit: (row) => this.paintSpendLimit(row),
       elevenFetch: this.slot("elevenFetch", "chat", (row) => this.paintElevenFetch(row)),
       elevenVoice: this.slot("elevenVoice", "chat", (row) => this.paintElevenVoice(row)),
       testVoice: (row) => this.paintTestVoice(row),
@@ -1379,6 +1380,23 @@ export class AxxaSettingsTab extends PluginSettingTab {
           // chave. Os dois mudam com a digitação.
           this.repaint("ttsWho");
           this.refreshVisibility();
+        });
+    });
+  }
+
+  private paintSpendLimit(row: Setting): void {
+    const s = this.s;
+    row.addText((t) => {
+      t.inputEl.type = "number";
+      t.inputEl.min = "0";
+      t.inputEl.step = "0.5";
+      t.inputEl.inputMode = "decimal";
+      t.setPlaceholder("No limit")
+        .setValue(s.limiteGastoDiario > 0 ? String(s.limiteGastoDiario) : "")
+        .onChange(async (v) => {
+          const n = Number(v.replace(",", "."));
+          s.limiteGastoDiario = Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0;
+          await this.save();
         });
     });
   }
