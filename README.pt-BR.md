@@ -25,7 +25,7 @@
 
 - **Três modos, um painel.** Chat, Vault Q&A sobre as suas notas e um Agente que trabalha nos seus arquivos.
 - **Respostas que citam as suas notas.** O Vault Q&A faz busca híbrida (palavra-chave + vetor, reordenada pelos seus links) e cita as notas que usou como wikilinks que abrem a nota.
-- **Um agente que pergunta antes.** Ele cria, edita, move e apaga notas por um conjunto pequeno de ferramentas. As mudanças esperam o seu OK, o que é apagado vai pra lixeira e mover reescreve os seus `[[links]]`.
+- **Um agente que pergunta antes.** Ele cria, edita, move e apaga notas por um conjunto pequeno de ferramentas. Por padrão, toda mudança espera o seu OK; mover reescreve os seus `[[links]]`, e apagar segue a configuração de lixeira do Obsidian.
 - **Feito pro celular.** Desenhado primeiro pra gaveta do Obsidian no celular: o composer acompanha o teclado, há um modo tela cheia opcional, e o agente funciona no celular também.
 - **Seis provedores, suas chaves.** OpenAI, Anthropic, Google Gemini, OpenRouter, NVIDIA NIM e Ollama local. As chaves ficam no cofre do sistema.
 - **Pequeno e rápido.** O `main.js` tem cerca de 0,5 MB. Os 12 plugins de IA mais baixados vão de 0,56 a 14,6 MB, com mediana de uns 3,8 MB (medido em outubro de 2026).
