@@ -21,6 +21,7 @@ import {
   Notice,
   Platform,
   requestUrl,
+  type App,
 } from "obsidian";
 import type AxxaPlugin from "../main";
 import {
@@ -72,6 +73,7 @@ import {
 } from "./attachSources";
 import { getModelCapabilities } from "../providers/modelCapabilities";
 import { ConfirmModal, PromptModal, openPluginSettings } from "./modals";
+import { desfaziveis, desfazerRodada, desfazerUma, idDesfazivel } from "./agentUndo";
 import { VoiceDock } from "./VoiceBar";
 import {
   Sheet,
@@ -1743,7 +1745,23 @@ Open Settings › Providers to add it, then run the connection test.`,
         }
       >
         {toolAt !== null && tools ? (
-          <ToolDetail action={tools[toolAt]} />
+          <ToolDetail
+            action={tools[toolAt]}
+            app={plugin.app}
+            // A folha guarda uma CÓPIA das ações de quando abriu; o Undo feito
+            // aqui dentro tem que aparecer nela também, não só na conversa.
+            onUndone={(id) =>
+              setTools((ts) =>
+                ts
+                  ? ts.map((x) =>
+                      x.kind === "activity" && x.activity.undoId === id
+                        ? { ...x, activity: { ...x.activity, undone: true } }
+                        : x
+                    )
+                  : ts
+              )
+            }
+          />
         ) : (
           <SheetGroup>
             {(tools ?? []).map((a, i) => (
@@ -1754,7 +1772,13 @@ Open Settings › Providers to add it, then run the connection test.`,
                 iconTone={actionFailed(a) ? "danger" : undefined}
                 title={actionTitle(a)}
                 note={actionNote(a)}
-                tag={actionFailed(a) ? "failed" : undefined}
+                tag={
+                  actionFailed(a)
+                    ? "failed"
+                    : a.kind === "activity" && a.activity.undone
+                      ? "undone"
+                      : undefined
+                }
                 onClick={() => setToolAt(i)}
               />
             ))}
@@ -2012,9 +2036,60 @@ function toolSummary(step: AIToolStep): string {
   return `${chave}: ${texto}`.slice(0, 80);
 }
 
-/** Detalhe de uma ação: o que foi pedido e o que voltou. */
-function ToolDetail({ action }: { action: TurnAction }) {
+/**
+ * O chip "Undo" da resposta: desfaz tudo o que o agente mudou na rodada.
+ * Só existe enquanto sobra mudança desfazível — e só na sessão em que ela
+ * aconteceu (o desfazer mora na memória; ver agent/undo.ts).
+ */
+function UndoChip({
+  plugin,
+  actions,
+}: {
+  plugin: AxxaPlugin;
+  actions: TurnAction[];
+}) {
+  const [rodando, setRodando] = useState(false);
+  const ids = desfaziveis(
+    actions.map((a) => (a.kind === "activity" ? a.activity : undefined))
+  );
+  if (ids.length === 0) return null;
+  return (
+    <button
+      type="button"
+      className="axxa-tools-chip"
+      disabled={rodando}
+      aria-label={
+        ids.length === 1
+          ? "Undo the agent's change"
+          : `Undo the agent's ${ids.length} changes`
+      }
+      onClick={() => {
+        setRodando(true);
+        void desfazerRodada(plugin.app, ids).finally(() => setRodando(false));
+      }}
+    >
+      <Icon name="undo-2" size={15} />
+      <span>Undo</span>
+    </button>
+  );
+}
+
+/** Detalhe de uma ação: o que foi pedido e o que voltou — e, se ela mudou o
+ *  vault e ainda dá, o botão de desfazer só ela. */
+function ToolDetail({
+  action,
+  app,
+  onUndone,
+}: {
+  action: TurnAction;
+  app: App;
+  onUndone: (id: string) => void;
+}) {
   const ok = !actionFailed(action);
+  const [rodando, setRodando] = useState(false);
+  const desfazivel =
+    action.kind === "activity" ? idDesfazivel(action.activity) : null;
+  const desfeita = action.kind === "activity" && action.activity.undone;
   return (
     <div className="axxa-tool-detail">
       {action.kind !== "reasoning" && (
@@ -2022,6 +2097,30 @@ function ToolDetail({ action }: { action: TurnAction }) {
           <Icon name={ok ? "circle-check" : "circle-alert"} size={15} />
           {ok ? "Completed" : "Failed"}
         </p>
+      )}
+      {desfeita && (
+        <p className="axxa-tool-state is-undone">
+          <Icon name="undo-2" size={15} />
+          Undone
+        </p>
+      )}
+      {desfazivel && (
+        <button
+          type="button"
+          className="axxa-tool-undo"
+          disabled={rodando}
+          onClick={() => {
+            setRodando(true);
+            void desfazerUma(app, desfazivel)
+              .then((feito) => {
+                if (feito) onUndone(desfazivel);
+              })
+              .finally(() => setRodando(false));
+          }}
+        >
+          <Icon name="undo-2" size={16} />
+          <span>Undo this change</span>
+        </button>
       )}
       {action.kind === "step" ? (
         <>
@@ -2142,19 +2241,25 @@ const MessageRow = memo(function MessageRow({
           )}
           {msg.truncated && <small className="axxa-msg-note">truncated</small>}
           {actions && actions.length > 0 && (
-            // O que o agente FEZ vira um chip: quem quer ver abre a folha, e
-            // quem não quer não leva um <details> no meio da leitura.
-            <button
-              type="button"
-              className="axxa-tools-chip"
-              onClick={() => onOpenTools?.(actions)}
-            >
-              <span>
-                Ran {actions.length}{" "}
-                {actions.length === 1 ? "action" : "actions"}
-              </span>
-              <Icon name="chevron-right" size={15} />
-            </button>
+            <div className="axxa-tools-row">
+              {/* O que o agente FEZ vira um chip: quem quer ver abre a folha, e
+                  quem não quer não leva um <details> no meio da leitura. */}
+              <button
+                type="button"
+                className="axxa-tools-chip"
+                onClick={() => onOpenTools?.(actions)}
+              >
+                <span>
+                  Ran {actions.length}{" "}
+                  {actions.length === 1 ? "action" : "actions"}
+                </span>
+                <Icon name="chevron-right" size={15} />
+              </button>
+              {/* E o que ele MUDOU volta com um toque: a rodada inteira, da
+                  última mudança pra primeira. Some quando não sobra nada pra
+                  desfazer (ou a sessão em que ela aconteceu acabou). */}
+              <UndoChip plugin={plugin} actions={actions} />
+            </div>
           )}
         </div>
       );

@@ -88,6 +88,12 @@ export interface ActivityMeta {
   /** Quando "image" e phase=pending, renderiza um PLACEHOLDER com gradiente
    *  animado (a "moldura" da imagem sendo gerada, estilo ChatGPT). v0.1.182 */
   placeholder?: "image";
+  /** A mudança no vault que esta linha narra pode ser desfeita: o id no
+   *  registro do agent/undo.ts (o da própria mensagem). Só vale na sessão em
+   *  que ela aconteceu — fora dela o registro não tem, e o Undo não aparece. */
+  undoId?: string;
+  /** Já foi desfeita. */
+  undone?: boolean;
 }
 
 export interface AICommentMessage extends BaseMessage {
@@ -257,6 +263,10 @@ interface ChatState {
     patch: Partial<ActivityMeta>,
     contentPatch?: string
   ) => void;
+  /** Marca como DESFEITA a mudança que esta linha narra — na conversa que
+   *  estiver com ela, a da tela ou a que roda em segundo plano (o Undo é
+   *  tocado pela pessoa, não pelo turno, então não segue a regra do turno). */
+  markUndone: (id: string) => void;
   /** Toggle/seta reaction num ai-response. null = neutro, "like"/"dislike". */
   setReaction: (id: string, reaction: "like" | "dislike" | null) => void;
   /** Anexa as ações de tool do agent a uma ai-response (Agent mode). */
@@ -433,6 +443,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
         )
       )
     ),
+  markUndone: (id) =>
+    set((state) => {
+      const marcar = (ms: ChatMessage[]) =>
+        ms.map((m) =>
+          m.id === id && m.type === "ai-comment" && m.activity
+            ? { ...m, activity: { ...m.activity, undone: true } }
+            : m
+        );
+      return {
+        messages: marcar(state.messages),
+        ...(state.background
+          ? { background: { ...state.background, messages: marcar(state.background.messages) } }
+          : {}),
+      };
+    }),
   // Patch atômico de campos do activity meta. Usado pelo agent loop pra
   // mudar phase=pending → done/failed mantendo iconPending/pendingText.
   updateActivity: (id, patch, contentPatch) =>

@@ -110,7 +110,9 @@ O agente usa oito ferramentas: `vault_search`, `vault_list`, `vault_read`, `vaul
 
 - **Ask** (padrão): toda mudança espera o seu OK.
 - **Vault**: criar, editar e mover rodam sozinhos; apagar ainda pergunta.
-- **YOLO**: tudo roda sozinho, menos apagar, que sempre pergunta.
+- **YOLO**: tudo roda sozinho, inclusive apagar. O que se apaga vai para a lixeira; se o Obsidian estiver configurado para apagar de vez, apagar continua perguntando.
+
+Toda mudança do agente pode ser desfeita pela conversa: o **Undo** embaixo da resposta desfaz a rodada inteira, e cada ação da lista tem o seu. O desfazer preserva o que você mudou à mão depois, a menos que você escolha sobrescrever, e vale enquanto o Obsidian estiver aberto.
 
 Os caminhos ficam presos ao seu vault, e a confirmação mostra exatamente o que vai mudar.
 

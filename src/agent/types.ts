@@ -27,13 +27,13 @@ export interface AIToolStep {
   ok: boolean;
 }
 
-/** Quanto controle o user dá ao agent.
- *  - ask: confirma cada ação NÃO destrutiva via modal antes de executar
- *  - vault: pula confirmação pra read/list/create/edit. Destrutivo (delete/move)
- *           ainda pede confirmação
- *  - yolo: zero modais — agent executa tudo. Apenas pra power users
+/** Quanto controle o user dá ao agent (as regras moram em permissions.ts).
+ *  - ask: confirma cada mudança no vault antes de executar
+ *  - vault: cria, edita e move sem perguntar; apagar pergunta
+ *  - yolo: tudo sem perguntar, apagar inclusive — quando o apagado vai pra
+ *          uma lixeira; com "apagar de vez" no Obsidian, apagar pergunta
  *
- * Delete SEMPRE pede confirmação independente do nível (safety net forte). */
+ * Toda mudança do agente tem Undo na conversa durante a sessão (undo.ts). */
 export type PermissionLevel = "ask" | "vault" | "yolo";
 
 /** Contexto passado aos executores de tools. Além do `app`, carrega o que
@@ -73,7 +73,8 @@ export interface ToolDefinition {
   };
   /** true = pode mudar o vault (write/delete/move). Usado pra permissão. */
   destructive: boolean;
-  /** true = ação irreversível (delete). SEMPRE pede confirmação, mesmo em YOLO. */
+  /** true = apagar. Pergunta sempre, exceto no YOLO com o apagado indo pra
+   *  uma lixeira (ver decideToolGate). */
   irreversible?: boolean;
 }
 

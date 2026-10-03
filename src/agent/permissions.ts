@@ -4,7 +4,14 @@
 // Regras (do mais conservador pro mais aberto):
 //   - ask (default):  confirma TUDO destrutivo. Read/list passa direto.
 //   - vault:          read/list/create/edit/move passam. Delete pede confirmação.
-//   - yolo:           tudo passa. EXCETO delete (irreversível sempre pergunta).
+//   - yolo:           tudo passa — delete INCLUSIVE, quando o Obsidian manda o
+//                     apagado pra uma lixeira. Com "apagar de vez" nas
+//                     preferências dele, delete pergunta até no yolo.
+//
+// Antes (até 0.9.22) o yolo também perguntava no delete, e vault e yolo eram
+// o MESMO nível com dois nomes. O que separa os dois agora é o apagar — e ele
+// só roda sozinho quando dá pra voltar: lixeira do Obsidian ou do sistema, e
+// o Undo da conversa (agent/undo.ts).
 
 import type {
   PermissionDecision,
@@ -21,7 +28,8 @@ export function evaluatePermission(
     return { autoApprove: true };
   }
 
-  // Irreversíveis (delete) SEMPRE confirmam — safety net
+  // Apagar (o "irreversível") é decidido em decideToolGate, que sabe se o
+  // apagado vai pra lixeira. Aqui, sem essa informação, pergunta.
   if (tool.irreversible) {
     return { autoApprove: false };
   }
@@ -70,9 +78,18 @@ export type ToolGate = "auto" | "confirm";
 export function decideToolGate(
   tool: ToolDefinition,
   level: PermissionLevel,
-  opts: { approveAll: boolean }
+  opts: {
+    approveAll: boolean;
+    /** O Obsidian manda o que se apaga pra uma lixeira (do vault ou do
+     *  sistema)? Só então o yolo apaga sem perguntar. */
+    apagarVaiPraLixeira?: boolean;
+  }
 ): ToolGate {
-  if (tool.irreversible) return "confirm";
+  // Apagar: só o yolo pula a pergunta, e só com lixeira. Nem o "aprovar
+  // todas" do modal pula — ele vale pro que se desfaz sozinho.
+  if (tool.irreversible) {
+    return level === "yolo" && opts.apagarVaiPraLixeira === true ? "auto" : "confirm";
+  }
   if (opts.approveAll) return "auto";
   return evaluatePermission(tool, level).autoApprove ? "auto" : "confirm";
 }
@@ -82,7 +99,7 @@ export function decideToolGate(
 export const PERMISSION_LABELS: Record<PermissionLevel, string> = {
   ask: "Ask — confirms every change",
   vault: "Vault — edits freely, deletes ask",
-  yolo: "YOLO — no confirmations except deletes",
+  yolo: "YOLO — runs everything, deletes go to the trash",
 };
 
 /** O desenho de cada nível no menu de escolha das settings. */

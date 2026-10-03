@@ -88,7 +88,7 @@ export const EN_US = {
       "How much control the Agent has over the vault. Delete always asks for confirmation regardless of the level.",
     permissionAsk: "Ask — confirm every action that modifies a file",
     permissionVault: "Vault — free read/write, only delete asks",
-    permissionYolo: "YOLO — no modals, except delete (irreversible)",
+    permissionYolo: "YOLO — runs everything, deletes go to the trash",
     diffApproval: "Show diff in confirmations",
     diffApprovalDesc:
       "When the Agent asks for confirmation (per the permission level above), include a before/after diff of the change. Off = a simpler confirmation without the preview. Deletes always ask, on every level.",

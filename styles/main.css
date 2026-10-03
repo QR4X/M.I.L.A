@@ -6285,6 +6285,39 @@ input[type="range"].axxa-slider::-webkit-slider-thumb {
   color: var(--color-green);
 }
 
+/* Desfeita: estado, não erro — o tom de apoio, não o vermelho. */
+.axxa-root .axxa-tool-state.is-undone {
+  color: var(--text-muted);
+}
+
+/* "Undo this change": a única ação da folha de detalhe. Contorno, como as
+   pílulas de ação da home — quem tem peso na tela é a conversa. */
+.axxa-root button.axxa-tool-undo {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--axxa-2);
+  height: var(--axxa-tap);
+  padding: 0 var(--axxa-3);
+  border-radius: 999px;
+  background-color: var(--axxa-raised);
+  box-shadow: none;
+  color: var(--text-normal);
+  --icon-size: 16px;
+}
+
+.axxa-root button.axxa-tool-undo:hover:not(:disabled) {
+  background-color: var(--axxa-hover);
+}
+
+/* O "Ran N actions" e o "Undo" lado a lado, embaixo da resposta. */
+.axxa-root .axxa-tools-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--axxa-1) var(--axxa-4);
+}
+
 .axxa-root .axxa-tool-label {
   margin: var(--axxa-2) 0 0;
   color: var(--text-faint);

@@ -21,6 +21,7 @@ import {
   storeMessagesToProvider,
 } from "../agent/conversation";
 import { decideToolGate } from "../agent/permissions";
+import { antesDe, apagarVaiPraLixeira, depoisDe, registrarDesfazer } from "../agent/undo";
 import { ConfirmationModal } from "../agent/ConfirmationModal";
 import { TOOL_REGISTRY, isTransientError } from "../agent/tools";
 import { TOOL_DEFINITIONS, getToolDefinition } from "../agent/toolSchemas";
@@ -327,6 +328,7 @@ export async function runAgentTurn(
         // Gate: roda direto ("auto") ou abre o preview de confirmação.
         const gate = decideToolGate(def, permissionLevel, {
           approveAll: agentApproveAllRef.current,
+          apagarVaiPraLixeira: apagarVaiPraLixeira(plugin.app),
         });
         let approved = gate === "auto";
         if (gate === "confirm") {
@@ -411,6 +413,17 @@ export async function runAgentTurn(
           };
         }
         const executor = TOOL_REGISTRY[call.name];
+        // O que a mudança vai tirar do lugar, guardado ANTES dela — é disso
+        // que sai o Undo da conversa (agent/undo.ts). Falhar aqui não pode
+        // impedir a tool: sem a cópia, a mudança só fica sem Undo.
+        let antes: Awaited<ReturnType<typeof antesDe>> = null;
+        if (prep.def?.destructive) {
+          try {
+            antes = await antesDe(plugin.app, call.name, call.arguments);
+          } catch (err) {
+            console.warn("[axxa] sem cópia pro Undo:", err);
+          }
+        }
         const maxAttempts = 1 + Math.max(0, effortCfg.toolRetryOnError);
         let lastErr: unknown = null;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -434,6 +447,17 @@ export async function runAgentTurn(
                 ? result.slice(0, 800).trimEnd() + "\n…"
                 : result || undefined;
             updateActivity(activityId, { phase: "done", detail }, meta);
+            if (antes) {
+              try {
+                const volta = await depoisDe(plugin.app, antes);
+                if (volta) {
+                  registrarDesfazer(activityId, volta);
+                  updateActivity(activityId, { undoId: activityId });
+                }
+              } catch (err) {
+                console.warn("[axxa] Undo não registrado:", err);
+              }
+            }
             return {
               callId: call.id,
               content: result,

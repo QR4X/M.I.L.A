@@ -108,7 +108,9 @@ The agent uses eight tools: `vault_search`, `vault_list`, `vault_read`, `vault_c
 
 - **Ask** (default): every change waits for your OK.
 - **Vault**: creates, edits and moves run on their own; deletes still ask.
-- **YOLO**: everything runs on its own except deletes, which always ask.
+- **YOLO**: everything runs on its own, deletes included. Deletes go to your trash; if Obsidian is set to delete files permanently, they still ask.
+
+Every change the agent makes can be undone from the chat: **Undo** under the answer reverts the whole turn, and each action in the list has its own. Undo keeps anything you changed by hand since, unless you choose to overwrite it, and lasts while Obsidian stays open.
 
 File paths are sandboxed to your vault, and the confirmation shows exactly what will change.
 

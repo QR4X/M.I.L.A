@@ -77,7 +77,7 @@ export const PT_BR: Translations = {
       "Quanto controle o agente tem sobre o vault. Apagar sempre pede confirmação, seja qual for o nível.",
     permissionAsk: "Perguntar — confirma toda ação que mexe num arquivo",
     permissionVault: "Vault — lê e escreve à vontade, só apagar pergunta",
-    permissionYolo: "YOLO — sem modais, exceto apagar (irreversível)",
+    permissionYolo: "YOLO — roda tudo, o que apaga vai pra lixeira",
     diffApproval: "Mostrar o diff nas confirmações",
     diffApprovalDesc:
       "Quando o agente pede confirmação (conforme o nível acima), incluir o antes/depois da mudança. Desligado = uma confirmação mais simples, sem a prévia. Apagar sempre pergunta, em qualquer nível.",

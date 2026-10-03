@@ -43,6 +43,7 @@ import { revisarOllamaPadrao } from "./core/ollamaPadrao";
 import { definirGratisConhecidos } from "./usage/pricing";
 import { lancar, podar, type LivroDoDia } from "./usage/livroDoDia";
 import { definirAnotadorDeUso } from "./usage/anotador";
+import { esquecerDesfazeres } from "./agent/undo";
 import { LOCALES } from "./i18n";
 
 /** Resultado do último teste de credencial de um provider. */
@@ -1048,6 +1049,8 @@ export default class AxxaPlugin extends Plugin {
 
   onunload() {
     definirAnotadorDeUso(null);
+    // As cópias do Undo do agente não sobrevivem ao plugin (ver agent/undo.ts).
+    esquecerDesfazeres();
     // O que o livro anotou e ainda não gravou não se perde ao sair.
     if (this.usoTimer !== null) {
       window.clearTimeout(this.usoTimer);

@@ -772,7 +772,7 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       { tab: "agent" },
       "Permission level",
       null,
-      "When the agent stops to ask you before changing the vault. Deleting a note always asks, at every level.",
+      "When the agent stops to ask before changing the vault. In YOLO, deletes run on their own too when Obsidian sends deleted files to a trash (set to delete permanently, they still ask). Every change can be undone from the chat while Obsidian is open.",
       "agentPermissionLevel",
       () =>
         (Object.keys(PERMISSION_LABELS) as PermissionLevel[]).map((l) => ({

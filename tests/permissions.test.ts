@@ -17,8 +17,9 @@ const tool = (destructive: boolean, irreversible = false): ToolDefinition =>
 const gate = (
   t: ToolDefinition,
   level: PermissionLevel,
-  approveAll: boolean
-) => decideToolGate(t, level, { approveAll });
+  approveAll: boolean,
+  apagarVaiPraLixeira = false
+) => decideToolGate(t, level, { approveAll, apagarVaiPraLixeira });
 
 // v0.1.237 (auditoria P1-04/P1-05): o NÍVEL decide SE confirma (labels
 // vault/yolo prometem sem modal e agora cumprem); o toggle de diff só muda o
@@ -42,9 +43,17 @@ describe("decideToolGate", () => {
     expect(gate(tool(true), "ask", true)).toBe("auto");
   });
 
-  it("SEGURANÇA: irreversível (delete) SEMPRE confirma — nem 'aprovar todas' pula", () => {
+  it("SEGURANÇA: apagar sem lixeira SEMPRE confirma — nem yolo, nem 'aprovar todas'", () => {
     expect(gate(tool(true, true), "yolo", true)).toBe("confirm");
     expect(gate(tool(true, true), "yolo", false)).toBe("confirm");
     expect(gate(tool(true, true), "ask", true)).toBe("confirm");
+  });
+
+  it("o que separa vault de yolo: com lixeira, só o yolo apaga sem perguntar", () => {
+    expect(gate(tool(true, true), "yolo", false, true)).toBe("auto");
+    expect(gate(tool(true, true), "vault", false, true)).toBe("confirm");
+    expect(gate(tool(true, true), "ask", false, true)).toBe("confirm");
+    // "aprovar todas" continua não valendo pro apagar fora do yolo
+    expect(gate(tool(true, true), "vault", true, true)).toBe("confirm");
   });
 });

@@ -124,7 +124,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "vault_delete",
     description:
-      "Deletes a file or an EMPTY folder from the vault. Irreversible operation — always asks the user for confirmation, even in YOLO mode. For folders with content, delete the files first.",
+      "Deletes a file or an EMPTY folder from the vault (it goes to the trash, following the user's Obsidian setting). The user is usually asked to confirm. For folders with content, delete the files first.",
     parameters: {
       type: "object",
       properties: {
