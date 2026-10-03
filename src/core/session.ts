@@ -26,6 +26,7 @@ import {
   type UserMessage,
 } from "../store/chat";
 import { getProvider } from "../providers";
+import { modeloSalvoPara } from "./modeloPadrao";
 import { getTranslations } from "../i18n";
 import {
   saveChat,
@@ -172,26 +173,9 @@ export class ChatSession {
     };
   }
 
-  /** Modelo salvo pro provider (campos legados por provider nas settings). */
+  /** Modelo salvo pro provider (ver core/modeloPadrao.ts). */
   modelFor(provider: string): string {
-    const s = this.plugin.settings;
-    const fromField = (() => {
-      switch (provider) {
-        case "anthropic":
-          return s.anthropicModel;
-        case "gemini":
-          return s.geminiModel;
-        case "openrouter":
-          return s.openrouterModel;
-        case "nim":
-          return s.nimModel;
-        case "ollama":
-          return s.ollamaModel;
-        default:
-          return s.defaultModel;
-      }
-    })();
-    return fromField || s.activeModels?.[provider]?.[0] || "";
+    return modeloSalvoPara(this.plugin.settings, provider);
   }
 
   /** Opções do seletor de modelo (modelos ativos + o atual, se faltar). */

@@ -49,6 +49,16 @@ export function rankNotes(
 }
 
 /** As notas do vault no formato do ranking. */
+/**
+ * A nota que a pessoa tem aberta (ou teve por último): o "This note" do "+".
+ * `getActiveFile` devolve a do painel em foco e, com o foco no AXXA, a
+ * última aberta — que é justamente a que se quer anexar.
+ */
+export function notaAberta(app: App): { path: string; basename: string } | null {
+  const f = app.workspace.getActiveFile();
+  return f && f.extension === "md" ? { path: f.path, basename: f.basename } : null;
+}
+
 export function vaultNotes(app: App): NoteLike[] {
   return app.vault.getMarkdownFiles().map((f) => ({
     path: f.path,

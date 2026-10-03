@@ -1,0 +1,27 @@
+// src/core/modeloPadrao.ts
+// O modelo SALVO pra cada provider — os campos legados das settings (um por
+// provider) e, sem eles, o primeiro modelo ativo. É o que a conversa nova
+// usa (session.ts) e o que as ações do editor usam (editor/inline.ts): os
+// dois lugares tinham que concordar, então a regra mora num lugar só.
+
+import type { AxxaSettings } from "../main";
+
+export function modeloSalvoPara(s: AxxaSettings, provider: string): string {
+  const doCampo = (() => {
+    switch (provider) {
+      case "anthropic":
+        return s.anthropicModel;
+      case "gemini":
+        return s.geminiModel;
+      case "openrouter":
+        return s.openrouterModel;
+      case "nim":
+        return s.nimModel;
+      case "ollama":
+        return s.ollamaModel;
+      default:
+        return s.defaultModel;
+    }
+  })();
+  return doCampo || s.activeModels?.[provider]?.[0] || "";
+}

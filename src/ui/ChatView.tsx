@@ -92,6 +92,7 @@ import { modelLogo } from "../providers/modelLogo";
 import {
   rankNotes,
   readNote,
+  notaAberta,
   vaultNotes,
   wikilinkQuery,
   type NoteLike,
@@ -1672,6 +1673,28 @@ Open Settings › Providers to add it, then run the connection test.`,
             </SheetTiles>
 
             <SheetGroup>
+              {/* A nota aberta, a um toque: é a que a pessoa mais quer
+                  anexar, e achá-la na busca era o caminho mais longo. Some
+                  quando já está anexada. */}
+              {(() => {
+                const aberta = sheet === "plus" ? notaAberta(plugin.app) : null;
+                if (!aberta || attachments.some((a) => a.type === "note" && a.path === aberta.path)) {
+                  return null;
+                }
+                return (
+                  <SheetRow
+                    badge
+                    chevron
+                    icon="file-check"
+                    title="This note"
+                    note={aberta.basename}
+                    onClick={() => {
+                      void anexarNota(aberta.path);
+                      closeSheet();
+                    }}
+                  />
+                );
+              })()}
               <SheetRow
                 badge
                 chevron

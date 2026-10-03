@@ -44,6 +44,8 @@ import { definirGratisConhecidos } from "./usage/pricing";
 import { lancar, podar, type LivroDoDia } from "./usage/livroDoDia";
 import { definirAnotadorDeUso } from "./usage/anotador";
 import { esquecerDesfazeres } from "./agent/undo";
+import { registrarComandosDoEditor } from "./editor/comandos";
+import { esquecerPedidos } from "./editor/ponte";
 import { LOCALES } from "./i18n";
 
 /** Resultado do último teste de credencial de um provider. */
@@ -1003,6 +1005,10 @@ export default class AxxaPlugin extends Plugin {
       callback: () => this.activateView(),
     });
 
+    // O AXXA a partir da nota: comandos (perguntar, resumir, reescrever,
+    // corrigir, traduzir, continuar) e o clique direito no texto e na nota.
+    registrarComandosDoEditor(this);
+
     // Settings tab — aparece em Settings -> Community Plugins -> AXXA Agent.
     this.settingsTab = new AxxaSettingsTab(this.app, this);
     this.addSettingTab(this.settingsTab);
@@ -1057,6 +1063,7 @@ export default class AxxaPlugin extends Plugin {
     definirAnotadorDeUso(null);
     // As cópias do Undo do agente não sobrevivem ao plugin (ver agent/undo.ts).
     esquecerDesfazeres();
+    esquecerPedidos();
     // O que o livro anotou e ainda não gravou não se perde ao sair.
     if (this.usoTimer !== null) {
       window.clearTimeout(this.usoTimer);

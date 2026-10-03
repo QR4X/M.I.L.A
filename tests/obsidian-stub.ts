@@ -44,6 +44,18 @@ export class Plugin {}
 export class PluginSettingTab {}
 export class ItemView {}
 export class Modal {}
+// A lista de escolha do Obsidian (o "Translate selection…" usa): o mínimo pra
+// construir e consultar as sugestões num teste.
+export class SuggestModal<T> {
+  constructor(public app?: unknown) {}
+  setPlaceholder(_p: string): void {}
+  open(): void {}
+  close(): void {}
+  getSuggestions(_q: string): T[] {
+    return [];
+  }
+}
+export class MarkdownView {}
 export class Setting {}
 export class ToggleComponent {}
 export class TFile {}

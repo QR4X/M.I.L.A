@@ -23,6 +23,10 @@ import { Drawer, type ViewId } from "./Drawer";
 import { PainelCtx } from "./painel";
 import { ChatInstructionsSheet } from "./ChatInstructionsSheet";
 import type { ChatSummary } from "../core/chatPersistence";
+import { Notice } from "obsidian";
+import { ouvirPedidos } from "../editor/ponte";
+import { readNote } from "./notePicker";
+import { useChatStore } from "../store/chat";
 
 export interface ComposerInject {
   text: string;
@@ -86,6 +90,44 @@ export function App({
       u2();
     };
   }, [session, plugin]);
+
+  // O que vem do EDITOR (comandos e clique direito — ver editor/ponte.ts):
+  // uma nota vira conversa nova com ela anexada; um trecho selecionado vai
+  // pra conversa aberta. Os dois terminam na tela da conversa, com o campo
+  // aceso — ou já enviando, no "Summarize this note".
+  useEffect(
+    () =>
+      ouvirPedidos((p) => {
+        void (async () => {
+          const st = useChatStore.getState();
+          if (p.tipo === "nota") {
+            const nota = await readNote(plugin.app, p.path);
+            if (!nota) {
+              new Notice(`Note not found: ${p.path}`);
+              return;
+            }
+            session.newChat();
+            useChatStore.getState().addAttachment({ type: "note", path: nota.path, content: nota.content });
+          } else {
+            // Sem conversa na tela, o trecho começa uma; com conversa, entra
+            // nela — "manda isto pro chat" é pro chat que está aberto.
+            if (view !== "chat" && st.messages.length === 0) session.newChat();
+            useChatStore.getState().addAttachment({
+              type: "note",
+              path: `${p.path} (selection)`,
+              content: p.texto,
+            });
+          }
+          setPainel(null);
+          setMenuOpen(false);
+          setVoltarPara("home");
+          setView("chat");
+          if (p.tipo === "nota" && p.enviar) await session.send(p.enviar);
+          else setInject({ text: "", nonce: Date.now() });
+        })();
+      }),
+    [session, plugin, view]
+  );
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
