@@ -62,7 +62,7 @@ export interface SearchResult {
 }
 
 /** Provider de embeddings disponíveis. */
-export type EmbeddingProvider = "openai" | "openrouter" | "gemini" | "nim";
+export type EmbeddingProvider = "openai" | "openrouter" | "gemini" | "nim" | "ollama";
 
 /** Modelo + dimensão associada. */
 export interface EmbeddingModelSpec {
@@ -84,6 +84,9 @@ export interface EmbeddingModelSpec {
   free?: boolean;
   /** Descoberto via fetch da API (spec inferida, não curada). v0.1.151 */
   discovered?: boolean;
+  /** Roda na máquina de quem usa (Ollama): nada sai pra nuvem. A dimensão
+   *  é um palpite pelo nome — o indexador mede a de verdade antes de usar. */
+  local?: boolean;
 }
 
 export const EMBEDDING_MODELS: EmbeddingModelSpec[] = [
@@ -181,6 +184,22 @@ export function isEmbeddingModelId(id: string): boolean {
   return /embed/i.test(id);
 }
 
+/** As famílias de embedding mais comuns no Ollama — pelo nome, porque nem
+ *  todo Ollama diz no /api/show quais modelos são de embedding. */
+export function pareceEmbeddingDoOllama(nome: string): boolean {
+  return /(embed|bge|minilm|\be5\b|e5-|gte|nomic|mxbai|snowflake-arctic|granite-embedding|paraphrase|jina)/i.test(nome);
+}
+
+/** A dimensão provável de um embedding do Ollama, pela família. Só pra
+ *  mostrar: o indexador mede a de verdade com uma sonda. */
+function dimDoOllama(id: string): number {
+  if (/minilm|granite-embedding:30m|arctic-embed:(xs|s)\b|arctic-embed:2[23]m/.test(id)) return 384;
+  if (/qwen3-embedding:8b/.test(id)) return 4096;
+  if (/qwen3-embedding:4b/.test(id)) return 2560;
+  if (/mxbai|bge-m3|bge-large|arctic-embed(:l|:335m|$|:latest)|qwen3-embedding/.test(id)) return 1024;
+  return 768; // nomic-embed-text, embeddinggemma, paraphrase-multilingual, arctic-embed:m…
+}
+
 /**
  * Monta um spec pra um modelo de embedding: usa o curado se existir, senão
  * INFERE (dim por heurística de nome, free/imagem/dimensions por padrão). É a
@@ -194,6 +213,20 @@ export function inferEmbeddingSpec(
   if (curated) return curated;
 
   const id = model.toLowerCase();
+  // Ollama: na máquina de quem usa — sem custo, sem nuvem, e a imagem fica
+  // de fora (o caminho de imagem é só o do OpenRouter).
+  if (provider === "ollama") {
+    return {
+      provider,
+      model,
+      dim: dimDoOllama(id),
+      maxInputTokens: 8192,
+      pricePerMillion: 0,
+      free: true,
+      local: true,
+      discovered: true,
+    };
+  }
   // Dimensão — heurística pelos nomes conhecidos; default 1536.
   let dim = 1536;
   if (id.includes("3-large") || id.includes("gemini-embedding")) dim = 3072;

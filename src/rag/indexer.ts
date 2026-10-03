@@ -57,6 +57,8 @@ export interface IndexerOptions {
   openrouterApiKey: string;
   geminiApiKey?: string;
   nimApiKey?: string;
+  /** O endereço do Ollama (embedding local). */
+  ollamaEndpoint?: string;
   model: string;
   /** Perfil de quantização (precision/balanced/light/minimal). */
   profile: string;
@@ -157,6 +159,7 @@ export async function indexVault(
     openrouterApiKey,
     geminiApiKey,
     nimApiKey,
+    ollamaEndpoint,
     model,
     profile,
     indexPath,
@@ -166,11 +169,18 @@ export async function indexVault(
   } = opts;
   const spec = getEmbeddingSpec(model);
   const prof = getQuantProfile(profile);
-  const creds = { openaiApiKey, openrouterApiKey, geminiApiKey, nimApiKey };
+  const creds = { openaiApiKey, openrouterApiKey, geminiApiKey, nimApiKey, ollamaEndpoint };
   // Dim efetiva: reduzida (Matryoshka) só se o modelo suporta `dimensions`.
   // Senão, perfis "Leve/Mínimo" caem pra dim cheia (só a precisão int8 vale).
-  const effectiveDim =
+  let effectiveDim =
     prof.targetDim > 0 && spec.supportsDimensions ? prof.targetDim : spec.dim;
+  // Modelo LOCAL (Ollama): a dimensão do spec é palpite pelo nome. Uma sonda
+  // mede a de verdade antes de criar (ou comparar) o índice — com o palpite
+  // errado, todo reindex achava que a dimensão tinha mudado.
+  if (spec.local) {
+    const [sonda] = await embedItems([{ kind: "text", text: "dimension probe" }], creds, model);
+    if (sonda && sonda.length > 0) effectiveDim = sonda.length;
+  }
   const embedDims = spec.supportsDimensions ? effectiveDim : undefined;
 
   // Modo sharded → SEMPRE rebuild completo (o índice anterior é streamed, sem

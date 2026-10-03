@@ -20,6 +20,7 @@
 // Como a key não é necessária, passamos vazia mesmo.
 
 import { requestUrl } from "obsidian";
+import { pareceEmbeddingDoOllama } from "../rag/types";
 import {
   Provider,
   ProviderError,
@@ -510,6 +511,37 @@ export class OllamaProvider implements Provider {
       .map((m) => m?.name)
       .filter((n): n is string => typeof n === "string")
       .sort();
+  }
+
+  /**
+   * Os modelos de EMBEDDING instalados — o que deixa o Vault Q&A rodar sem
+   * nuvem. O nome resolve as famílias comuns (nomic-embed-text, mxbai, bge,
+   * all-minilm…); o resto pergunta ao /api/show, que nos Ollama recentes diz
+   * "embedding" nas capabilities. Sem resposta dele, fica só o nome.
+   */
+  async listEmbeddingModels(apiKey: string): Promise<string[]> {
+    const endpoint = this.getEndpoint(apiKey);
+    const todos = await this.listModels(apiKey);
+    const porNome = todos.filter((m) => pareceEmbeddingDoOllama(m));
+    const resto = todos.filter((m) => !pareceEmbeddingDoOllama(m));
+    const porCapacidade = await Promise.all(
+      resto.map(async (model) => {
+        try {
+          const res = await requestUrl({
+            url: `${endpoint}/api/show`,
+            method: "POST",
+            contentType: "application/json",
+            body: JSON.stringify({ model }),
+            throw: false,
+          });
+          const caps = (res.json as { capabilities?: unknown } | undefined)?.capabilities;
+          return Array.isArray(caps) && caps.includes("embedding") ? model : null;
+        } catch {
+          return null;
+        }
+      })
+    );
+    return [...porNome, ...porCapacidade.filter((m): m is string => m !== null)].sort();
   }
 }
 

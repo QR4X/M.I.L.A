@@ -10,7 +10,8 @@ describe("embeddings descobertos", () => {
   it("o Fetch de modelos traz os de embedding junto", () => {
     const tab = readFileSync(resolve(__dirname, "../src/ui/SettingsTab.ts"), "utf8");
     expect(tab).toMatch(/this\.plugin\.scanEmbeddings\(providerId\)/);
-    expect(EMBEDDING_PROVIDERS).toEqual(["openai", "openrouter", "gemini", "nim"]);
+    // o Ollama entrou na 0.9.23: embedding local, sem nuvem
+    expect(EMBEDDING_PROVIDERS).toEqual(["openai", "openrouter", "gemini", "nim", "ollama"]);
   });
 
   it("somar descobertos não repete e mantém os antigos na frente", () => {

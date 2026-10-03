@@ -49,6 +49,7 @@ export interface ToolContext {
     openrouterApiKey: string;
     geminiApiKey?: string;
     nimApiKey?: string;
+    ollamaEndpoint?: string;
   };
   /** As ferramentas de web (agent/web.ts): a chave da busca. */
   web?: { tavilyApiKey: string };

@@ -444,6 +444,7 @@ export async function runAgentTurn(
                   openrouterApiKey: plugin.settings.openrouterApiKey,
                   geminiApiKey: plugin.settings.geminiApiKey,
                   nimApiKey: plugin.settings.nimApiKey,
+                  ollamaEndpoint: plugin.settings.ollamaEndpoint,
                 },
                 web: { tavilyApiKey: tavily },
               },

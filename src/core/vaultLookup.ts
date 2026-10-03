@@ -69,6 +69,7 @@ export async function buscarContextoDoVault({
         openrouterApiKey: plugin.settings.openrouterApiKey,
         geminiApiKey: plugin.settings.geminiApiKey,
         nimApiKey: plugin.settings.nimApiKey,
+        ollamaEndpoint: plugin.settings.ollamaEndpoint,
       },
       query,
       topK,

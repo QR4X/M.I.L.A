@@ -74,6 +74,8 @@ export interface EmbedCredentials {
   openrouterApiKey: string;
   geminiApiKey?: string;
   nimApiKey?: string;
+  /** O endereço do Ollama (embedding local). */
+  ollamaEndpoint?: string;
 }
 
 /**
@@ -396,6 +398,69 @@ export async function embedBatchOpenRouter(
 //
 // Se o modelo NÃO suporta imagem mas o batch tem imagem, dá erro claro.
 
+/**
+ * Embeda textos no OLLAMA da pessoa — na máquina dela (ou na rede dela):
+ * nada vai pra nuvem. `/api/embed` é o atual e aceita a lista inteira; um
+ * Ollama antigo só tem o `/api/embeddings`, de um texto por vez — o 404 do
+ * novo cai nele.
+ */
+export async function embedOllama(
+  texts: string[],
+  endpoint: string,
+  model: string
+): Promise<number[][]> {
+  const base = (endpoint || "http://localhost:11434").replace(/\/+$/, "");
+  if (texts.length === 0) return [];
+  const pedir = async (path: string, body: unknown) => {
+    try {
+      return await withTimeout(
+        requestUrl({
+          url: `${base}${path}`,
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          throw: false,
+        }),
+        "Ollama"
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "network error";
+      throw new ProviderError(`Couldn't reach Ollama at ${base} (${msg}) — is it running?`, "network");
+    }
+  };
+
+  const res = await pedir("/api/embed", { model, input: texts, truncate: true });
+  if (res.status === 404) {
+    // Ollama antigo: um por vez, no endpoint de antes.
+    const out: number[][] = [];
+    for (const prompt of texts) {
+      const r = await pedir("/api/embeddings", { model, prompt });
+      if (r.status >= 400) {
+        throw new ProviderError(`Ollama embeddings returned ${r.status}: ${r.text?.slice(0, 200) ?? ""}`, "unknown");
+      }
+      const emb = (r.json as { embedding?: unknown } | undefined)?.embedding;
+      if (!ehVetor(emb) || emb.length === 0) {
+        throw new ProviderError(`Ollama returned no embedding for ${model}.`, "unknown");
+      }
+      out.push(emb);
+      anotarUso("ollama", model, { r: 1 });
+    }
+    return out;
+  }
+  if (res.status >= 400) {
+    throw new ProviderError(`Ollama embeddings returned ${res.status}: ${res.text?.slice(0, 200) ?? ""}`, "unknown");
+  }
+  const lista = (res.json as { embeddings?: unknown } | undefined)?.embeddings;
+  if (!Array.isArray(lista) || lista.length !== texts.length || !lista.every((v) => ehVetor(v) && v.length > 0)) {
+    throw new ProviderError(
+      `Ollama returned ${Array.isArray(lista) ? lista.length : 0} vectors for ${texts.length} inputs.`,
+      "unknown"
+    );
+  }
+  anotarUso("ollama", model, { r: 1 });
+  return lista as number[][];
+}
+
 /** Embeda items (texto e/ou imagem) usando o provider do modelo. */
 export async function embedItems(
   items: EmbedInput[],
@@ -429,6 +494,9 @@ export async function embedItems(
   }
   // Texto puro pros endpoints OpenAI-compat (OpenAI / Gemini / NIM)
   const texts = items.map((i) => (i.kind === "text" ? i.text : ""));
+  if (spec.provider === "ollama") {
+    return embedOllama(texts, creds.ollamaEndpoint ?? "", model);
+  }
   if (spec.provider === "gemini") {
     return embedOpenAICompat(
       texts,

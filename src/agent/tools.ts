@@ -380,6 +380,7 @@ export async function toolVaultSearch(
       openrouterApiKey: ctx.embed.openrouterApiKey,
       geminiApiKey: ctx.embed.geminiApiKey,
       nimApiKey: ctx.embed.nimApiKey,
+      ollamaEndpoint: ctx.embed.ollamaEndpoint,
     },
     query,
     topK,

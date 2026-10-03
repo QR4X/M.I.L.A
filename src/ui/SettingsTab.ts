@@ -1540,8 +1540,11 @@ export class AxxaSettingsTab extends PluginSettingTab {
       items: specs.map((spec) => {
         // O mesmo "grátis de verdade" da lista de modelos: a lista do fetch
         // (NIM, OpenRouter) e o tier da conta no Gemini.
-        const gratis =
-          spec.provider === "gemini"
+        // Local (Ollama) não é "grátis de um provider": é a máquina de quem
+        // usa, e a etiqueta diz isso — nada sai dela.
+        const gratis = spec.local
+          ? "local"
+          : spec.provider === "gemini"
             ? geminiTemTierGratis(spec.model)
               ? "free tier"
               : ""
@@ -1550,7 +1553,11 @@ export class AxxaSettingsTab extends PluginSettingTab {
               : "";
         const extras = [
           gratis,
-          providerConfigured(this.plugin, spec.provider) ? "" : "needs key",
+          providerConfigured(this.plugin, spec.provider)
+            ? ""
+            : spec.provider === "ollama"
+              ? "needs Ollama"
+              : "needs key",
         ].filter(Boolean);
         return {
           value: spec.model,

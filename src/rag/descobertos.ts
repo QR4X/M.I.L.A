@@ -9,6 +9,7 @@ export const EMBEDDING_PROVIDERS: readonly string[] = [
   "openrouter",
   "gemini",
   "nim",
+  "ollama",
 ];
 
 /** Soma os ids novos aos já salvos, sem repetir — os antigos ficam na frente:
