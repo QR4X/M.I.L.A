@@ -34,6 +34,36 @@ describe("previewFromMarkdown", () => {
     expect(previewFromMarkdown(md)).toBe("Plano primeiro segundo const a = 1;");
   });
 
+  it("negrito, itálico e companhia saem; o texto fica (achado no cartão do Agent)", () => {
+    const md = arquivo(
+      "## Assistant\n\nYour Lisbon trip note has been moved and is now at **Travel/Lisbon trip.md**. " +
+        "It was *old*, _really_ ~~gone~~ ==here==, __done__.\n"
+    );
+    expect(previewFromMarkdown(md)).toBe(
+      "Your Lisbon trip note has been moved and is now at Travel/Lisbon trip.md. " +
+        "It was old, really gone here, done."
+    );
+  });
+
+  it("o que parece ênfase mas não é fica como está", () => {
+    const md = arquivo(
+      "## Assistant\n\nsnake_case_name, 2 * 3 * 4, a_b e `a*b*c` e \\*literal\\*\n"
+    );
+    expect(previewFromMarkdown(md)).toBe("snake_case_name, 2 * 3 * 4, a_b e a*b*c e *literal*");
+  });
+
+  it("wikilink mostra o nome (ou o apelido), e embed some", () => {
+    const md = arquivo(
+      "## Assistant\n\nveja [[Lisbon]], [[Trips/Lisbon|a viagem]] e [[Lisbon#Hotel]] ![[mapa.png]]\n"
+    );
+    expect(previewFromMarkdown(md)).toBe("veja Lisbon, a viagem e Lisbon > Hotel");
+  });
+
+  it("tag de HTML sai, mas comparação com < e > fica", () => {
+    const md = arquivo("## Assistant\n\nlinha<br>outra, e 1 < 2 > 0\n");
+    expect(previewFromMarkdown(md)).toBe("linha outra, e 1 < 2 > 0");
+  });
+
   it("link mostra o texto, imagem não mostra nada", () => {
     const md = arquivo("## Assistant\n\nveja [o plano](x.md) ![](y.png)\n");
     expect(previewFromMarkdown(md)).toBe("veja o plano");

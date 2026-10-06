@@ -42,22 +42,50 @@ export function previewFromText(bruto: string): string {
   return limpar(bruto).slice(0, TETO);
 }
 
+/** A marca de um trecho guardado à parte: um caractere de uso privado
+ *  (U+E000), que não aparece em texto e, ao contrário do \0, não é de
+ *  controle (o lint recusa caractere de controle em regex). */
+const MARCA = String.fromCharCode(0xe000);
+const GUARDADO = new RegExp(`${MARCA}(\\d+)${MARCA}`, "g");
+
 /** Tira do texto tudo que só existe pro arquivo, não pra quem lê o cartão. */
 function limpar(bruto: string): string {
-  return (
-    bruto
-      // Comentários do formato: a meta da mensagem e os passos do agente em
-      // base64 (que são longos e não dizem nada assim).
-      .replace(/<!--[\s\S]*?-->/g, " ")
-      // Cerca de código: o que importa é o código, não as crases.
-      .replace(/^```.*$/gm, " ")
-      // Marcas de início de linha (#, >, -, *, 1.) — viram ruído numa linha só.
-      .replace(/^\s{0,3}(?:[#>]+|[-*+]|\d+\.)\s+/gm, " ")
-      // Imagem/anexo não têm o que mostrar em texto.
-      .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
-      // Link vira o texto dele.
-      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-      .replace(/\s+/g, " ")
-      .trim()
-  );
+  // Código em linha sai da frente antes das ênfases: `a*b*c` é código, e as
+  // estrelas dele ficam. Volta no fim, sem as crases.
+  const codigos: string[] = [];
+  const guardar = (_: string, c: string) => `${MARCA}${codigos.push(c) - 1}${MARCA}`;
+  const texto = bruto
+    // Comentários do formato: a meta da mensagem e os passos do agente em
+    // base64 (que são longos e não dizem nada assim).
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    // Cerca de código: o que importa é o código, não as crases.
+    .replace(/^```.*$/gm, " ")
+    // Marcas de início de linha (#, >, -, *, 1.) — viram ruído numa linha só.
+    .replace(/^\s{0,3}(?:[#>]+|[-*+]|\d+\.)\s+/gm, " ")
+    .replace(/`([^`\n]+)`/g, guardar)
+    // Escape de markdown (\* \_ \[) é o caractere em si: sai da frente pelo
+    // mesmo caminho, senão "\*x\*" viraria itálico.
+    .replace(/\\([\\`*_{}[\]()#+\-.!~=|>])/g, guardar)
+    // Imagem/anexo (markdown ou ![[embed]]) não têm o que mostrar em texto.
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/!\[\[[^\]]*\]\]/g, " ")
+    // [[nota|apelido]] mostra o apelido; [[nota#Seção]], "nota > Seção" —
+    // como o Obsidian escreve esse link na leitura.
+    .replace(/\[\[[^\]|]*\|([^\]]+)\]\]/g, "$1")
+    .replace(/\[\[([^\]]+)\]\]/g, (_, alvo: string) => alvo.replace(/#\^?/g, " > "))
+    // Link vira o texto dele.
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    // Ênfases: o negrito que o modelo usa a cada frase aparecia como **.
+    // Sem lookbehind de propósito: regex com ele nem compila no WebKit do
+    // iOS 15/16, e um erro de sintaxe aqui derrubaria o plugin inteiro.
+    .replace(/\*\*(?=\S)([^*\n]*?\S)\*\*/g, "$1")
+    .replace(/(^|[^\w])__(?=\S)([^_\n]*?\S)__(?!\w)/g, "$1$2")
+    .replace(/(^|[^\w*])\*(?=\S)([^*\n]*?[^\s*])\*(?![\w*])/g, "$1$2")
+    .replace(/(^|[^\w])_(?=\S)([^_\n]*?[^\s_])_(?!\w)/g, "$1$2")
+    .replace(/~~(?=\S)([^~\n]*?\S)~~/g, "$1")
+    .replace(/==(?=\S)([^=\n]*?\S)==/g, "$1")
+    // Tag de HTML solta (<br>, <sup>…) — só a que parece tag, não "a < b".
+    .replace(/<\/?[a-zA-Z][^<>]*>/g, " ")
+    .replace(GUARDADO, (_, i: string) => codigos[Number(i)] ?? "");
+  return texto.replace(/\s+/g, " ").trim();
 }
