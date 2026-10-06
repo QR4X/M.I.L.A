@@ -7,6 +7,7 @@ import { settingsReadLooksBroken } from "./core/settingsGuard";
 import { AXXA_HIDDEN, HIDDEN_MOVES, shouldMigrate } from "./core/vaultPaths";
 import { getProvider } from "./providers";
 import { AxxaView, VIEW_TYPE_AXXA } from "./ui/AxxaView";
+import { FONTE_DO_HOVER } from "./ui/linksDaResposta";
 import { registerBrandLogos } from "./ui/brandLogos";
 import { AxxaSettingsTab } from "./ui/SettingsTab";
 import { VectorIndex, loadIndex, RAG_SHARD_SIZE } from "./rag/vectorIndex";
@@ -1016,6 +1017,13 @@ export default class AxxaPlugin extends Plugin {
       VIEW_TYPE_AXXA,
       (leaf) => new AxxaView(leaf, this)
     );
+
+    // Os [[links]] das respostas mostram a prévia da nota ao passar o mouse,
+    // como os de uma nota (o "Page preview" lista a fonte e o atalho).
+    this.registerHoverLinkSource(FONTE_DO_HOVER, {
+      display: "AXXA Agent",
+      defaultMod: true,
+    });
 
     // Ícone na ribbon (sidebar esquerda do Obsidian).
     this.addRibbonIcon("bot", "AXXA Agent", () => {

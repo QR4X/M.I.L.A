@@ -13,7 +13,13 @@
 //             visível de uma vez. O usuário nunca vê o vazio do meio.
 
 import { useCallback, useEffect, useRef } from "react";
-import { App, Component, MarkdownRenderer } from "obsidian";
+import { App, Component, Keymap, MarkdownRenderer, Platform, type HoverParent } from "obsidian";
+import {
+  abrirLinkDaResposta,
+  linkInterno,
+  previaDoLink,
+  textoDoLink,
+} from "./linksDaResposta";
 
 /** Teto de renders por segundo enquanto o texto chega. */
 const THROTTLE_MS = 140;
@@ -35,6 +41,8 @@ export function Markdown({
   textRef.current = text;
   /** O que já está na tela: evita re-render de texto que não mudou. */
   const shownRef = useRef<string | null>(null);
+  /** Dono da prévia de nota aberta pelo hover (o Obsidian guarda ela aqui). */
+  const hoverRef = useRef<HoverParent>({ hoverPopover: null });
 
   const render = useCallback(
     async (md: string) => {
@@ -88,6 +96,38 @@ export function Markdown({
     },
     []
   );
+
+  // Os [[links]] da resposta abrem a nota (linksDaResposta.ts). Um ouvinte só,
+  // no contêiner: o conteúdo é trocado a cada render e o contêiner fica.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const abrir = (e: MouseEvent) => {
+      const a = linkInterno(e.target, el);
+      if (!a) return;
+      // O botão do meio chega no auxclick; o direito fica com o menu.
+      if (e.type === "auxclick" && e.button !== 1) return;
+      e.preventDefault();
+      e.stopPropagation();
+      abrirLinkDaResposta(app, textoDoLink(a), Keymap.isModEvent(e), el);
+    };
+    const previa = (e: MouseEvent) => {
+      const a = linkInterno(e.target, el);
+      // Andar entre os filhos do mesmo link não é entrar nele de novo.
+      if (!a || a.contains(e.relatedTarget as Node | null)) return;
+      previaDoLink(app, e, a, hoverRef.current);
+    };
+    el.addEventListener("click", abrir);
+    el.addEventListener("auxclick", abrir);
+    if (!Platform.isMobile) el.addEventListener("mouseover", previa);
+    const pai = hoverRef.current;
+    return () => {
+      el.removeEventListener("click", abrir);
+      el.removeEventListener("auxclick", abrir);
+      el.removeEventListener("mouseover", previa);
+      pai.hoverPopover?.unload();
+    };
+  }, [app]);
 
   return <div ref={ref} className="axxa-markdown" />;
 }

@@ -70,3 +70,7 @@ export function getLanguage(): string {
 // Mutável nos testes: por padrão "desktop"; vire isMobile=true pra testar o
 // caminho mobile (ex: arquivo de índice separado).
 export const Platform = { isMobile: false };
+// O caminho de um link sem o "#seção" / "#^bloco", como o real.
+export function getLinkpath(linktext: string): string {
+  return linktext.replace(/#.*$/, "");
+}
