@@ -82,9 +82,9 @@ Test builds are published as GitHub pre-releases. Install [BRAT](https://github.
 <details>
 <summary>How Vault Q&A searches</summary>
 
-- Hybrid search: semantic similarity plus keyword (BM25) ranking, re-ranked with your vault's link graph.
-- Embedding models from 4 providers: OpenAI (`text-embedding-3-small/large`, `ada-002`), Gemini (`gemini-embedding-001`, `text-embedding-004`), NVIDIA NIM (the embedding models its catalog lists when you fetch models) and OpenRouter's free Nemotron VL, which also embeds images.
-- The index is stored in your vault and updates incrementally, only for changed files. Without an embedding model (or offline), search falls back to keywords.
+- Hybrid search: semantic similarity plus keyword matching (a match in a note's title counts more than one in its text), re-ranked with your vault's link graph.
+- Embedding models from 5 providers: OpenAI (`text-embedding-3-small/large`, `ada-002`), Gemini (`gemini-embedding-001`, `text-embedding-004`), NVIDIA NIM (the embedding models its catalog lists when you fetch models), OpenRouter's free Nemotron VL, which also embeds images, and your own Ollama (for example `nomic-embed-text`), which keeps indexing and search on your machine.
+- The index is stored in your vault and updates incrementally, only for changed files. Without an embedding model (or offline with a cloud one), search falls back to keywords.
 </details>
 
 ## Providers
@@ -119,7 +119,7 @@ File paths are sandboxed to your vault, and the confirmation shows exactly what 
 - **No telemetry, no account, nothing sent to us.** Requests go only to the providers you configure and to web pages you ask it to read.
 - **Keys stay on your device** in your OS keychain (Obsidian's `secretStorage`), never in `data.json`, so they don't travel through Sync or backups.
 - **Your notes leave the device only to the provider you chose**, as part of a conversation or the Vault Q&A index. The index itself is stored in your vault.
-- **Offline with Ollama.** Chat and the agent run fully on your machine with a local model; Vault Q&A then searches by keyword, because the embedding models are cloud services.
+- **Offline with Ollama.** Chat, Vault Q&A and the agent can all run on your machine with Ollama (Vault Q&A needs an embedding model such as `nomic-embed-text`; the agent needs a model with tools).
 
 When you use a third-party provider, its own terms and privacy policy apply.
 
@@ -141,7 +141,7 @@ Per Obsidian's developer policies, in plain terms:
 - **Accounts and payment.** The plugin is free, but it needs your own key for at least one provider (Ollama, running locally, needs none). Most providers bill API usage per token; some offer free models or quotas.
 - **Vault enumeration.** The plugin reads your vault's file list (Obsidian's `getMarkdownFiles` / `getFiles`) to build the Vault Q&A index, for the keyword half of vault search (Vault Q&A, Agent context and the agent's `vault_search`), for the note picker (**+ › Notes**, `[[` mentions and project sources) and, only if you turn on *Let it see your note names* (off by default), so the creation assistant can suggest notes for a project. The list itself stays on your device, with three exceptions: in that last case the paths of up to 300 recent notes (never their content) go to the assistant's model; in Agent mode the `vault_list` tool sends the names of the files in a folder (the vault root included) to the chat model, without asking; and `vault_search` sends the paths and excerpts of the notes it finds.
 - **Automatic context.** In Vault Q&A and Agent conversations, a per-chat vault switch starts **on**: excerpts of the notes that match your message are sent with it to the chat provider. In Chat it starts **off**.
-- **Files read and written.** Chats and the Vault Q&A index are saved inside your vault, in the hidden `.axxa/` folder by default. When you ask for them, exports go to `axxa-ai/exports/`, usage reports to `axxa-ai/reports/` and skills to `axxa-ai/skills/`. In Agent mode the model can read any text file in your vault and create, edit, move and delete notes and folders through its tools. Changes ask for confirmation according to the permission level you set (and **Approve all** in that dialog stops asking for reversible changes until the session ends); deletes ask at every level except YOLO, and even there when Obsidian is set to delete files permanently. Every change the agent makes can be undone from the chat while Obsidian stays open.
+- **Files read and written.** Chats and the Vault Q&A index are saved inside your vault, in the hidden `.axxa/` folder by default. When you ask for them, exports go to `axxa-ai/exports/`, usage reports to `axxa-ai/reports/` and skills to `axxa-ai/skills/`. In Agent mode the model can read any text file in your vault and create, edit, move and delete notes and folders through its tools. Changes ask for confirmation according to the permission level you set (and **Approve all** in that dialog stops asking for the rest of that turn's reversible changes; on a web request, it covers only that turn's web requests); deletes ask at every level except YOLO, and even there when Obsidian is set to delete files permanently. Every change the agent makes can be undone from the chat while Obsidian stays open.
 
 <details>
 <summary>Why the plugin uses <code>fetch</code>, and the one Node API it touches</summary>
@@ -206,7 +206,7 @@ Use the [bug report form](https://github.com/axxalab/axxa-agent/issues/new?templ
 ## Roadmap
 
 - **Now:** stability across all six providers, and the agent with local Ollama models.
-- **Next:** PDFs on Gemini, NIM and Ollama; a Coder mode with diff previews; a Portuguese interface.
+- **Next:** PDFs on Gemini, NIM and Ollama; a Coder mode with diff previews.
 - **Later:** MCP connectors (Notion, Linear, GitHub); optional paid extras such as cross-device sync and automatic media transcription.
 
 Ideas and votes live in [Discussions › Ideas](https://github.com/axxalab/axxa-agent/discussions/categories/ideas).

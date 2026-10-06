@@ -19,7 +19,7 @@
 
 <p align="center"><a href="https://agent.axxalab.com.br/pt/">Site</a> · <a href="#instalação">Instalar</a> · <a href="#começo-rápido">Começo rápido</a> · <a href="#privacidade-e-dados">Privacidade</a> · <a href="#perguntas-frequentes">Perguntas</a> · <a href="https://github.com/axxalab/axxa-agent/discussions">Discussions</a></p>
 
-> A interface do plugin é em inglês. A versão em português está no roadmap.
+> A interface do plugin está em inglês e em português do Brasil. Por padrão ela segue o idioma do Obsidian, e dá pra trocar em Settings › Chat › Language.
 
 ## O que ele faz
 
@@ -84,9 +84,9 @@ As versões de teste saem como pré-releases no GitHub. Instale o [BRAT](https:/
 <details>
 <summary>Como o Vault Q&A busca</summary>
 
-- Busca híbrida: semelhança semântica mais ranqueamento por palavra-chave (BM25), reordenado pelo grafo de links do vault.
-- Modelos de embedding de 4 provedores: OpenAI (`text-embedding-3-small/large`, `ada-002`), Gemini (`gemini-embedding-001`, `text-embedding-004`), NVIDIA NIM (os modelos de embedding que o catálogo dele lista quando você busca os modelos) e o Nemotron VL grátis do OpenRouter, que também faz embedding de imagens.
-- O índice fica salvo no vault e se atualiza só nos arquivos que mudaram. Sem modelo de embedding (ou offline), a busca usa só palavra-chave.
+- Busca híbrida: semelhança semântica mais busca por palavra-chave (achar no título da nota vale mais que achar no texto), reordenada pelo grafo de links do vault.
+- Modelos de embedding de 5 provedores: OpenAI (`text-embedding-3-small/large`, `ada-002`), Gemini (`gemini-embedding-001`, `text-embedding-004`), NVIDIA NIM (os modelos de embedding que o catálogo dele lista quando você busca os modelos), o Nemotron VL grátis do OpenRouter, que também faz embedding de imagens, e o seu Ollama (por exemplo o `nomic-embed-text`), que deixa a indexação e a busca na sua máquina.
+- O índice fica salvo no vault e se atualiza só nos arquivos que mudaram. Sem modelo de embedding (ou offline com um da nuvem), a busca usa só palavra-chave.
 </details>
 
 ## Provedores
@@ -121,7 +121,7 @@ Os caminhos ficam presos ao seu vault, e a confirmação mostra exatamente o que
 - **Sem telemetria, sem conta, nada enviado pra nós.** As requisições vão só pros provedores que você configurar e pras páginas que você pedir pra ler.
 - **As chaves ficam no aparelho**, no cofre do sistema (o `secretStorage` do Obsidian), nunca no `data.json`, então não viajam pelo Sync nem por backup.
 - **As suas notas só saem do aparelho pro provedor que você escolheu**, numa conversa ou no índice do Vault Q&A. O índice em si fica no vault.
-- **Offline com o Ollama.** O chat e o agente rodam inteiros na sua máquina com um modelo local; o Vault Q&A busca então por palavra-chave, porque os modelos de embedding são serviços na nuvem.
+- **Offline com o Ollama.** O chat, o Vault Q&A e o agente podem rodar todos na sua máquina com o Ollama (o Vault Q&A precisa de um modelo de embedding, como o `nomic-embed-text`; o agente, de um modelo com ferramentas).
 
 Ao usar um provedor terceiro, valem os termos e a política de privacidade dele.
 
@@ -143,7 +143,7 @@ Pelas políticas de desenvolvedor do Obsidian, em linguagem direta:
 - **Contas e pagamento.** O plugin é gratuito, mas precisa da sua chave de pelo menos um provedor (o Ollama, rodando local, não precisa). A maioria cobra o uso da API por token; alguns oferecem modelos ou cotas gratuitas.
 - **Listagem do vault.** O plugin lê a lista de arquivos do vault (o `getMarkdownFiles` / `getFiles` do Obsidian) pra montar o índice do Vault Q&A, pra metade por palavra-chave da busca no vault (Vault Q&A, contexto do Agent e a ferramenta `vault_search` do agente), pro seletor de notas (**+ › Notes**, menções `[[` e fontes de projeto) e — só se você ligar *Let it see your note names*, que vem desligado — pra assistente de criação sugerir notas pra um projeto. A lista fica no aparelho, com três exceções: nesse último caso os caminhos de até 300 notas recentes (nunca o conteúdo) vão pro modelo da assistente; no modo Agent a ferramenta `vault_list` manda os nomes dos arquivos de uma pasta (a raiz inclusive) pro modelo do chat, sem perguntar; e a `vault_search` manda os caminhos e trechos das notas que acha.
 - **Contexto automático.** Nas conversas de Vault Q&A e Agent, um interruptor de vault por conversa nasce **ligado**: trechos das notas que combinam com a sua mensagem vão junto dela pro provedor do chat. No Chat ele nasce **desligado**.
-- **Arquivos lidos e gravados.** As conversas e o índice do Vault Q&A ficam dentro do vault, na pasta oculta `.axxa/` por padrão. Quando você pede, exportações vão pra `axxa-ai/exports/`, relatórios de uso pra `axxa-ai/reports/` e skills pra `axxa-ai/skills/`. No modo Agent o modelo pode ler qualquer arquivo de texto do vault e criar, editar, mover e apagar notas e pastas pelas ferramentas dele. Mudanças pedem confirmação conforme o nível de permissão escolhido — e o **Approve all** dessa confirmação deixa de perguntar pelas mudanças reversíveis até o fim da sessão —; apagar pergunta em todos os níveis menos no YOLO, e mesmo nele quando o Obsidian está configurado pra apagar de vez. Toda mudança do agente pode ser desfeita pela conversa enquanto o Obsidian estiver aberto.
+- **Arquivos lidos e gravados.** As conversas e o índice do Vault Q&A ficam dentro do vault, na pasta oculta `.axxa/` por padrão. Quando você pede, exportações vão pra `axxa-ai/exports/`, relatórios de uso pra `axxa-ai/reports/` e skills pra `axxa-ai/skills/`. No modo Agent o modelo pode ler qualquer arquivo de texto do vault e criar, editar, mover e apagar notas e pastas pelas ferramentas dele. Mudanças pedem confirmação conforme o nível de permissão escolhido — e o **Approve all** dessa confirmação deixa de perguntar pelas mudanças reversíveis até o fim daquela rodada; dado num pedido à web, vale só pros pedidos à web da rodada —; apagar pergunta em todos os níveis menos no YOLO, e mesmo nele quando o Obsidian está configurado pra apagar de vez. Toda mudança do agente pode ser desfeita pela conversa enquanto o Obsidian estiver aberto.
 
 <details>
 <summary>Por que o plugin usa <code>fetch</code>, e a única API do Node que ele toca</summary>
@@ -208,7 +208,7 @@ Use o [formulário de bug](https://github.com/axxalab/axxa-agent/issues/new?temp
 ## Roadmap
 
 - **Agora:** estabilidade nos seis provedores, e o agente com modelos locais do Ollama.
-- **Depois:** PDFs no Gemini, NIM e Ollama; um modo Coder com prévia das diferenças; a interface em português.
+- **Depois:** PDFs no Gemini, NIM e Ollama; um modo Coder com prévia das diferenças.
 - **Mais adiante:** conectores MCP (Notion, Linear, GitHub); extras pagos opcionais, como sincronização entre aparelhos e transcrição automática de mídia.
 
 Ideias e votos ficam em [Discussions › Ideas](https://github.com/axxalab/axxa-agent/discussions/categories/ideas).
