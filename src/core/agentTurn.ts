@@ -116,6 +116,8 @@ export async function runAgentTurn(
   // Diff-approval: toda ação que ESCREVE passa por preview/diff antes de gravar.
   const diffApproval = plugin.settings.agentDiffApproval !== false;
   agentApproveAllRef.current = false;
+  // O "aprovar todas" dado num pedido à web: só pra web, e só nesta rodada.
+  let webAprovadaNaRodada = false;
 
   const effortCfg = resolveEffortConfig(effort, plugin.settings.effortConfigs);
 
@@ -335,6 +337,7 @@ export async function runAgentTurn(
         // Gate: roda direto ("auto") ou abre o preview de confirmação.
         const gate = decideToolGate(def, permissionLevel, {
           approveAll: agentApproveAllRef.current,
+          approveAllWeb: webAprovadaNaRodada,
           apagarVaiPraLixeira: apagarVaiPraLixeira(plugin.app),
         });
         let approved = gate === "auto";
@@ -360,7 +363,10 @@ export async function runAgentTurn(
             useChatStore.getState().setWaitingChatId(null);
           }
           approved = res.approved;
-          if (res.approveAll) agentApproveAllRef.current = true;
+          if (res.approveAll) {
+            if (def.network) webAprovadaNaRodada = true;
+            else agentApproveAllRef.current = true;
+          }
         }
 
         if (!approved) {

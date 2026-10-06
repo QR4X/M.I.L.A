@@ -60,8 +60,9 @@ export type ToolGate = "auto" | "confirm";
  *
  * Regras (v0.1.237 — auditoria P1-04/P1-05):
  *   - irreversível (delete) → SEMPRE "confirm" (nem o "aprovar todas" pula).
- *   - "aprovar todas" (sessão) → "auto" pra qualquer ação reversível,
+ *   - "aprovar todas" (da rodada) → "auto" pra qualquer ação reversível,
  *     independente de nível/diff — o botão do modal nunca é promessa vazia.
+ *     O dado num pedido à web vale só pra web, e vice-versa (0.9.24).
  *   - senão, o NÍVEL decide (evaluatePermission): ask confirma destrutivo;
  *     vault/yolo auto-aprovam como os labels prometem.
  *   O toggle "Approve changes (diff)" NÃO força mais o gate: ele passou a
@@ -81,16 +82,20 @@ export function decideToolGate(
   level: PermissionLevel,
   opts: {
     approveAll: boolean;
+    /** O "aprovar todas" dado num pedido à WEB, nesta rodada. É outro, de
+     *  propósito: aprovar uma leva de edições não libera a internet. */
+    approveAllWeb?: boolean;
     /** O Obsidian manda o que se apaga pra uma lixeira (do vault ou do
      *  sistema)? Só então o yolo apaga sem perguntar. */
     apagarVaiPraLixeira?: boolean;
   }
 ): ToolGate {
   // Web: o que sai pra internet pergunta no Ask e no Vault (a URL é o canal
-  // de vazamento de uma instrução plantada numa nota). O yolo e o "aprovar
-  // todas" da rodada passam.
+  // de vazamento de uma instrução plantada numa nota). Passam o yolo e o
+  // "aprovar todas" dado num pedido À WEB — o de uma edição, não: quem
+  // aprovou dez mudanças numa nota não autorizou mandar nada pra fora.
   if (tool.network) {
-    return level === "yolo" || opts.approveAll ? "auto" : "confirm";
+    return level === "yolo" || opts.approveAllWeb === true ? "auto" : "confirm";
   }
   // Apagar: só o yolo pula a pergunta, e só com lixeira. Nem o "aprovar
   // todas" do modal pula — ele vale pro que se desfaz sozinho.

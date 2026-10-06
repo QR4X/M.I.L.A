@@ -114,12 +114,20 @@ describe("web_search (Tavily)", () => {
 
 describe("quando a web pergunta", () => {
   const web = getToolDefinition("web_fetch")!;
-  it("Ask e Vault perguntam; YOLO e o 'aprovar todas' passam", () => {
+  it("Ask e Vault perguntam; passam o YOLO e o 'aprovar todas' dado à web", () => {
     expect(web.network).toBe(true);
     expect(decideToolGate(web, "ask", { approveAll: false })).toBe("confirm");
     expect(decideToolGate(web, "vault", { approveAll: false })).toBe("confirm");
     expect(decideToolGate(web, "yolo", { approveAll: false })).toBe("auto");
-    expect(decideToolGate(web, "ask", { approveAll: true })).toBe("auto");
+    expect(decideToolGate(web, "ask", { approveAll: false, approveAllWeb: true })).toBe("auto");
+  });
+
+  it("o 'aprovar todas' de uma edição não libera a web, nem o da web libera edição", () => {
+    const editar = getToolDefinition("vault_edit")!;
+    expect(decideToolGate(web, "ask", { approveAll: true })).toBe("confirm");
+    expect(decideToolGate(web, "vault", { approveAll: true })).toBe("confirm");
+    expect(decideToolGate(editar, "ask", { approveAll: false, approveAllWeb: true })).toBe("confirm");
+    expect(decideToolGate(editar, "ask", { approveAll: true })).toBe("auto");
   });
 
   it("a narração mostra o host, não a URL inteira", () => {
