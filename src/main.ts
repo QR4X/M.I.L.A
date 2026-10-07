@@ -14,6 +14,7 @@ import { VectorIndex, loadIndex, RAG_SHARD_SIZE } from "./rag/vectorIndex";
 import { indexVault } from "./rag/indexer";
 import {
   inferEmbeddingSpec,
+  pareceEmbeddingDoOllama,
   registerDiscoveredEmbeddings,
   type EmbeddingModelSpec,
   type EmbeddingProvider,
@@ -40,7 +41,12 @@ import type {
 import { limparCamposMortos } from "./core/settingsLegado";
 import { EMBEDDING_PROVIDERS, somarDescobertos } from "./rag/descobertos";
 import { chatIndexSignature } from "./core/chatIndex";
-import { revisarOllamaPadrao } from "./core/ollamaPadrao";
+import {
+  FABRICA_ATE_0923,
+  alinharAoInstalado,
+  listaDeFabrica,
+  revisarOllamaPadrao,
+} from "./core/ollamaPadrao";
 import { definirGratisConhecidos } from "./usage/pricing";
 import { lancar, podar, type LivroDoDia } from "./usage/livroDoDia";
 import { definirAnotadorDeUso, definirGuardaDeGasto } from "./usage/anotador";
@@ -82,6 +88,9 @@ export interface AxxaSettings {
   openrouterModel: string;
   nimModel: string;
   ollamaModel: string;
+  /** O que o Ollama tinha instalado na última busca — o que vier além disso
+   *  é modelo novo e entra na lista (ver core/ollamaPadrao.ts). */
+  ollamaVistos?: string[];
   /** Modelos conhecidos por provider — opções do seletor de modelo. */
   activeModels: Record<string, string[]>;
   /** Modelos FAVORITOS por provider — aparecem na tela inicial. Máx. 5. */
@@ -235,7 +244,9 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   geminiModel: "gemini-2.5-flash",
   openrouterModel: "anthropic/claude-3.5-sonnet",
   nimModel: "meta/llama-3.3-70b-instruct",
-  ollamaModel: "llama3.2",
+  // Vazio de fábrica: o modelo e a lista do Ollama saem do que ele tem
+  // instalado, na primeira busca (ver core/ollamaPadrao.ts).
+  ollamaModel: "",
   activeModels: {
     openai: ["gpt-4o", "gpt-4o-mini", "o1", "o3", "gpt-5"],
     anthropic: [
@@ -266,7 +277,7 @@ const DEFAULT_SETTINGS: AxxaSettings = {
       "qwen/qwen2.5-72b-instruct",
       "microsoft/phi-4",
     ],
-    ollama: ["llama3.2", "qwen2.5", "deepseek-r1", "mistral"],
+    ollama: [],
   },
   favoriteModels: {},
   freeModels: {},
@@ -622,7 +633,18 @@ export default class AxxaPlugin extends Plugin {
   async scanModels(providerId: string): Promise<string[]> {
     const p = getProvider(providerId);
     if (!p.listModels) return [];
+    const desde = this.settings.ollamaEndpoint;
     const lista = await p.listModels(this.providerCredential(providerId));
+    // No Ollama a resposta é o que está INSTALADO: a lista do chat passa a
+    // ser ela (sem os palpites de fábrica nem o que saiu com `ollama rm`).
+    // Se o endereço mudou enquanto ela vinha, é a lista de OUTRO servidor.
+    if (
+      providerId === "ollama" &&
+      this.settings.ollamaEndpoint === desde &&
+      this.alinharOllama(lista)
+    ) {
+      await this.saveSettings();
+    }
     // Aproveita a volta pra saber quais são GRÁTIS. O preço vem no mesmo
     // `/models`, então isto não custa uma chamada a mais — e sem isto o app
     // continuaria adivinhando free pelo nome.
@@ -631,12 +653,76 @@ export default class AxxaPlugin extends Plugin {
   }
 
   /**
+   * Acerta as listas do Ollama (ativos, favoritos, modelo de conversa nova)
+   * com o que ele tem instalado — a regra mora em core/ollamaPadrao.ts.
+   * Devolve se mudou alguma coisa; quem chama decide gravar.
+   */
+  alinharOllama(instalados: readonly string[]): boolean {
+    const s = this.settings;
+    const antes = {
+      ativos: s.activeModels.ollama ?? [],
+      favoritos: s.favoriteModels?.ollama ?? [],
+      modelo: s.ollamaModel ?? "",
+      vistos: s.ollamaVistos ?? null,
+    };
+    const depois = alinharAoInstalado(antes, instalados, pareceEmbeddingDoOllama);
+    if (JSON.stringify(antes) === JSON.stringify(depois)) return false;
+    s.activeModels = { ...s.activeModels, ollama: [...depois.ativos] };
+    s.favoriteModels = { ...(s.favoriteModels ?? {}), ollama: [...depois.favoritos] };
+    s.ollamaModel = depois.modelo;
+    s.ollamaVistos = [...depois.vistos];
+    return true;
+  }
+
+  /**
+   * A mesma conferência sem a pessoa pedir. Só age quando o Ollama RESPONDE
+   * — fora de alcance (o celular longe de casa), tudo fica como estava.
+   * Devolve o que ele tem instalado (null quando não perguntou ou não ouviu).
+   *
+   * `soDeFabrica` (a de quando o Obsidian abre) só troca lista que ninguém
+   * escolheu: os palpites de fábrica, ou vazia. Lista escolhida é da pessoa,
+   * e o data.json viaja entre aparelhos — num notebook com outro Ollama, a
+   * poda sozinha apagaria os favoritos do desktop. Lá, quem poda é o "Fetch
+   * models" ou o "Test", que a pessoa aperta NAQUELE aparelho.
+   */
+  async conferirOllama(opts: { soDeFabrica: boolean }): Promise<string[] | null> {
+    const s = this.settings;
+    if (!s.ollamaEndpoint) return null;
+    if (
+      opts.soDeFabrica &&
+      !(
+        listaDeFabrica(s.activeModels.ollama ?? []) &&
+        (s.favoriteModels?.ollama ?? []).length === 0 &&
+        s.ollamaVistos === undefined
+      )
+    ) {
+      return null;
+    }
+    const p = getProvider("ollama");
+    if (!p.listModels) return null;
+    const desde = s.ollamaEndpoint;
+    let instalados: string[];
+    try {
+      instalados = await p.listModels(this.providerCredential("ollama"));
+    } catch {
+      return null; // Ollama desligado ou longe: a lista de antes vale.
+    }
+    // O endereço mudou enquanto a resposta vinha: ela é de outro servidor.
+    if (s.ollamaEndpoint !== desde) return null;
+    // Uma resposta vazia, sem ninguém ter pedido, não apaga nada.
+    if (opts.soDeFabrica && instalados.length === 0) return null;
+    if (this.alinharOllama(instalados)) await this.saveSettings();
+    return instalados;
+  }
+
+  /**
    * Os modelos de EMBEDDING que a conta do provider oferece — o "Fetch models"
    * de cada provider traz junto, como era até a 0.3.x. O redesign da 0.4.0
    * perdeu esse caminho: o registro dos descobertos ficou só com o que versões
    * antigas tinham salvo, e um modelo de embedding novo de um provider não
-   * aparecia no Q&A. Grava em `discoveredEmbeddings` (somando ao que já havia)
-   * e reconstrói o registro. Só os providers que o RAG usa; nunca lança —
+   * aparecia no Q&A. Grava em `discoveredEmbeddings` (somando ao que já havia;
+   * no Ollama, trocando — é a lista do que está instalado) e reconstrói o
+   * registro. Só os providers que o RAG usa; nunca lança —
    * embedding é o extra da busca, não o motivo dela.
    */
   async scanEmbeddings(providerId: string): Promise<string[]> {
@@ -645,15 +731,35 @@ export default class AxxaPlugin extends Plugin {
       listEmbeddingModels?: (credential: string) => Promise<string[]>;
     };
     if (!p.listEmbeddingModels) return [];
+    const desde = this.settings.ollamaEndpoint;
     let ids: string[] = [];
     try {
       ids = await p.listEmbeddingModels(this.providerCredential(providerId));
     } catch {
       return [];
     }
-    if (ids.length === 0) return [];
+    // Ollama: uma resposta do endereço de antes não troca a lista deste.
+    if (providerId === "ollama" && this.settings.ollamaEndpoint !== desde) return [];
     const map = this.settings.discoveredEmbeddings ?? {};
-    map[providerId] = somarDescobertos(map[providerId], ids);
+    if (providerId === "ollama") {
+      // O Ollama responde com o que está INSTALADO: o que saiu dele sai
+      // daqui também (somar deixaria um embedding apagado na lista do Q&A).
+      // Menos o que o Q&A está USANDO: sem o registro dele, o modelo vira
+      // desconhecido, e um id desconhecido cai no embedding padrão — que é
+      // da OpenAI. As notas iriam pra nuvem sem ninguém ter pedido.
+      const emUso = [
+        this.settings.ragEmbeddingProvider === "ollama" ? this.settings.ragEmbeddingModel : "",
+        this.vectorIndex?.provider === "ollama" ? this.vectorIndex.model : "",
+      ].filter((m) => m && !ids.includes(m));
+      const novo = [...ids, ...new Set(emUso)];
+      const antes = map.ollama ?? [];
+      if (antes.length === novo.length && antes.every((m) => novo.includes(m))) return ids;
+      map.ollama = novo;
+    } else {
+      // Dos de nuvem, soma: um modelo some do /models por um dia e volta.
+      if (ids.length === 0) return [];
+      map[providerId] = somarDescobertos(map[providerId], ids);
+    }
     this.settings.discoveredEmbeddings = map;
     this.refreshDiscoveredEmbeddings();
     await this.saveSettings();
@@ -828,6 +934,10 @@ export default class AxxaPlugin extends Plugin {
 
     // "Hot" dos modelos a partir do uso local — fire-and-forget (não bloqueia).
     void this.refreshLocalUsageHot();
+
+    // A lista do Ollama que ainda é a de fábrica vira a do que ele tem
+    // instalado — fire-and-forget: um Ollama fora de alcance não segura nada.
+    void this.conferirOllama({ soDeFabrica: true });
 
     // Skills (.md na pasta de skills) → slash-commands no composer.
     await this.reloadSkills();
@@ -1416,10 +1526,8 @@ export default class AxxaPlugin extends Plugin {
     // gravado e nunca usou o Ollama volta pro vazio — uma vez só: a marca vai
     // pro disco na próxima gravação, e daí um localhost digitado de propósito
     // fica.
-    const ollama = revisarOllamaPadrao(saved, {
-      modelo: DEFAULT_SETTINGS.ollamaModel,
-      ativos: DEFAULT_SETTINGS.activeModels.ollama ?? [],
-    });
+    // Compara com a fábrica ANTIGA: é ela que está gravada em quem herdou.
+    const ollama = revisarOllamaPadrao(saved, FABRICA_ATE_0923);
     if (ollama !== null) this.settings.ollamaEndpoint = ollama;
     this.settings.ollamaPadraoRevisto = true;
     // Object.assign é shallow — pra activeModels (Record por provider),

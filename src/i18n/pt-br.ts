@@ -103,6 +103,8 @@ export const PT_BR: Translations = {
         `Sem chave de API pra ${provider}. Coloque a sua nas configurações pra começar.`,
       noEndpoint: (provider: string) =>
         `Sem endereço do servidor pra ${provider}. Coloque em Configurações → Providers → ${provider} (normalmente http://localhost:11434).`,
+      noModel: (provider: string) =>
+        `Nenhum modelo do ${provider} escolhido ainda. Em Configurações → Providers → ${provider}, toque em Buscar modelos e escolha um.`,
       invalidKey: (provider: string) =>
         `Sua chave da ${provider} parece inválida ou expirada. Confira nas configurações.`,
       rateLimit: "Limite de uso atingido. Espere alguns segundos e tente de novo.",

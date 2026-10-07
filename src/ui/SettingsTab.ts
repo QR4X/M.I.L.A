@@ -153,6 +153,8 @@ export class AxxaSettingsTab extends PluginSettingTab {
   private amostra: HTMLButtonElement | null = null;
   /** O recarregamento do índice espera a digitação da pasta parar. */
   private timerDoIndice = 0;
+  /** A busca do Ollama espera a digitação do endereço parar. */
+  private timerDoOllama: number | null = null;
   private hapticsOff: (() => void) | null = null;
 
   /** As linhas vivas, por nome (ver `slot`). */
@@ -343,7 +345,10 @@ export class AxxaSettingsTab extends PluginSettingTab {
         this.slot(`cred:${id}`, "providers", (row) => this.paintCredential(row, id)),
       connection: (id) =>
         this.slot(`conn:${id}`, "providers", (row) => this.paintConnection(row, id)),
-      newChatModel: (id) => (row) => this.paintNewChatModel(row, id),
+      // Um slot, pra redesenhar quando a busca do Ollama troca o modelo que
+      // não está mais instalado.
+      newChatModel: (id) =>
+        this.slot(`model:${id}`, "providers", (row) => this.paintNewChatModel(row, id)),
       fetchModels: (id) =>
         this.slot(`fetch:${id}`, "providers", (row) => this.paintFetch(row, id)),
       catalog: (id) =>
@@ -639,9 +644,39 @@ export class AxxaSettingsTab extends PluginSettingTab {
             s.ollamaEndpoint = v.trim();
             await this.save();
             changed();
+            this.conferirOllamaDepois();
           })
       );
     }
+  }
+
+  /**
+   * Um endereço novo do Ollama já traz a lista do que ele tem instalado — sem
+   * isto, quem acabou de configurar ficava sem modelo nenhum até apertar Test
+   * (a fábrica do Ollama é vazia). Espera a digitação parar; um endereço pela
+   * metade só não responde, e a lista fica como estava.
+   */
+  private conferirOllamaDepois(): void {
+    // O catálogo buscado era de OUTRO endereço: sai na hora, senão os modelos
+    // do servidor antigo seguiam na lista como se este os tivesse.
+    if (this.catalog.ollama) {
+      delete this.catalog.ollama;
+      this.repaint("catalog:ollama");
+    }
+    if (this.timerDoOllama !== null) window.clearTimeout(this.timerDoOllama);
+    this.timerDoOllama = window.setTimeout(() => {
+      this.timerDoOllama = null;
+      void (async () => {
+        const instalados = await this.plugin.conferirOllama({ soDeFabrica: false });
+        if (instalados === null) return;
+        this.catalog.ollama = instalados;
+        this.repaint("catalog:ollama");
+        this.repaint("model:ollama");
+        // E a lista de embeddings do Q&A, que também é deste servidor.
+        await this.plugin.scanEmbeddings("ollama");
+        this.repaint("embedding");
+      })();
+    }, 900);
   }
 
   // "Tem chave" e "a chave funciona" são coisas diferentes; o trilho mostra a
@@ -674,8 +709,14 @@ export class AxxaSettingsTab extends PluginSettingTab {
     this.conn[providerId] = { state: "testing" };
     this.repaint(`conn:${providerId}`);
     try {
+      const desde = this.s.ollamaEndpoint;
       const models = await this.plugin.scanModels(providerId);
-      if (models.length > 0) this.catalog[providerId] = models;
+      // No Ollama, zero modelos é resposta (nada instalado), não falta dela —
+      // desde que seja do endereço de agora.
+      const doEnderecoAtual = providerId !== "ollama" || this.s.ollamaEndpoint === desde;
+      if (doEnderecoAtual && (models.length > 0 || providerId === "ollama")) {
+        this.catalog[providerId] = models;
+      }
       this.conn[providerId] = {
         state: "ok",
         detail:
@@ -702,6 +743,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
     await this.save();
     this.repaint(`conn:${providerId}`);
     this.repaint(`catalog:${providerId}`);
+    this.repaint(`model:${providerId}`);
     this.syncReady();
     if (providerId === "openai") this.freeOfferChanged();
   }
@@ -741,12 +783,17 @@ export class AxxaSettingsTab extends PluginSettingTab {
     try {
       // Os de EMBEDDING vêm na mesma ida (ver plugin.scanEmbeddings): eles
       // alimentam a lista de modelos do Q&A. Nunca lançam.
+      const desde = this.s.ollamaEndpoint;
       const [models, embeds] = await Promise.all([
         this.plugin.scanModels(providerId),
         this.plugin.scanEmbeddings(providerId),
       ]);
+      // Ollama: o endereço mudou no meio da busca — a resposta é do servidor
+      // de antes, e a conferência do endereço novo já cuida da lista.
+      if (providerId === "ollama" && this.s.ollamaEndpoint !== desde) return;
       this.catalog[providerId] = models;
-      if (embeds.length > 0) this.repaint("embedding");
+      // No Ollama a lista do Q&A também ENCOLHE (o que saiu com `ollama rm`).
+      if (embeds.length > 0 || providerId === "ollama") this.repaint("embedding");
       // Os grátis contados pela regra de verdade (preço no OpenRouter, marca
       // "Free Endpoint" no NIM) — o número que a lista vai mostrar.
       const gratis = models.filter((m) => this.tagGratis(providerId, m) !== null).length;
@@ -775,6 +822,7 @@ export class AxxaSettingsTab extends PluginSettingTab {
       this.fetchingFor = null;
       this.repaint(`fetch:${providerId}`);
       this.repaint(`catalog:${providerId}`);
+      this.repaint(`model:${providerId}`);
       if (providerId === "openai") this.freeOfferChanged();
     }
   }

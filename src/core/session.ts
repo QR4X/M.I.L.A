@@ -27,6 +27,7 @@ import {
 } from "../store/chat";
 import { getProvider } from "../providers";
 import { modeloSalvoPara } from "./modeloPadrao";
+import { nomeCompleto } from "./ollamaPadrao";
 import { getTranslations } from "../i18n";
 import { tr } from "../i18n/tr";
 import {
@@ -93,6 +94,7 @@ export class ChatSession {
   private skipNextSave = false;
   private readonly listeners = new Set<() => void>();
   private readonly unsubStore: () => void;
+  private readonly unsubSettings: () => void;
   private provider: string;
   private model: string;
   private mode: ChatMode;
@@ -110,6 +112,10 @@ export class ChatSession {
     this.unsubStore = useChatStore.subscribe((state, prev) => {
       if (state.messages !== prev.messages) this.scheduleSave();
     });
+    // A lista do Ollama muda com a conversa aberta (a busca nas settings, a
+    // conferência ao abrir o Obsidian). Sem isto, o modelo que saiu dela
+    // continuava escolhido aqui — e o seletor o mostrava na frente da lista.
+    this.unsubSettings = plugin.onSettingsChange(() => this.seguirOllama());
     // Cache de summaries aquecido — o upsert incremental depende dele.
     void plugin.loadChatSummaries();
   }
@@ -130,6 +136,7 @@ export class ChatSession {
 
   dispose(): void {
     this.unsubStore();
+    this.unsubSettings();
     this.flushSave();
     // Rede de segurança pra quem chama `dispose` sem poder esperar (o await
     // de verdade está no onClose da view). Dispara antes do abort: depois
@@ -177,6 +184,25 @@ export class ChatSession {
   /** Modelo salvo pro provider (ver core/modeloPadrao.ts). */
   modelFor(provider: string): string {
     return modeloSalvoPara(this.plugin.settings, provider);
+  }
+
+  /**
+   * O modelo do Ollama escolhido aqui não está mais na lista do que está
+   * instalado (ou nunca teve modelo): volta pro modelo salvo, que a busca já
+   * acertou. Vale também com uma conversa enviada na tela — ela lê o modelo
+   * dela (o travado), e este é o que a PRÓXIMA conversa usa. Sem isso, quem
+   * buscou os modelos olhando uma conversa e depois abriu outra nova caía
+   * de novo no modelo que não tem.
+   */
+  private seguirOllama(): void {
+    if (this.provider !== "ollama") return;
+    const ativos = this.plugin.settings.activeModels?.ollama ?? [];
+    const atual = this.model;
+    if (atual && ativos.some((m) => nomeCompleto(m) === nomeCompleto(atual))) return;
+    const salvo = this.modelFor("ollama");
+    if (salvo === atual) return;
+    this.model = salvo;
+    this.emit();
   }
 
   /** Opções do seletor de modelo (modelos ativos + o atual, se faltar). */
@@ -266,17 +292,32 @@ export class ChatSession {
   async send(text: string): Promise<boolean> {
     const trimmed = text.trim();
     if (!trimmed) return false;
-    const st = useChatStore.getState();
+    let st = useChatStore.getState();
     if (st.isLoading) return false;
+    // O aviso do pre-flight (sem chave, sem modelo) não é conversa: quem
+    // seguiu o aviso e mandou de novo está mandando a PRIMEIRA mensagem. Com
+    // o aviso na lista, a conversa nova nunca ganhava id, trava nem gravação.
+    if (
+      !st.currentChatId &&
+      st.messages.length > 0 &&
+      st.messages.every((m) => m.type === "ai-response" && m.isError === true)
+    ) {
+      st.setMessages([]);
+      st = useChatStore.getState(); // o retrato anterior ainda tem o aviso
+    }
     const cfg = this.config;
     const provider = getProvider(cfg.provider);
 
     // Pre-flight de key ANTES de criar o chat — senão o 1º envio sem key
     // persistia um chat-fantasma (só a pergunta). O Ollama entra também: o
     // que falta nele é o endereço.
+    // Sem modelo também para aqui: mandar `model: ""` dava erro do servidor
+    // E travava a conversa nova num modelo vazio (o Ollama recém-configurado,
+    // antes da primeira busca, não tem nenhum).
     const falta =
       st.messages.length === 0
-        ? semCredencial(cfg.provider, this.apiKeyFor(cfg.provider), this.t, provider.name)
+        ? (semCredencial(cfg.provider, this.apiKeyFor(cfg.provider), this.t, provider.name) ??
+          (cfg.model.trim() ? null : this.t.ai.err.noModel(provider.name)))
         : null;
     if (falta) {
       st.addMessage({

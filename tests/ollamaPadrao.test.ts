@@ -1,7 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { OLLAMA_LOCAL, revisarOllamaPadrao, usaOllama } from "../src/core/ollamaPadrao";
+import {
+  FABRICA_ATE_0923,
+  OLLAMA_LOCAL,
+  revisarOllamaPadrao,
+  usaOllama,
+} from "../src/core/ollamaPadrao";
 import { semCredencial } from "../src/core/helpers";
 import { getTranslations } from "../src/i18n";
 import { ollamaProvider } from "../src/providers/ollama";
@@ -19,11 +24,17 @@ describe("de fábrica", () => {
     expect(padrao).toMatch(/\bollamaEndpoint:\s*"",/);
   });
 
-  it("a fábrica que o teste usa é a do main.ts (modelo e lista)", () => {
+  it("modelo e lista do Ollama nascem vazios (saem do que ele tem instalado)", () => {
     const main = readFileSync(resolve(__dirname, "../src/main.ts"), "utf8");
     const padrao = main.slice(main.indexOf("const DEFAULT_SETTINGS"));
-    expect(padrao).toContain(`ollamaModel: "${MODELO.modelo}"`);
-    expect(padrao).toContain(`ollama: ${JSON.stringify(MODELO.ativos).replace(/","/g, '", "')}`);
+    expect(padrao).toMatch(/\bollamaModel:\s*"",/);
+    expect(padrao).toMatch(/\bollama:\s*\[\],/);
+  });
+
+  it("a revisão do endereço compara com a fábrica ANTIGA, a que está gravada", () => {
+    expect(MODELO).toEqual(FABRICA_ATE_0923);
+    const main = readFileSync(resolve(__dirname, "../src/main.ts"), "utf8");
+    expect(main).toContain("revisarOllamaPadrao(saved, FABRICA_ATE_0923)");
   });
 });
 
