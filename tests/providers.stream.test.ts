@@ -376,6 +376,36 @@ describe("openrouter streamChat — formato OpenAI-compat via fetch", () => {
     );
     expect(reasoning).toEqual(["deep"]);
     expect(res.content).toBe("ans");
+    expect(res.reasoning).toBe("deep");
+  });
+
+  it("evento error no stream SSE do OpenRouter → lança ProviderError", async () => {
+    mockFetch([
+      sse({ error: { message: "Provider stream terminated unexpectedly" } }),
+    ]);
+    await expect(
+      openrouterProvider.streamChat(userReq("anthropic/claude-sonnet-4"), "key", () => {})
+    ).rejects.toMatchObject({
+      name: "ProviderError",
+      message: expect.stringContaining("Provider stream terminated unexpectedly"),
+    });
+  });
+
+  it("stream fecha sem conteúdo/tools/reasoning → fallback pro chat()", async () => {
+    mockFetch([
+      "data: [DONE]\n\n",
+    ]);
+    const spyChat = vi.spyOn(openrouterProvider, "chat").mockResolvedValue({ content: "resposta via chat fallback" });
+    const tokens: string[] = [];
+    const res = await openrouterProvider.streamChat(
+      userReq("openrouter/auto"),
+      "key",
+      (t) => tokens.push(t)
+    );
+    expect(spyChat).toHaveBeenCalled();
+    expect(res.content).toBe("resposta via chat fallback");
+    expect(tokens).toEqual(["resposta via chat fallback"]);
+    spyChat.mockRestore();
   });
 });
 

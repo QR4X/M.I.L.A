@@ -84,4 +84,10 @@ describe("resolveMaxTokens — teto de OUTPUT (≠ context window)", () => {
   it("modelo desconhecido → default conservador 16k", () => {
     expect(resolveMaxTokens("ollama", "modelo-aleatorio", 999999)).toBe(16384);
   });
+
+  it("openrouter/auto recebe piso de modelo que pensa para evitar starvation", () => {
+    expect(resolveMaxTokens("openrouter", "openrouter/auto", 512, "low")).toBe(16000);
+    expect(resolveMaxTokens("openrouter", "openrouter/auto", 2048, "med")).toBe(16000);
+    expect(resolveMaxTokens("openrouter", "openrouter/auto", 999999, "max")).toBe(64000);
+  });
 });

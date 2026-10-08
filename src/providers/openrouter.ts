@@ -198,7 +198,30 @@ export class OpenRouterProvider implements Provider {
     await ensureOkStream(res, { label: "OpenRouter" });
     if (!res.body) throw new ProviderError("Empty stream.", "unknown");
 
-    return parseOpenAICompatSSE(res.body, onToken, onUsage, "openrouter_call", onReasoning);
+    const parsed = await parseOpenAICompatSSE(
+      res.body,
+      onToken,
+      onUsage,
+      "openrouter_call",
+      onReasoning
+    );
+
+    // Se o stream fechou sem produzir nenhum conteúdo, tool call ou reasoning
+    // (comum em conexões mobile instáveis ou quando SSE fecha prematuramente sem erro explícito),
+    // tenta fallback via requestUrl nativo do Obsidian antes de desistir.
+    if (!parsed.content && (!parsed.toolCalls || parsed.toolCalls.length === 0) && !parsed.reasoning) {
+      if (signal?.aborted) {
+        throw new DOMException("Interrupted", "AbortError");
+      }
+      return streamFallbackToChat(
+        () => this.chat(req, apiKey),
+        onToken,
+        onUsage,
+        onReasoning
+      );
+    }
+
+    return parsed;
   }
 
   /** Lista modelos modernos do OpenRouter (sem free/auto/etc) */

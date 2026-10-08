@@ -238,10 +238,16 @@ export async function runAgentTurn(
             updateActivity(commentId, { phase: "done" });
             firstTurn = false;
           }
+          const hasContent = Boolean(response.content && response.content.trim());
           responseId = addMessage({
             type: "ai-response",
-            content: response.content || t.ai.emptyResponse,
+            content: hasContent ? response.content : `${t.ai.errorPrefix} ${t.ai.emptyResponse}`,
+            isError: !hasContent,
           });
+          if (!hasContent && response.reasoning) {
+            useChatStore.getState().appendReasoning(responseId, response.reasoning);
+            useChatStore.getState().setTruncated(responseId, true);
+          }
         }
         if (runSteps.length > 0 && responseId) {
           setAgentSteps(responseId, runSteps);

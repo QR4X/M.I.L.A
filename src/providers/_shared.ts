@@ -495,7 +495,8 @@ export function finalizeOpenAIResponse(
   content: string,
   toolCallAccum: ToolAccum,
   usage?: { input: number; output: number },
-  idPrefix = "openai_call"
+  idPrefix = "openai_call",
+  reasoning?: string
 ): ProviderResponse {
   const indices = Object.keys(toolCallAccum)
     .map((k) => Number(k))
@@ -523,6 +524,7 @@ export function finalizeOpenAIResponse(
   const result: ProviderResponse = { content };
   if (toolCalls.length > 0) result.toolCalls = toolCalls;
   if (usage) result.usage = usage;
+  if (reasoning) result.reasoning = reasoning;
   return result;
 }
 
@@ -541,6 +543,7 @@ export async function parseOpenAICompatSSE(
   const decoder = new TextDecoder();
   let buffer = "";
   let accumulatedText = "";
+  let accumulatedReasoning = "";
   const toolCallAccum: ToolAccum = {};
   // Fallback p/ quando o chunk de tool_call vem SEM `index` (raro, mas alguns
   // hosts OpenAI-compat omitem): em vez de cair sempre em 0 e fundir tools
@@ -562,68 +565,101 @@ export async function parseOpenAICompatSSE(
       const data = trimmed.slice(5).trim();
       if (!data || data === "[DONE]") {
         if (data === "[DONE]") {
-          return finalizeOpenAIResponse(accumulatedText, toolCallAccum, usage, idPrefix);
+          return finalizeOpenAIResponse(
+            accumulatedText,
+            toolCallAccum,
+            usage,
+            idPrefix,
+            accumulatedReasoning || undefined
+          );
         }
         continue;
       }
+      let json: (ChunkNoFio & { error?: unknown; errors?: unknown }) | null = null;
       try {
-        const json = JSON.parse(data) as ChunkNoFio;
-        const delta = json?.choices?.[0]?.delta;
-        if (delta) {
-          const token = delta.content;
-          if (typeof token === "string" && token.length > 0) {
-            accumulatedText += token;
-            onToken(token);
-          }
-          // Reasoning/thinking exposto por alguns modelos (DeepSeek R1 via
-          // reasoning_content; OpenRouter via reasoning). Roteado à parte.
-          if (onReasoning) {
-            const r =
-              (typeof delta.reasoning === "string" && delta.reasoning) ||
-              (typeof delta.reasoning_content === "string" &&
-                delta.reasoning_content) ||
-              "";
-            if (r) onReasoning(r);
-          }
-          if (Array.isArray(delta.tool_calls)) {
-            for (const tc of delta.tool_calls) {
-              // `index` presente (caminho padrão OpenAI) é sempre respeitado;
-              // só usamos o contador quando ele falta. O 1º chunk de uma tool
-              // traz id/name, então é nele que avançamos o contador.
-              let idx: number;
-              if (typeof tc.index === "number") {
-                idx = tc.index;
-                if (idx > lastToolIdx) lastToolIdx = idx;
-              } else {
-                if (tc.id || tc.function?.name) lastToolIdx += 1;
-                idx = lastToolIdx < 0 ? 0 : lastToolIdx;
-              }
-              if (!toolCallAccum[idx]) {
-                toolCallAccum[idx] = { id: "", name: "", argsBuf: "" };
-              }
-              if (tc.id) toolCallAccum[idx].id = tc.id;
-              // name só é setado se ainda vazio: hosts mandam o name uma vez no
-              // 1º chunk; reescrever (ou concatenar) corromperia o nome.
-              if (tc.function?.name && !toolCallAccum[idx].name) {
-                toolCallAccum[idx].name = tc.function.name;
-              }
-              if (typeof tc.function?.arguments === "string") {
-                toolCallAccum[idx].argsBuf += tc.function.arguments;
-              }
+        json = JSON.parse(data);
+      } catch {
+        /* chunk JSON inválido — pula */
+        continue;
+      }
+
+      // Detecção de erros emitidos dentro do stream SSE (ex: OpenRouter / gateways)
+      if (json && (json.error !== undefined || json.errors !== undefined)) {
+        const streamErr = extractApiMessage(json) ?? "Stream error received";
+        const label = idPrefix ? idPrefix.replace(/_call$/, "") : "Provider";
+        if (
+          /context.{0,8}length|maximum context|context window|too many tokens|prompt is too long|exceeds? the (model'?s? )?context/i.test(
+            streamErr
+          )
+        ) {
+          throw new ProviderError(`${label}: ${streamErr}`, "context-overflow");
+        }
+        if (/rate limit|too many requests|quota|overloaded/i.test(streamErr)) {
+          throw new ProviderError(`${label}: ${streamErr}`, "rate-limit");
+        }
+        throw new ProviderError(`${label}: ${streamErr}`, "unknown");
+      }
+
+      const delta = json?.choices?.[0]?.delta;
+      if (delta) {
+        const token = delta.content;
+        if (typeof token === "string" && token.length > 0) {
+          accumulatedText += token;
+          onToken(token);
+        }
+        // Reasoning/thinking exposto por alguns modelos (DeepSeek R1 via
+        // reasoning_content; OpenRouter via reasoning). Roteado à parte.
+        const r =
+          (typeof delta.reasoning === "string" && delta.reasoning) ||
+          (typeof delta.reasoning_content === "string" &&
+            delta.reasoning_content) ||
+          "";
+        if (r) {
+          accumulatedReasoning += r;
+          if (onReasoning) onReasoning(r);
+        }
+        if (Array.isArray(delta.tool_calls)) {
+          for (const tc of delta.tool_calls) {
+            // `index` presente (caminho padrão OpenAI) é sempre respeitado;
+            // só usamos o contador quando ele falta. O 1º chunk de uma tool
+            // traz id/name, então é nele que avançamos o contador.
+            let idx: number;
+            if (typeof tc.index === "number") {
+              idx = tc.index;
+              if (idx > lastToolIdx) lastToolIdx = idx;
+            } else {
+              if (tc.id || tc.function?.name) lastToolIdx += 1;
+              idx = lastToolIdx < 0 ? 0 : lastToolIdx;
+            }
+            if (!toolCallAccum[idx]) {
+              toolCallAccum[idx] = { id: "", name: "", argsBuf: "" };
+            }
+            if (tc.id) toolCallAccum[idx].id = tc.id;
+            // name só é setado se ainda vazio: hosts mandam o name uma vez no
+            // 1º chunk; reescrever (ou concatenar) corromperia o nome.
+            if (tc.function?.name && !toolCallAccum[idx].name) {
+              toolCallAccum[idx].name = tc.function.name;
+            }
+            if (typeof tc.function?.arguments === "string") {
+              toolCallAccum[idx].argsBuf += tc.function.arguments;
             }
           }
         }
-        if (json?.usage) {
-          usage = {
-            input: json.usage.prompt_tokens ?? 0,
-            output: json.usage.completion_tokens ?? 0,
-          };
-          if (onUsage) onUsage(usage);
-        }
-      } catch {
-        /* chunk JSON inválido — pula */
+      }
+      if (json?.usage) {
+        usage = {
+          input: json.usage.prompt_tokens ?? 0,
+          output: json.usage.completion_tokens ?? 0,
+        };
+        if (onUsage) onUsage(usage);
       }
     }
   }
-  return finalizeOpenAIResponse(accumulatedText, toolCallAccum, usage, idPrefix);
+  return finalizeOpenAIResponse(
+    accumulatedText,
+    toolCallAccum,
+    usage,
+    idPrefix,
+    accumulatedReasoning || undefined
+  );
 }

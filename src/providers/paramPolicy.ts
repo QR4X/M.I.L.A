@@ -181,6 +181,8 @@ export function maxOutputTokens(provider: string, model: string): number {
   // DeepSeek capa output em 8k (API própria e na maioria dos hosts; no NIM o
   // V4 Pro aceita até 16k).
   if (/deepseek/.test(id)) return 8192;
+  // OpenRouter auto router (pode rotear pra modelos de raciocínio de 64k+)
+  if (id === "openrouter/auto" || id.endsWith("/auto") || id.includes("router")) return 64000;
   // NIM hosted: os outros modelos capam a saída em 4096 (Llama 3.1 70B, por
   // exemplo) e devolvem 400 acima disso.
   if (provider === "nim") return 4096;
@@ -193,11 +195,14 @@ export function maxOutputTokens(provider: string, model: string): number {
  *   - Claude Fable, Mythos e 5+ (o pensamento vem ligado; o Opus 4.7/4.8 só
  *     pensa se pedirem, e a gente não pede);
  *   - Gemini 2.5 (menos o Flash-Lite, que vem sem) e 3+;
- *   - locais que pensam por padrão: gpt-oss, qwen3.
+ *   - locais que pensam por padrão: gpt-oss, qwen3;
+ *   - routers como openrouter/auto, que podem encaminhar dinamicamente para
+ *     modelos de raciocínio sem aviso prévio.
  */
 export function pensaAntes(_provider: string, model: string): boolean {
-  if (isReasoningModel(model)) return true;
   const id = (model || "").toLowerCase();
+  if (id === "openrouter/auto" || id.endsWith("/auto") || id.includes("router")) return true;
+  if (isReasoningModel(model)) return true;
   const c = claudeVersao(model);
   if (c) return claudeNovo(c) || noMinimo(c, 5, 0);
   if (/gemini-2\.5-(pro|flash)(?!-lite)/.test(id) || /gemini-([3-9]|\d{2})/.test(id)) return true;

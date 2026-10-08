@@ -235,8 +235,23 @@ export async function streamReply(
     }
 
     if (responseId === null) {
-      updateActivity(commentId, { phase: "done" });
-      addMessage({ type: "ai-response", content: t.ai.emptyResponse });
+      if (reasoningBuf.trim()) {
+        updateActivity(commentId, { phase: "done" });
+        responseId = addMessage({ type: "ai-response", content: "" });
+        useChatStore.getState().appendReasoning(responseId, reasoningBuf);
+        useChatStore.getState().setTruncated(responseId, true);
+      } else {
+        updateActivity(commentId, {
+          phase: "failed",
+          iconFailed: "x-circle",
+          failedText: t.ai.failed,
+        });
+        addMessage({
+          type: "ai-response",
+          content: `${t.ai.errorPrefix} ${t.ai.emptyResponse}`,
+          isError: true,
+        });
+      }
     }
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
