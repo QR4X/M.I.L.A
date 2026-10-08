@@ -20,7 +20,12 @@ import {
   type UsageHandler,
   type ReasoningHandler,
 } from "./base";
-import { aplicarEsforco, resolveTemperature, resolveMaxTokens } from "./paramPolicy";
+import {
+  aplicarEsforco,
+  resolveTemperature,
+  resolveMaxTokens,
+  semRaciocinioComFerramentas,
+} from "./paramPolicy";
 
 // ============================================================
 // Fallback de streaming → não-streaming (pseudo-stream). v0.1.232
@@ -232,6 +237,11 @@ export function buildChatBody(
   if (tools) {
     body.tools = tools;
     body.tool_choice = "auto";
+    // GPT-5.4+ no /chat/completions: ferramentas só sem raciocínio (o
+    // Agent quebrava no primeiro pedido). Ver paramPolicy.
+    if (body.reasoning_effort !== undefined && semRaciocinioComFerramentas(opts.provider, req.model)) {
+      body.reasoning_effort = "none";
+    }
   }
   return body;
 }

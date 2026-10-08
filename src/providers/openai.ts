@@ -19,6 +19,10 @@ import {
 } from "./base";
 import { isEmbeddingModelId } from "../rag/types";
 import {
+  ehRecusaDeRaciocinioComFerramentas,
+  lembrarSemRaciocinioComFerramentas,
+} from "./paramPolicy";
+import {
   buildChatBody,
   ensureOkStream,
   ensureOkRequest,
@@ -49,6 +53,27 @@ interface CatalogoOpenAI {
 }
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+
+/**
+ * A OpenAI recusou ferramentas com raciocínio pra este modelo (o GPT-5.4 em
+ * diante faz isso no /chat/completions; a regra em paramPolicy cobre os
+ * conhecidos). Um modelo que a regra ainda não conhecia aprende aqui: fica
+ * lembrado, e o corpo vai de novo — uma vez — com `reasoning_effort: "none"`.
+ */
+function recusouRaciocinioComFerramentas(
+  err: unknown,
+  body: Record<string, unknown>,
+  model: string
+): boolean {
+  if (!(err instanceof ProviderError)) return false;
+  if (!body.tools || body.reasoning_effort === undefined || body.reasoning_effort === "none") {
+    return false;
+  }
+  if (!ehRecusaDeRaciocinioComFerramentas(err.message)) return false;
+  lembrarSemRaciocinioComFerramentas(model);
+  body.reasoning_effort = "none";
+  return true;
+}
 const OPENAI_MODELS_ENDPOINT = "https://api.openai.com/v1/models";
 const OPENAI_IMAGES_ENDPOINT = "https://api.openai.com/v1/images/generations";
 const OPENAI_AUDIO_SPEECH_ENDPOINT = "https://api.openai.com/v1/audio/speech";
@@ -67,20 +92,30 @@ export class OpenAIProvider implements Provider {
       maxTokensField: "max_completion_tokens", // gpt-4o+ exigem (max_tokens deprecado)
     });
 
+    const pedir = async () => {
+      let r;
+      try {
+        r = await requestUrl({
+          url: OPENAI_ENDPOINT,
+          method: "POST",
+          contentType: "application/json",
+          headers: { Authorization: `Bearer ${apiKey.trim()}` },
+          body: JSON.stringify(body),
+          throw: false,
+        });
+      } catch {
+        throw new ProviderError("Connection failed. Check your internet.", "network");
+      }
+      ensureOkRequest(r, { label: "OpenAI" });
+      return r;
+    };
     let res;
     try {
-      res = await requestUrl({
-        url: OPENAI_ENDPOINT,
-        method: "POST",
-        contentType: "application/json",
-        headers: { Authorization: `Bearer ${apiKey.trim()}` },
-        body: JSON.stringify(body),
-        throw: false,
-      });
-    } catch {
-      throw new ProviderError("Connection failed. Check your internet.", "network");
+      res = await pedir();
+    } catch (err) {
+      if (!recusouRaciocinioComFerramentas(err, body, req.model)) throw err;
+      res = await pedir();
     }
-    ensureOkRequest(res, { label: "OpenAI" });
 
     const corpo = res.json as RespostaNoFio | undefined;
     const message = corpo?.choices?.[0]?.message;
@@ -123,9 +158,8 @@ export class OpenAIProvider implements Provider {
       maxTokensField: "max_completion_tokens",
     });
 
-    let res: Response;
-    try {
-      res = await fetchStream(OPENAI_ENDPOINT, {
+    const abrir = () =>
+      fetchStream(OPENAI_ENDPOINT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -134,6 +168,9 @@ export class OpenAIProvider implements Provider {
         body: JSON.stringify(body),
         signal,
       });
+    let res: Response;
+    try {
+      res = await abrir();
     } catch (err) {
       // AbortError sobe sem mudar pra ProviderError — caller distingue
       if (err instanceof DOMException && err.name === "AbortError") throw err;
@@ -146,7 +183,13 @@ export class OpenAIProvider implements Provider {
         onReasoning
       );
     }
-    await ensureOkStream(res, { label: "OpenAI" });
+    try {
+      await ensureOkStream(res, { label: "OpenAI" });
+    } catch (err) {
+      if (!recusouRaciocinioComFerramentas(err, body, req.model)) throw err;
+      res = await abrir();
+      await ensureOkStream(res, { label: "OpenAI" });
+    }
     if (!res.body) throw new ProviderError("Empty stream from OpenAI.", "unknown");
 
     return parseOpenAICompatSSE(res.body, onToken, onUsage, "openai_call", onReasoning);

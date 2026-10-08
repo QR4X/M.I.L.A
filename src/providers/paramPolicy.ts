@@ -300,6 +300,42 @@ export function esforcoDoProvider(
   return null;
 }
 
+/**
+ * Modelos da OpenAI que recusam ferramentas COM raciocínio no
+ * /v1/chat/completions. Do GPT-5.4 em diante, um pedido com `tools` e
+ * `reasoning_effort` diferente de "none" volta 400 ("Function tools with
+ * reasoning_effort are not supported … use /v1/responses or set
+ * reasoning_effort to 'none'") — o modo Agent quebrava logo no primeiro
+ * pedido. A regra cobre os conhecidos; um modelo novo que recuse entra na
+ * lista pelo próprio erro (ver lembrarSemRaciocinioComFerramentas).
+ */
+const aprendidosSemRaciocinioComFerramentas = new Set<string>();
+
+export function semRaciocinioComFerramentas(provider: string, model: string): boolean {
+  if (provider !== "openai") return false;
+  const tail = tailOf(model);
+  if (aprendidosSemRaciocinioComFerramentas.has(tail)) return true;
+  const m = /(?:^|[-/])gpt-(\d+)(?:\.(\d+))?/.exec(tail);
+  if (!m) return false;
+  const maior = Number(m[1]);
+  const menor = m[2] === undefined ? 0 : Number(m[2]);
+  return maior > 5 || (maior === 5 && menor >= 4);
+}
+
+/** O próprio erro ensinou que este modelo recusa ferramentas com raciocínio. */
+export function lembrarSemRaciocinioComFerramentas(model: string): void {
+  aprendidosSemRaciocinioComFerramentas.add(tailOf(model));
+}
+
+/** O erro da OpenAI que diz exatamente isso (pra tentar de novo sem raciocínio). */
+export function ehRecusaDeRaciocinioComFerramentas(mensagem: string): boolean {
+  return (
+    /reasoning_effort/i.test(mensagem) &&
+    /tools?\b/i.test(mensagem) &&
+    /not supported/i.test(mensagem)
+  );
+}
+
 /** Põe o esforço no corpo do pedido (se houver o que pôr). */
 export function aplicarEsforco(
   body: Record<string, unknown>,
