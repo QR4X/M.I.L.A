@@ -51,8 +51,6 @@ export const PT_BR: Translations = {
       "(no mesmo turno).",
     needsOpenAI:
       "O modo Agente precisa de um provider com tool calling. Use OpenAI, Anthropic, Gemini, OpenRouter, Nvidia NIM ou Ollama (modelo compatível).",
-    maxTurnsReached: (n: number) =>
-      `O agente bateu o limite de ${n} turnos sem terminar. Tente reformular a tarefa.`,
     unknownTool: (name: string) => `Ferramenta desconhecida: ${name}`,
     deniedTool: (name: string) => `Negado: ${name}`,
     loopDetectedPending: "Repetição detectada — pedindo pro agente repensar",
@@ -93,7 +91,11 @@ export const PT_BR: Translations = {
 
   ai: {
     thinking: "Pensando...",
-    emptyResponse: "[Resposta vazia]",
+    emptyResponse: "O provedor não enviou uma resposta, só raciocínio ou uma saída vazia. Tente de novo ou escolha outro modelo.",
+    outputLimit: "O modelo atingiu o limite de tokens de saída do pedido antes de terminar. Aumente o orçamento onde for permitido ou tente outro modelo.",
+    streamIncomplete: "A conexão terminou antes de o provedor confirmar o fim da resposta. Tente de novo.",
+    invalidToolResponse: "O modelo enviou argumentos incompletos ou inválidos. Nenhuma ferramenta desta rodada foi executada.",
+    recovering: "Sem resposta utilizável — tentando mais uma vez (pode consumir mais créditos da API).",
     errorPrefix: "[Erro]",
     unknownError: "Erro desconhecido.",
     failed: "Falhou",

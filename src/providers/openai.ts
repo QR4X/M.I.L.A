@@ -120,7 +120,10 @@ export class OpenAIProvider implements Provider {
     const corpo = res.json as RespostaNoFio | undefined;
     const message = corpo?.choices?.[0]?.message;
     if (!message) throw new ProviderError("Empty response from OpenAI.", "unknown");
-    const { content, toolCalls } = parseOpenAIChatMessage(message);
+    const { content, toolCalls, invalidToolCalls } = parseOpenAIChatMessage(message);
+    if (invalidToolCalls) {
+      throw new ProviderError("OpenAI returned invalid tool-call arguments. No tools were executed.", "unknown");
+    }
     if (!toolCalls && !content) {
       throw new ProviderError("Empty response from OpenAI (no text or tool_calls).", "unknown");
     }

@@ -198,7 +198,8 @@ Use the [bug report form](https://github.com/axxalab/axxa-agent/issues/new?templ
 <details>
 <summary><b>More: effort, usage and cost</b></summary>
 
-- **Effort** (Low to Max) scales how hard the model works: max tokens, agent turn limits, temperature, parallel tool calls, retries, and how much of your vault goes into context. Every level is tunable in Settings.
+- **Effort** (Low to Max) scales how hard the model works: max tokens, temperature, parallel tool calls, retries, and how much of your vault goes into context. Every level is tunable in Settings. Agent runs have no turn limit, including with older saved settings. Use **Stop** to end a run; the loop guard detects repeated identical tool calls, not every possible research loop. Longer runs can cost more.
+- **Empty OpenRouter answers.** An empty or reasoning-only stream gets one additional request through Obsidian's native connection, using the same conversation and an output budget within the existing model ceiling. The chat announces the attempt, which can consume additional API credits. Previous tools are not executed again. If it still fails, the chat distinguishes an output-token limit, an incomplete stream and an empty answer; completed tool actions remain available when continuing or reopening the conversation.
 - **Usage** reads your saved chats and estimates spend in USD by provider, model, mode and day, with a 30-day heatmap. Export the report as PDF, Markdown or HTML.
 - **Left today**, at the top of Usage, shows what's left on each free tier and when it resets: OpenRouter's free requests, read live from your key (so they count every app that uses it); OpenAI's data-sharing tokens and Gemini's free-tier requests, counted by AXXA on this device (Google doesn't publish Gemini's limits, so you type each model's limit from AI Studio); and NVIDIA NIM's requests today, which have no daily cap. The count is a local log that never leaves your device.
 </details>

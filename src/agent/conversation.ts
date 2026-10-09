@@ -119,6 +119,12 @@ export interface StoreMessageLike {
   agentSteps?: AIToolStep[];
 }
 
+/** Keep completed actions even when the final provider response failed. */
+export function keepConversationMessage(m: StoreMessageLike): boolean {
+  return m.type === "user" ||
+    (m.type === "ai-response" && (!m.isError || Boolean(m.agentSteps?.length)));
+}
+
 // ── Flatten de agentSteps → texto (modos SEM tools) ────────
 // Mandar `tool_calls`/`tool` num request que NÃO declara `tools` quebra em
 // vários providers: Anthropic responde 400 ("tool_use/tool_result exigem tools
@@ -185,9 +191,7 @@ export function storeMessagesToProvider(
   lastUserAttachments?: MessageAttachment[],
   toolMode = false
 ): ProviderMessage[] {
-  const usable = messages.filter(
-    (m) => m.type === "user" || (m.type === "ai-response" && !m.isError)
-  );
+  const usable = messages.filter(keepConversationMessage);
   const out: ProviderMessage[] = [];
   usable.forEach((m, idx) => {
     if (m.type === "ai-response" && m.agentSteps && m.agentSteps.length > 0) {
@@ -213,12 +217,12 @@ export function storeMessagesToProvider(
             content: s.ok ? body : `ERRO: ${body}`,
           });
         }
-        if (m.content) out.push({ role: "assistant", content: m.content });
+        if (m.content && !m.isError) out.push({ role: "assistant", content: m.content });
       } else {
         // Qualquer outro modo/provider: ações viram texto (memória portável).
         out.push({
           role: "assistant",
-          content: flattenAgentResponse(m.content ?? "", m.agentSteps),
+          content: flattenAgentResponse(m.isError ? "" : m.content ?? "", m.agentSteps),
         });
       }
       return;
@@ -227,7 +231,7 @@ export function storeMessagesToProvider(
       role: m.type === "user" ? "user" : "assistant",
       content: m.content ?? "",
     };
-    const isLastUser = idx === usable.length - 1 && m.type === "user";
+    const isLastUser = m.type === "user" && usable.slice(idx + 1).every((next) => next.isError);
     if (isLastUser && lastUserAttachments && lastUserAttachments.length > 0) {
       out.push({ ...base, attachments: lastUserAttachments });
     } else {

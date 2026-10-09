@@ -87,6 +87,8 @@ export interface ProviderRequest {
    *  responder recebe dele QUANTO pensar e um piso de max_tokens (ver
    *  paramPolicy). Sem ele (assistente, títulos), vale o padrão do provider. */
   effort?: EffortLevel;
+  /** Local UI notification; never serialized into the API body. */
+  onRecovery?: () => void;
 }
 
 export interface ProviderResponse {
@@ -97,6 +99,19 @@ export interface ProviderResponse {
   /** Raciocínio (reasoning_content) de respostas NÃO-stream — ex: DeepSeek R1
    *  via NIM (pseudo-stream). No stream real vai pelo ReasoningHandler. */
   reasoning?: string;
+  finishReason?: string;
+  /** SSE terminal event or finish_reason received (not merely an EOF). */
+  streamCompleted?: boolean;
+  invalidToolCalls?: boolean;
+}
+
+export function responseIssue(response: ProviderResponse):
+  "outputLimit" | "streamIncomplete" | "invalidToolResponse" | "emptyResponse" | undefined {
+  if (response.finishReason === "length") return "outputLimit";
+  if (response.streamCompleted === false) return "streamIncomplete";
+  if (response.invalidToolCalls) return "invalidToolResponse";
+  if (!response.content.trim() && !response.toolCalls?.length) return "emptyResponse";
+  return undefined;
 }
 
 /** Callback que recebe cada delta de token vindo do streaming. */

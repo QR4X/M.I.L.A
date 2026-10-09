@@ -37,8 +37,7 @@ describe("os sliders do editor de nível", () => {
     expect(tokens.paradas!.at(-1)).toBe(0); // sem teto é o maior de todos
     expect(tokens.mostrar!(0)).toBe("No cap");
     expect(tokens.mostrar!(2048)).toBe("2k tokens");
-    expect(campo("agentMaxTurns").paradas!.at(-1)).toBe(0);
-    expect(campo("agentMaxTurns").mostrar!(1)).toBe("1 turn");
+    expect(campo("agentMaxTurns")).toBeUndefined();
     const temp = campo("temperature");
     expect(temp.paradas![0]).toBe(-1); // não mandar fica antes do zero
     expect(temp.mostrar!(-1)).toBe("Provider default");
@@ -89,19 +88,26 @@ describe("os sliders do editor de nível", () => {
 // v0.1.73 e sumiu na 0.4.0; o motor sempre leu `effortConfigs`).
 
 describe("esforço por nível", () => {
+  it("overrides antigos de turnos não contam como ajuste nem reaparecem ao editar", () => {
+    const old = { low: { agentMaxTurns: 5, maxTokens: 900 } };
+    const onlyOld = { low: { agentMaxTurns: 5, maxTokens: undefined } };
+    expect(nivelEditado(onlyOld, "low")).toBe(false);
+    expect(comCampo(old, "low", "maxTokens", 1000)).toEqual({ low: { maxTokens: 1000 } });
+    expect(describeEffort("low", old)).toBe("Fast and economical (≤900 tok)");
+  });
   it("de fábrica, as descrições são as de antes, letra por letra", () => {
     expect(EFFORT_DESCRIPTIONS).toEqual({
-      low: "Fast and economical (≤512 tok · 5 turns)",
-      med: "Balanced (≤2k tok · 12 turns)",
-      high: "Detailed (≤6k tok · 25 turns)",
-      xhigh: "Deep (≤16k tok · 60 turns)",
-      max: "Relentless (up to 80% of context · 200 turns)",
+      low: "Fast and economical (≤512 tok)",
+      med: "Balanced (≤2k tok)",
+      high: "Detailed (≤6k tok)",
+      xhigh: "Deep (≤16k tok)",
+      max: "Relentless (up to 80% of context)",
     });
   });
 
   it("editado, a descrição do composer mostra o número que vale", () => {
-    expect(describeEffort("med", { med: { maxTokens: 3000, agentMaxTurns: 0 } })).toBe(
-      "Balanced (≤3k tok · no turn cap)"
+    expect(describeEffort("med", { med: { maxTokens: 3000 } })).toBe(
+      "Balanced (≤3k tok)"
     );
     expect(describeEffort("max", { max: { contextReservePercent: 60 } })).toContain(
       "up to 60% of context"
@@ -139,7 +145,7 @@ describe("esforço por nível", () => {
   });
 
   it("a linha do nível resume os números de agora", () => {
-    expect(resumoDoNivel({}, "med")).toBe("≤2k tok · 12 turns · temperature 0.7 · 5 notes");
+    expect(resumoDoNivel({}, "med")).toBe("≤2k tok · temperature 0.7 · 5 notes");
     expect(resumoDoNivel({ med: { temperature: -1 } }, "med")).toContain("provider temperature");
   });
 

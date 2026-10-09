@@ -45,6 +45,7 @@ import type { NoteAttachment } from "../providers/base";
 import type { Project } from "../projects";
 import { previewFromText } from "./chatPreview";
 import { vaultAtivo } from "./vaultContext";
+import { keepConversationMessage } from "../agent/conversation";
 
 export type ChatMode = "chat" | "vault-qa" | "agent";
 export const CHAT_MODES: ChatMode[] = ["chat", "vault-qa", "agent"];
@@ -456,7 +457,7 @@ export class ChatSession {
     // `as` é o que diz ao compilador o que o filtro já garantiu — ai-options
     // não tem `content` e não passa por aqui.
     const guardadas = run.messages.filter(
-      (m) => m.type === "user" || (m.type === "ai-response" && !m.isError)
+      keepConversationMessage
     ) as Array<Extract<ChatMessage, { content: string }>>;
     if (guardadas.length === 0) return;
     const chat: ChatData = {
@@ -473,6 +474,7 @@ export class ChatSession {
         type: m.type as "user" | "ai-response",
         content: m.content,
         timestamp: m.timestamp,
+        ...(m.type === "ai-response" && m.isError ? { isError: true } : {}),
         ...(m.type === "ai-response" && m.reaction
           ? { reaction: m.reaction }
           : {}),
@@ -624,6 +626,7 @@ export class ChatSession {
         type: m.type,
         content: m.content,
         timestamp: m.timestamp,
+        ...(m.type === "ai-response" && m.isError ? { isError: true } : {}),
         ...(m.type === "ai-response" && m.reaction
           ? { reaction: m.reaction }
           : {}),
@@ -789,7 +792,7 @@ export class ChatSession {
     if (!st.currentChatId) return;
     const userOrAi = st.messages.filter(
       (m): m is UserMessage | AIResponseMessage =>
-        m.type === "user" || (m.type === "ai-response" && !m.isError)
+        keepConversationMessage(m)
     );
     if (userOrAi.length === 0) return;
     const cfg = this.config;
@@ -814,6 +817,7 @@ export class ChatSession {
         type: m.type,
         content: m.content,
         timestamp: m.timestamp,
+        ...(m.type === "ai-response" && m.isError ? { isError: true } : {}),
         ...(m.type === "ai-response" && m.reaction
           ? { reaction: m.reaction }
           : {}),

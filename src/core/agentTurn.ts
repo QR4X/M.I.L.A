@@ -31,6 +31,7 @@ import {
   trimSignatures,
 } from "../agent/loopDetection";
 import type { MessageAttachment, ProviderMessage } from "../providers/base";
+import { responseIssue } from "../providers/base";
 import type { AIToolStep, PermissionLevel } from "../agent/types";
 import type { EngineCtx } from "./chatEngine";
 import { buscarContextoDoVault } from "./vaultLookup";
@@ -171,9 +172,6 @@ export async function runAgentTurn(
 
   const apiKey = apiKeyFor(activeProviderId);
 
-  // MAX_TURNS vem do effort config (0 = sem teto; loop detection é o limite).
-  const MAX_TURNS = effortCfg.agentMaxTurns;
-  const isUncapped = MAX_TURNS === 0;
   const loopWindow = effortCfg.loopDetectionWindow;
   const recentCallSignatures: string[] = [];
   let loopNudges = 0;
@@ -181,20 +179,21 @@ export async function runAgentTurn(
   // Ações de tool do run inteiro — anexadas à resposta final p/ continuidade.
   const runSteps: AIToolStep[] = [];
 
-  let turn = 0;
   let firstTurn = true;
   const controller = new AbortController();
   abortRef.current = controller;
+  let responseId: string | null = null;
+  let reasoningBuf = "";
 
   try {
-    while (isUncapped || turn < MAX_TURNS) {
-      turn++;
+    while (true) {
       // Stop entre turnos.
       if (controller.signal.aborted) {
         throw new DOMException("Interrupted", "AbortError");
       }
 
-      let responseId: string | null = null;
+      responseId = null;
+      reasoningBuf = "";
       const onToken = (token: string) => {
         if (responseId === null) {
           if (firstTurn) {
@@ -203,6 +202,10 @@ export async function runAgentTurn(
           }
           responseId = addMessage({ type: "ai-response", content: token });
           setStreamingMessageId(responseId);
+          if (reasoningBuf) {
+            useChatStore.getState().appendReasoning(responseId, reasoningBuf);
+            reasoningBuf = "";
+          }
         } else {
           appendToMessage(responseId, token);
         }
@@ -222,14 +225,45 @@ export async function runAgentTurn(
           temperature: effortCfg.temperature,
           effort: isEffortLevel(effort) ? effort : undefined,
           tools,
+          onRecovery: () => {
+            addMessage({
+              type: "ai-comment",
+              content: t.ai.recovering,
+            });
+          },
         },
         apiKey,
         onToken,
         (usage) => addUsage(usage.input, usage.output),
-        controller.signal
+        controller.signal,
+        (delta) => {
+          if (responseId === null) reasoningBuf += delta;
+          else useChatStore.getState().appendReasoning(responseId, delta);
+        }
       );
       endStreamTimer();
       setStreamingMessageId(null);
+
+      const issue = responseIssue(response);
+      if (issue) {
+        if (firstTurn) {
+          updateActivity(commentId, { phase: "failed", iconFailed: "x-circle", failedText: t.ai.failed });
+          firstTurn = false;
+        }
+        const errorId = addMessage({
+          type: "ai-response",
+          content: `${t.ai.errorPrefix} ${t.ai[issue]}`,
+          isError: true,
+        });
+        if (responseId === null && (reasoningBuf || response.reasoning)) {
+          useChatStore.getState().appendReasoning(errorId, reasoningBuf || response.reasoning || "");
+        }
+        if (response.finishReason === "length" || response.streamCompleted === false) {
+          useChatStore.getState().setTruncated(responseId ?? errorId, true);
+        }
+        if (runSteps.length) setAgentSteps(errorId, runSteps);
+        return;
+      }
 
       // Caso 1: sem tool_calls = resposta final.
       if (!response.toolCalls || response.toolCalls.length === 0) {
@@ -238,15 +272,12 @@ export async function runAgentTurn(
             updateActivity(commentId, { phase: "done" });
             firstTurn = false;
           }
-          const hasContent = Boolean(response.content && response.content.trim());
           responseId = addMessage({
             type: "ai-response",
-            content: hasContent ? response.content : `${t.ai.errorPrefix} ${t.ai.emptyResponse}`,
-            isError: !hasContent,
+            content: response.content,
           });
-          if (!hasContent && response.reasoning) {
+          if (response.reasoning) {
             useChatStore.getState().appendReasoning(responseId, response.reasoning);
-            useChatStore.getState().setTruncated(responseId, true);
           }
         }
         if (runSteps.length > 0 && responseId) {
@@ -600,11 +631,6 @@ export async function runAgentTurn(
         recentCallSignatures.length = 0;
       }
     }
-    const maxId = addMessage({
-      type: "ai-response",
-      content: t.agent.maxTurnsReached(MAX_TURNS),
-    });
-    if (runSteps.length > 0) setAgentSteps(maxId, runSteps);
   } catch (err) {
     if (firstTurn) {
       if (err instanceof DOMException && err.name === "AbortError") {
@@ -641,6 +667,9 @@ export async function runAgentTurn(
         isError: true,
         errorCode: code,
       });
+      if (responseId === null && reasoningBuf) {
+        useChatStore.getState().appendReasoning(errId, reasoningBuf);
+      }
       if (runSteps.length > 0) setAgentSteps(errId, runSteps);
     }
   } finally {

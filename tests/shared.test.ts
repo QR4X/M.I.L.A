@@ -124,20 +124,21 @@ describe("parseOpenAIChatMessage — tool calls tortas", () => {
     expect(r.toolCalls?.[0].arguments).toEqual({});
   });
 
-  it("arguments inválido vira { _raw } — o erro fica visível, não some", () => {
+  it("arguments inválido bloqueia o lote e sinaliza o erro", () => {
     const r = msg([
       { type: "function", id: "x", function: { name: "ler", arguments: "{nao é json" } },
     ]);
-    expect(r.toolCalls?.[0].arguments).toEqual({ _raw: "{nao é json" });
+    expect(r.toolCalls).toBeUndefined();
+    expect(r.invalidToolCalls).toBe(true);
   });
 
-  it("a torta é descartada e a boa do lado sobrevive", () => {
+  it("um lote misto não executa só parte das ações", () => {
     const r = msg([
       { type: "function", id: "a", function: {} },
       { type: "function", id: "b", function: { name: "ok", arguments: '{"n":1}' } },
     ]);
-    expect(r.toolCalls).toHaveLength(1);
-    expect(r.toolCalls?.[0]).toMatchObject({ id: "b", name: "ok", arguments: { n: 1 } });
+    expect(r.toolCalls).toBeUndefined();
+    expect(r.invalidToolCalls).toBe(true);
   });
 
   it("entrada que não é do tipo function é ignorada", () => {

@@ -9,6 +9,7 @@ import type { getProvider } from "../providers";
 import { semCredencial, describeProviderError } from "./helpers";
 import { resolveEffortConfig, effortToMaxTokensSmart, isEffortLevel } from "./effort";
 import { resolveMaxTokens } from "../providers/paramPolicy";
+import { responseIssue } from "../providers/base";
 import { getContextWindow } from "./contextWindows";
 import {
   blocoDeNotasAnexadas,
@@ -176,13 +177,14 @@ export async function streamReply(
     let lastOutputTokens = 0;
 
     startStreamTimer();
-    await activeProvider.streamChat(
+    const response = await activeProvider.streamChat(
       {
         model: activeModel,
         messages: history,
         maxTokens,
         temperature: effortCfg.temperature,
         effort: isEffortLevel(effort) ? effort : undefined,
+        onRecovery: () => addMessage({ type: "ai-comment", content: t.ai.recovering }),
       },
       apiKey,
       (token) => {
@@ -208,13 +210,37 @@ export async function streamReply(
       (reasoningDelta) => {
         // Reasoning costuma vir ANTES do conteúdo (R1). Buffera até a
         // ai-response existir; depois acumula direto na mensagem.
-        reasoningBuf += reasoningDelta;
         if (responseId !== null) {
           useChatStore.getState().appendReasoning(responseId, reasoningDelta);
+        } else {
+          reasoningBuf += reasoningDelta;
         }
       }
     );
     endStreamTimer();
+    const issue = responseIssue(response);
+    if (issue) {
+      updateActivity(commentId, { phase: "failed", iconFailed: "x-circle", failedText: t.ai.failed });
+      const errorId = addMessage({
+        type: "ai-response",
+        content: `${t.ai.errorPrefix} ${t.ai[issue]}`,
+        isError: true,
+      });
+      if (reasoningBuf || (responseId === null && response.reasoning)) {
+        useChatStore.getState().appendReasoning(errorId, reasoningBuf || response.reasoning || "");
+      }
+      if (response.finishReason === "length" || response.streamCompleted === false) {
+        useChatStore.getState().setTruncated(responseId ?? errorId, true);
+      }
+      return;
+    }
+    if (responseId === null && response.content.trim()) {
+      updateActivity(commentId, { phase: "done" });
+      responseId = addMessage({ type: "ai-response", content: response.content });
+      if (reasoningBuf || response.reasoning) {
+        useChatStore.getState().appendReasoning(responseId, reasoningBuf || response.reasoning || "");
+      }
+    }
 
     // Heurística de truncamento: output ≈ teto de tokens → "Continuar". O
     // teto é o que FOI pro provider: modelo que pensa recebe um piso bem acima
@@ -228,31 +254,13 @@ export async function streamReply(
     );
     if (
       responseId !== null &&
+      response.finishReason === undefined &&
       lastOutputTokens > 0 &&
       lastOutputTokens >= tetoEnviado * 0.95
     ) {
       useChatStore.getState().setTruncated(responseId, true);
     }
 
-    if (responseId === null) {
-      if (reasoningBuf.trim()) {
-        updateActivity(commentId, { phase: "done" });
-        responseId = addMessage({ type: "ai-response", content: "" });
-        useChatStore.getState().appendReasoning(responseId, reasoningBuf);
-        useChatStore.getState().setTruncated(responseId, true);
-      } else {
-        updateActivity(commentId, {
-          phase: "failed",
-          iconFailed: "x-circle",
-          failedText: t.ai.failed,
-        });
-        addMessage({
-          type: "ai-response",
-          content: `${t.ai.errorPrefix} ${t.ai.emptyResponse}`,
-          isError: true,
-        });
-      }
-    }
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
       if (responseId === null) {
@@ -278,12 +286,15 @@ export async function streamReply(
         t,
         activeProvider.name
       );
-      addMessage({
+      const errorId = addMessage({
         type: "ai-response",
         content: `${t.ai.errorPrefix} ${message}`,
         isError: true,
         errorCode: code,
       });
+      if (responseId === null && reasoningBuf) {
+        useChatStore.getState().appendReasoning(errorId, reasoningBuf);
+      }
     }
   } finally {
     setLoading(false);

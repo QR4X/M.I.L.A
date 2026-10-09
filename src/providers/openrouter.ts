@@ -17,7 +17,9 @@ import {
   ProviderResponse,
   TokenHandler,
   UsageHandler,
+  responseIssue,
 } from "./base";
+import { resolveMaxTokens } from "./paramPolicy";
 import { isEmbeddingModelId } from "../rag/types";
 import {
   buildChatBody,
@@ -26,7 +28,6 @@ import {
   parseOpenAIChatMessage,
   usageFrom,
   parseOpenAICompatSSE,
-  streamFallbackToChat,
   hasPdfAttachment,
   fetchStream,
 } from "./_shared";
@@ -142,13 +143,15 @@ export class OpenRouterProvider implements Provider {
     const corpo = res.json as RespostaNoFio | undefined;
     const message = corpo?.choices?.[0]?.message;
     if (!message) throw new ProviderError("Empty response.", "unknown");
-    const { content, toolCalls, reasoning } = parseOpenAIChatMessage(message);
-    if (!toolCalls && !content) {
-      throw new ProviderError("Empty response from OpenRouter (no text or tool_calls).", "unknown");
-    }
     // v0.1.228: propaga reasoning (DeepSeek R1 & afins expõem reasoning_content
     // em non-stream); antes era descartado aqui.
-    return { content, toolCalls, usage: usageFrom(corpo ?? {}), reasoning };
+    const parsed = parseOpenAIChatMessage(message);
+    const finishReason = corpo?.choices?.[0]?.finish_reason;
+    if (finishReason === "length") {
+      if (parsed.toolCalls?.length) parsed.invalidToolCalls = true;
+      delete parsed.toolCalls;
+    }
+    return { ...parsed, usage: usageFrom(corpo ?? {}), finishReason };
   }
 
   async streamChat(
@@ -172,6 +175,23 @@ export class OpenRouterProvider implements Provider {
       req
     );
 
+    const recover = async (): Promise<ProviderResponse> => {
+      if (signal?.aborted) throw new DOMException("Interrupted", "AbortError");
+      req.onRecovery?.();
+      if (signal?.aborted) throw new DOMException("Interrupted", "AbortError");
+      const retryReq = {
+        ...req,
+        maxTokens: resolveMaxTokens("openrouter", req.model, Number(body.max_tokens) * 2, req.effort),
+      };
+      const result = await this.chat(retryReq, apiKey);
+      // Account for both attempts, even if the recovery is also empty.
+      if (result.usage && onUsage) onUsage(result.usage);
+      if (signal?.aborted) throw new DOMException("Interrupted", "AbortError");
+      if (result.reasoning && onReasoning) onReasoning(result.reasoning);
+      if (result.content) onToken(result.content);
+      return result;
+    };
+
     let res: Response;
     try {
       res = await fetchStream(OPENROUTER_ENDPOINT, {
@@ -188,15 +208,10 @@ export class OpenRouterProvider implements Provider {
       if (err instanceof DOMException && err.name === "AbortError") throw err;
       // Falha de CONEXÃO do fetch SSE (típico: CORS no WebView mobile) → cai pro
       // chat() via requestUrl (fura CORS) e emite tudo de uma vez. v0.1.232
-      return streamFallbackToChat(
-        () => this.chat(req, apiKey),
-        onToken,
-        onUsage,
-        onReasoning
-      );
+      return recover();
     }
     await ensureOkStream(res, { label: "OpenRouter" });
-    if (!res.body) throw new ProviderError("Empty stream.", "unknown");
+    if (!res.body) return recover();
 
     const parsed = await parseOpenAICompatSSE(
       res.body,
@@ -206,19 +221,11 @@ export class OpenRouterProvider implements Provider {
       onReasoning
     );
 
-    // Se o stream fechou sem produzir nenhum conteúdo, tool call ou reasoning
-    // (comum em conexões mobile instáveis ou quando SSE fecha prematuramente sem erro explícito),
-    // tenta fallback via requestUrl nativo do Obsidian antes de desistir.
-    if (!parsed.content && (!parsed.toolCalls || parsed.toolCalls.length === 0) && !parsed.reasoning) {
-      if (signal?.aborted) {
-        throw new DOMException("Interrupted", "AbortError");
-      }
-      return streamFallbackToChat(
-        () => this.chat(req, apiKey),
-        onToken,
-        onUsage,
-        onReasoning
-      );
+    // Reasoning alone is not an answer. Recover once, without replaying tools.
+    if (!parsed.content.trim() && !parsed.toolCalls?.length && responseIssue(parsed)) {
+      const recovered = await recover();
+      if (parsed.reasoning && !recovered.reasoning) recovered.reasoning = parsed.reasoning;
+      return recovered;
     }
 
     return parsed;

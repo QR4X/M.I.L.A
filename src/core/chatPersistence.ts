@@ -26,6 +26,7 @@ export interface ChatMessageStored {
   /** Ações de tool do agent (Agent mode) — persistidas pra continuidade de
    *  contexto ao reabrir o chat. v0.1.160 */
   agentSteps?: AIToolStep[];
+  isError?: boolean;
 }
 
 /** Argumento mais significativo de uma tool (path/from/query) pro resumo. */
@@ -198,6 +199,7 @@ function renderBody(chat: ChatData): string {
       const meta: string[] = [];
       if (m.timestamp) meta.push(`ts=${m.timestamp}`);
       if (m.reaction) meta.push(`reaction=${m.reaction}`);
+      if (m.isError) meta.push("error=true");
       const metaLine = meta.length > 0 ? `<!-- axxa: ${meta.join(" ")} -->\n` : "";
       // Ações do agent — base64 num comentário (precisão pro replay; invisível
       // no preview). O resumo legível vai no frontmatter tools_used.
@@ -216,6 +218,7 @@ function parseMessageMeta(content: string): {
   cleanContent: string;
   timestamp?: number;
   reaction?: "like" | "dislike" | null;
+  isError?: boolean;
 } {
   const match = content.match(/^\s*<!--\s*axxa:\s*([^>]+?)\s*-->\s*\n?/);
   if (!match) return { cleanContent: content };
@@ -223,14 +226,16 @@ function parseMessageMeta(content: string): {
   const cleanContent = content.slice(match[0].length);
   let timestamp: number | undefined;
   let reaction: "like" | "dislike" | null | undefined;
+  let isError: boolean | undefined;
   for (const part of meta.split(/\s+/)) {
     const [k, v] = part.split("=");
     if (k === "ts" && v) timestamp = parseInt(v, 10);
+    else if (k === "error" && v === "true") isError = true;
     else if (k === "reaction" && (v === "like" || v === "dislike")) {
       reaction = v;
     }
   }
-  return { cleanContent, timestamp, reaction };
+  return { cleanContent, timestamp, reaction, isError };
 }
 
 // Exportadas pra teste de round-trip (integridade de dados). v0.1.149
@@ -360,7 +365,7 @@ function parseBody(body: string): ChatMessageStored[] {
       next ? next.headingStart : body.length
     );
     // Extrai metadata (timestamp + reaction) da linha HTML comment
-    const { cleanContent, timestamp, reaction } = parseMessageMeta(rawContent.trim());
+    const { cleanContent, timestamp, reaction, isError } = parseMessageMeta(rawContent.trim());
     // Extrai as ações do agent (comentário base64) e tira do conteúdo visível.
     const { content: finalContent, agentSteps } = extractAgentSteps(
       cleanContent.trim()
@@ -372,6 +377,7 @@ function parseBody(body: string): ChatMessageStored[] {
       timestamp: timestamp ?? Date.now(),
       ...(reaction != null ? { reaction } : {}),
       ...(agentSteps ? { agentSteps } : {}),
+      ...(isError ? { isError } : {}),
     });
   }
   return messages;

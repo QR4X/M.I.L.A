@@ -60,8 +60,6 @@ export const EN_US = {
       "When you need to list many files, prefer parallel tool calls (same turn).",
     needsOpenAI:
       "Agent Mode requires a provider with tool calling. Use OpenAI, Anthropic, Gemini, OpenRouter, Nvidia NIM, or Ollama (compatible model).",
-    maxTurnsReached: (n: number) =>
-      `Agent hit the limit of ${n} turns without finishing. Try rephrasing the task.`,
     // Chips de activity do agent loop (P1-03/P1-27) — antes hardcoded em PT.
     unknownTool: (name: string) => `Unknown tool: ${name}`,
     deniedTool: (name: string) => `Denied: ${name}`,
@@ -104,7 +102,11 @@ export const EN_US = {
 
   ai: {
     thinking: "Thinking...",
-    emptyResponse: "[Empty response received]",
+    emptyResponse: "The provider returned no answer, only reasoning or an empty response. Try again or choose another model.",
+    outputLimit: "The model reached the request's output-token limit before finishing. Increase the output budget where supported, or try another model.",
+    streamIncomplete: "The response stream ended before the provider confirmed completion. Try again.",
+    invalidToolResponse: "The model returned incomplete or invalid tool arguments. No tools from this batch were executed.",
+    recovering: "No usable answer received — trying once more (may use additional API credits).",
     errorPrefix: "[Error]",
     unknownError: "Unknown error.",
     failed: "Failed",
