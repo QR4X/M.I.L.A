@@ -60,8 +60,8 @@ function de(ini: number, fim: number, passo = 1): number[] {
   return out;
 }
 
-/** Os nove ajustes, em três blocos: a resposta (tamanho, a parte do contexto
- *  quando não tem teto, temperatura), o agente (voltas, novas tentativas,
+/** Os oito ajustes, em três blocos: a resposta (tamanho, a parte do contexto
+ *  quando não tem teto, temperatura), o agente (novas tentativas,
  *  trava de loop, paralelo) e o Vault Q&A (quantas notas, quanto de cada). */
 export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
   {
@@ -69,7 +69,7 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
     icone: "message-square-text",
     name: marca("Reply length"),
     desc: marca(
-      "The longest a reply can get, in tokens — longer costs more. No cap lets it use up to the share of context below. Models that think first (GPT-5, the o-series, Claude 5, Fable, Gemini 2.5 and 3) spend part of it thinking, so they always get at least 16k (32k on High, 64k from Extra high), and where the provider allows, the level also sets how hard they think. Each model has its own ceiling (4k on NVIDIA, 64k on Claude Haiku 4.5…), and the plugin never asks above it."
+      "The longest a reply can get, in tokens — longer costs more. No cap lets it use up to the share of context below. Models that think first (GPT-5, the o-series, Claude 5, Fable, Gemini 2.5 and 3, DeepSeek V4) spend part of it thinking, so the plugin requests at least 16k (32k on High, 64k from Extra high) where the model ceiling permits. Where the provider allows, the level also sets how hard they think. Existing model ceilings still apply (8k for DeepSeek), even with No cap."
     ),
     tipo: "numero",
     min: 0,
@@ -106,23 +106,6 @@ export const CAMPOS_DE_ESFORCO: CampoDeEsforco[] = [
     max: 2,
     paradas: [-1, ...de(0, 2, 0.1)],
     mostrar: (v) => (v < 0 ? tr("Provider default") : String(v)),
-  },
-  {
-    key: "agentMaxTurns",
-    icone: "footprints",
-    name: marca("Agent turns"),
-    desc: marca(
-      "How many rounds of tool use (read, search, edit…) the Agent gets before it stops and answers. No cap leaves only the loop guard to stop it."
-    ),
-    tipo: "numero",
-    min: 0,
-    max: 1000,
-    paradas: [
-      1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 80, 100, 150, 200, 300, 500,
-      1000, 0,
-    ],
-    mostrar: (v) =>
-      v === 0 ? tr("No cap") : v === 1 ? tr("1 turn") : tr("{n} turns", { n: v }),
   },
   {
     key: "toolRetryOnError",
@@ -229,7 +212,11 @@ export function comCampo(
   key: keyof EffortConfig,
   valor: number | boolean | undefined
 ): Overrides {
-  const atual: Partial<EffortConfig> = { ...(overrides[level] ?? {}) };
+  const atual: Partial<EffortConfig> = {};
+  for (const campo of CAMPOS_DE_ESFORCO) {
+    const v = overrides[level]?.[campo.key];
+    if (v !== undefined) Object.assign(atual, { [campo.key]: v });
+  }
   if (valor === undefined || valor === DEFAULT_EFFORT_CONFIGS[level][key]) {
     delete atual[key];
   } else {
@@ -243,7 +230,7 @@ export function comCampo(
 
 /** Algum campo do nível foi mudado? */
 export function nivelEditado(overrides: Overrides | undefined, level: EffortLevel): boolean {
-  return Object.keys(overrides?.[level] ?? {}).length > 0;
+  return CAMPOS_DE_ESFORCO.some((campo) => overrides?.[level]?.[campo.key] !== undefined);
 }
 
 /** A linha do nível nas settings: os números que valem agora. */

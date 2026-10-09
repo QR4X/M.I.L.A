@@ -89,6 +89,19 @@ describe("buildAgentSystemPrompt", () => {
 });
 
 describe("storeMessagesToProvider", () => {
+  it("retains completed tool results from errors without replaying error text", () => {
+    const messages = [{
+      type: "ai-response", content: "[Error] output limit", isError: true,
+      agentSteps: [{ id: "call-1", name: "vault_read", arguments: { path: "a.md" }, result: "already read", ok: true }],
+    }];
+    expect(storeMessagesToProvider(messages, undefined, true)).toEqual([
+      { role: "assistant", content: "", toolCalls: [{ id: "call-1", name: "vault_read", arguments: { path: "a.md" } }] },
+      { role: "tool", toolCallId: "call-1", content: "already read" },
+    ]);
+    const text = storeMessagesToProvider(messages)[0].content;
+    expect(text).toContain("already read");
+    expect(text).not.toContain("[Error]");
+  });
   const msgs = [
     { type: "user", content: "oi" },
     { type: "ai-comment", content: "pensando…" }, // descartado

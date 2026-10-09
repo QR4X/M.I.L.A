@@ -7,6 +7,8 @@ import { ollamaProvider } from "../src/providers/ollama";
 import { nimProvider } from "../src/providers/nim";
 import { fakeStreamResponse, sse } from "./helpers/streamMock";
 import { __setRequestUrl } from "./obsidian-stub";
+import { parseOpenAICompatSSE } from "../src/providers/_shared";
+import { responseIssue } from "../src/providers/base";
 
 // Dirige o streamChat REAL de cada provider com a rede mockada. Cobre o parser
 // de verdade (buffer de linha, acumulação de delta, tool_calls, usage, [DONE]),
@@ -17,6 +19,84 @@ import { __setRequestUrl } from "./obsidian-stub";
 const userReq = (model: string) => ({
   model,
   messages: [{ role: "user" as const, content: "hi" }],
+});
+
+describe("SSE completion diagnostics", () => {
+  const parse = (chunks: string[]) => parseOpenAICompatSSE(
+    fakeStreamResponse(chunks).body!, () => {}, undefined, "test_call"
+  );
+
+  it("reads the final event without a newline and retains length", async () => {
+    const res = await parse([
+      sse({ choices: [{ delta: { reasoning: "thinking" } }] }),
+      'data: {"choices":[{"delta":{},"finish_reason":"length"}]}',
+    ]);
+    expect(res.reasoning).toBe("thinking");
+    expect(res.finishReason).toBe("length");
+    expect(res.streamCompleted).toBe(true);
+    expect(responseIssue(res)).toBe("outputLimit");
+  });
+
+  describe("native compatible providers reject malformed tool arguments explicitly", () => {
+    afterEach(() => __setRequestUrl(null));
+    it.each([openaiProvider, geminiProvider, nimProvider])("$id does not turn a malformed batch into success text", async (provider) => {
+      __setRequestUrl(async () => ({ status: 200, json: { choices: [{ message: {
+        content: "I will edit your note",
+        tool_calls: [{ type: "function", id: "x", function: { name: "vault_edit", arguments: '{"path":' } }],
+      } }] } }));
+      await expect(provider.chat(userReq("test"), "key")).rejects.toMatchObject({
+        name: "ProviderError", message: expect.stringContaining("invalid tool-call arguments"),
+      });
+    });
+  });
+
+  it("distinguishes reasoning-only completion from premature EOF", async () => {
+    const reasoning = sse({ choices: [{ delta: { reasoning: "thinking" } }] });
+    expect(responseIssue(await parse([reasoning, "data: [DONE]"]))).toBe("emptyResponse");
+    expect(responseIssue(await parse([reasoning]))).toBe("streamIncomplete");
+  });
+
+  it("retains partial text and releases the stream reader", async () => {
+    const body = fakeStreamResponse([sse({ choices: [{ delta: { content: "partial" } }] })]).body!;
+    const res = await parseOpenAICompatSSE(body, () => {}, undefined, "test");
+    expect(res.content).toBe("partial");
+    expect(responseIssue(res)).toBe("streamIncomplete");
+    expect(body.locked).toBe(false);
+  });
+
+  it("a reader network failure keeps reasoning and reports an incomplete stream", async () => {
+    let sent = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (!sent) {
+          sent = true;
+          controller.enqueue(new TextEncoder().encode(sse({ choices: [{ delta: { reasoning: "thinking" } }] })));
+        } else controller.error(new TypeError("Network connection lost"));
+      },
+    });
+    const res = await parseOpenAICompatSSE(body, () => {}, undefined, "test");
+    expect(res.reasoning).toBe("thinking");
+    expect(responseIssue(res)).toBe("streamIncomplete");
+    expect(body.locked).toBe(false);
+  });
+
+  it.each(["length", null])("never executes a tool batch from an unfinished response (%s)", async (finish_reason) => {
+    const res = await parse([sse({ choices: [{
+      delta: { tool_calls: [{ index: 0, id: "x", function: { name: "vault_edit", arguments: '{"path":"a.md"}' } }] },
+      finish_reason,
+    }] })]);
+    expect(res.toolCalls).toBeUndefined();
+    expect(res.invalidToolCalls).toBe(true);
+  });
+
+  it("rejects malformed tool JSON even on a completed stream", async () => {
+    const res = await parse([
+      sse({ choices: [{ delta: { tool_calls: [{ index: 0, function: { name: "web_fetch", arguments: '{"url":' } }] } }] }),
+      "data: [DONE]\n\n",
+    ]);
+    expect(res.toolCalls).toBeUndefined();
+    expect(responseIssue(res)).toBe("invalidToolResponse");
+  });
 });
 
 /**
@@ -335,7 +415,110 @@ describe("anthropic streamChat — eventos tipados", () => {
 });
 
 describe("openrouter streamChat — formato OpenAI-compat via fetch", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    __setRequestUrl(null);
+  });
+
+  it("recovers reasoning-only once, keeps history and accounts both requests", async () => {
+    mockFetch([
+      sse({ choices: [{ delta: { reasoning: "thinking" } }] }),
+      sse({ choices: [{ delta: {}, finish_reason: "length" }], usage: { prompt_tokens: 10, completion_tokens: 8192 } }),
+      "data: [DONE]\n\n",
+    ]);
+    const chat = vi.spyOn(openrouterProvider, "chat").mockResolvedValue({
+      content: "answer", finishReason: "stop", usage: { input: 10, output: 50 },
+    });
+    const onRecovery = vi.fn();
+    const onUsage = vi.fn();
+    const req = { ...userReq("deepseek/deepseek-v4-flash-0731"), maxTokens: 512, effort: "low" as const, onRecovery };
+    const res = await openrouterProvider.streamChat(req, "key", () => {}, onUsage);
+    expect(res.content).toBe("answer");
+    expect(chat).toHaveBeenCalledTimes(1);
+    expect(chat.mock.calls[0][0]).toMatchObject({ messages: req.messages, maxTokens: 8192 });
+    expect(onRecovery).toHaveBeenCalledTimes(1);
+    expect(onUsage.mock.calls).toEqual([[{ input: 10, output: 8192 }], [{ input: 10, output: 50 }]]);
+  });
+
+  it("two empty responses stop after exactly one recovery", async () => {
+    mockFetch(["data: [DONE]\n\n"]);
+    const chat = vi.spyOn(openrouterProvider, "chat").mockResolvedValue({ content: "", reasoning: "still thinking", finishReason: "length" });
+    const res = await openrouterProvider.streamChat(userReq("deepseek/deepseek-v4-flash-0731"), "key", () => {});
+    expect(chat).toHaveBeenCalledTimes(1);
+    expect(responseIssue(res)).toBe("outputLimit");
+  });
+
+  it.each([
+    { error: { message: "Rate limit exceeded" } },
+    { error: { message: "Maximum context length exceeded" } },
+  ])("does not retry explicit provider stream errors", async (payload) => {
+    mockFetch([sse(payload)]);
+    const chat = vi.spyOn(openrouterProvider, "chat");
+    await expect(openrouterProvider.streamChat(userReq("x"), "key", () => {})).rejects.toMatchObject({ name: "ProviderError" });
+    expect(chat).not.toHaveBeenCalled();
+  });
+
+  it("does not retry HTTP authentication errors", async () => {
+    mockFetch([], { status: 401, ok: false });
+    const chat = vi.spyOn(openrouterProvider, "chat");
+    await expect(openrouterProvider.streamChat(userReq("x"), "key", () => {})).rejects.toMatchObject({ code: "invalid-key" });
+    expect(chat).not.toHaveBeenCalled();
+  });
+
+  it("does not restart a stream that already displayed partial text", async () => {
+    mockFetch([sse({ choices: [{ delta: { content: "partial" } }] })]);
+    const chat = vi.spyOn(openrouterProvider, "chat");
+    const res = await openrouterProvider.streamChat(userReq("x"), "key", () => {});
+    expect(res.content).toBe("partial");
+    expect(responseIssue(res)).toBe("streamIncomplete");
+    expect(chat).not.toHaveBeenCalled();
+  });
+
+  it("does not recover a valid tool response", async () => {
+    mockFetch([
+      sse({ choices: [{ delta: { tool_calls: [{ index: 0, id: "x", function: { name: "vault_read", arguments: '{"path":"a.md"}' } }] } }] }),
+      "data: [DONE]\n\n",
+    ]);
+    const chat = vi.spyOn(openrouterProvider, "chat");
+    const res = await openrouterProvider.streamChat(userReq("deepseek/deepseek-v4-flash-0731"), "key", () => {});
+    expect(res.toolCalls).toHaveLength(1);
+    expect(chat).not.toHaveBeenCalled();
+  });
+
+  it("Stop before recovery prevents the extra request", async () => {
+    mockFetch([sse({ choices: [{ delta: { reasoning: "thinking" } }] }), "data: [DONE]\n\n"]);
+    const chat = vi.spyOn(openrouterProvider, "chat");
+    const ctrl = new AbortController();
+    await expect(openrouterProvider.streamChat(userReq("x"), "key", () => {}, undefined, ctrl.signal, () => ctrl.abort()))
+      .rejects.toMatchObject({ name: "AbortError" });
+    expect(chat).not.toHaveBeenCalled();
+  });
+
+  it("Stop during native recovery suppresses its result", async () => {
+    mockFetch(["data: [DONE]\n\n"]);
+    const ctrl = new AbortController();
+    vi.spyOn(openrouterProvider, "chat").mockImplementation(async () => {
+      ctrl.abort();
+      return { content: "late answer" };
+    });
+    const onToken = vi.fn();
+    await expect(openrouterProvider.streamChat(userReq("x"), "key", onToken, undefined, ctrl.signal))
+      .rejects.toMatchObject({ name: "AbortError" });
+    expect(onToken).not.toHaveBeenCalled();
+  });
+
+  it("nonstream retains finish_reason and rejects incomplete tool batches", async () => {
+    __setRequestUrl(async () => ({ status: 200, json: { choices: [{
+      message: { content: "", reasoning: "thinking", tool_calls: [{ type: "function", id: "x", function: { name: "vault_edit", arguments: '{"path":' } }] },
+      finish_reason: "length",
+    }] } }));
+    const res = await openrouterProvider.chat(userReq("x"), "key");
+    expect(res.reasoning).toBe("thinking");
+    expect(res.finishReason).toBe("length");
+    expect(res.toolCalls).toBeUndefined();
+    expect(res.invalidToolCalls).toBe(true);
+  });
 
   it("acumula content + usage + [DONE]", async () => {
     mockFetch([

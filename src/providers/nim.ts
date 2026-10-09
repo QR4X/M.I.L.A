@@ -307,7 +307,10 @@ export class NimProvider implements Provider {
     const corpo = res.json as RespostaNoFio | undefined;
     const message = corpo?.choices?.[0]?.message;
     if (!message) throw new ProviderError("Empty response from NIM.", "unknown");
-    const { content, toolCalls, reasoning } = parseOpenAIChatMessage(message);
+    const { content, toolCalls, reasoning, invalidToolCalls } = parseOpenAIChatMessage(message);
+    if (invalidToolCalls) {
+      throw new ProviderError("NIM returned invalid tool-call arguments. No tools were executed.", "unknown");
+    }
     if (!toolCalls && !content) {
       throw new ProviderError("Empty response from NIM (no text or tool_calls).", "unknown");
     }

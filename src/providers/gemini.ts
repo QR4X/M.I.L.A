@@ -153,7 +153,10 @@ export class GeminiProvider implements Provider {
     const corpo = res.json as RespostaNoFio | undefined;
     const message = corpo?.choices?.[0]?.message;
     if (!message) throw new ProviderError("Empty response from Gemini.", "unknown");
-    const { content, toolCalls } = parseOpenAIChatMessage(message);
+    const { content, toolCalls, invalidToolCalls } = parseOpenAIChatMessage(message);
+    if (invalidToolCalls) {
+      throw new ProviderError("Gemini returned invalid tool-call arguments. No tools were executed.", "unknown");
+    }
     if (!toolCalls && !content) {
       throw new ProviderError("Empty response from Gemini (no text or tool_calls).", "unknown");
     }

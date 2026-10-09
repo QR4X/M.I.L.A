@@ -429,8 +429,9 @@ export interface RespostaNoFio {
 // ============================================================
 export function parseOpenAIChatMessage(
   message: MensagemNoFio
-): { content: string; toolCalls?: ProviderToolCall[]; reasoning?: string } {
+): Pick<ProviderResponse, "content" | "toolCalls" | "reasoning" | "invalidToolCalls"> {
   let toolCalls: ProviderToolCall[] | undefined;
+  let invalidToolCalls = false;
   if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
     const lidas: ProviderToolCall[] = [];
     for (const tc of message.tool_calls) {
@@ -438,13 +439,21 @@ export function parseOpenAIChatMessage(
       // Sem nome não há o que chamar; e `function` ausente estourava aqui
       // antes de haver tipo — o `any` escondia que o host podia omiti-lo.
       const nome = tc.function?.name;
-      if (!nome) continue;
+      if (!nome) {
+        invalidToolCalls = true;
+        continue;
+      }
       const brutos = tc.function?.arguments ?? "";
       let parsedArgs: Record<string, unknown> = {};
       try {
         parsedArgs = brutos ? (JSON.parse(brutos) as Record<string, unknown>) : {};
+        if (!parsedArgs || typeof parsedArgs !== "object" || Array.isArray(parsedArgs)) {
+          invalidToolCalls = true;
+          continue;
+        }
       } catch {
-        parsedArgs = { _raw: brutos };
+        invalidToolCalls = true;
+        continue;
       }
       lidas.push({
         id: tc.id || `call_${crypto.randomUUID()}`,
@@ -472,7 +481,8 @@ export function parseOpenAIChatMessage(
     (typeof message.reasoning_content === "string" && message.reasoning_content) ||
     (typeof message.reasoning === "string" && message.reasoning) ||
     undefined;
-  return { content, toolCalls, reasoning };
+  return { content, toolCalls: invalidToolCalls ? undefined : toolCalls, reasoning,
+    ...(invalidToolCalls ? { invalidToolCalls: true } : {}) };
 }
 
 export function usageFrom(json: {
@@ -502,16 +512,25 @@ export function finalizeOpenAIResponse(
     .map((k) => Number(k))
     .sort((a, b) => a - b);
   const toolCalls: ProviderToolCall[] = [];
+  let invalidToolCalls = false;
   for (const i of indices) {
     const acc = toolCallAccum[i];
-    if (!acc.name) continue;
+    if (!acc.name) {
+      invalidToolCalls = true;
+      continue;
+    }
     let parsedArgs: Record<string, unknown> = {};
     try {
       parsedArgs = acc.argsBuf
         ? (JSON.parse(acc.argsBuf) as Record<string, unknown>)
         : {};
+      if (!parsedArgs || typeof parsedArgs !== "object" || Array.isArray(parsedArgs)) {
+        invalidToolCalls = true;
+        continue;
+      }
     } catch {
-      parsedArgs = { _raw: acc.argsBuf };
+      invalidToolCalls = true;
+      continue;
     }
     toolCalls.push({
       // Fallback de id: randomUUID garante unicidade absoluta entre turnos
@@ -525,6 +544,11 @@ export function finalizeOpenAIResponse(
   if (toolCalls.length > 0) result.toolCalls = toolCalls;
   if (usage) result.usage = usage;
   if (reasoning) result.reasoning = reasoning;
+  if (invalidToolCalls) {
+    result.invalidToolCalls = true;
+    // Never execute a subset of a malformed tool batch.
+    delete result.toolCalls;
+  }
   return result;
 }
 
@@ -551,36 +575,25 @@ export async function parseOpenAICompatSSE(
   // v0.1.228.
   let lastToolIdx = -1;
   let usage: { input: number; output: number } | undefined;
+  let finishReason: string | undefined;
+  let completed = false;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-
-    for (const line of lines) {
+  const processLine = (line: string) => {
       const trimmed = line.trim();
-      if (!trimmed.startsWith("data:")) continue;
+      if (!trimmed.startsWith("data:")) return;
       const data = trimmed.slice(5).trim();
       if (!data || data === "[DONE]") {
         if (data === "[DONE]") {
-          return finalizeOpenAIResponse(
-            accumulatedText,
-            toolCallAccum,
-            usage,
-            idPrefix,
-            accumulatedReasoning || undefined
-          );
+          completed = true;
         }
-        continue;
+        return;
       }
       let json: (ChunkNoFio & { error?: unknown; errors?: unknown }) | null = null;
       try {
-        json = JSON.parse(data);
+        json = JSON.parse(data) as ChunkNoFio & { error?: unknown; errors?: unknown };
       } catch {
         /* chunk JSON inválido — pula */
-        continue;
+        return;
       }
 
       // Detecção de erros emitidos dentro do stream SSE (ex: OpenRouter / gateways)
@@ -600,7 +613,11 @@ export async function parseOpenAICompatSSE(
         throw new ProviderError(`${label}: ${streamErr}`, "unknown");
       }
 
-      const delta = json?.choices?.[0]?.delta;
+      const choice = json?.choices?.[0];
+      if (typeof choice?.finish_reason === "string") {
+        finishReason = choice.finish_reason;
+      }
+      const delta = choice?.delta;
       if (delta) {
         const token = delta.content;
         if (typeof token === "string" && token.length > 0) {
@@ -653,13 +670,45 @@ export async function parseOpenAICompatSSE(
         };
         if (onUsage) onUsage(usage);
       }
+  };
+  try {
+    while (!completed) {
+      let read: ReadableStreamReadResult<Uint8Array>;
+      try {
+        read = await reader.read();
+      } catch (err) {
+        // A WebView network failure is an incomplete stream, not a clean EOF.
+        if (err instanceof TypeError) break;
+        throw err;
+      }
+      const { done, value } = read;
+      buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        processLine(line);
+        if (completed) break;
+      }
+      if (done) {
+        if (!completed && buffer.trim()) processLine(buffer);
+        break;
+      }
     }
+  } finally {
+    reader.releaseLock();
   }
-  return finalizeOpenAIResponse(
+  const result = finalizeOpenAIResponse(
     accumulatedText,
     toolCallAccum,
     usage,
     idPrefix,
     accumulatedReasoning || undefined
   );
+  result.finishReason = finishReason;
+  result.streamCompleted = completed || finishReason !== undefined;
+  if (finishReason === "length" || !result.streamCompleted) {
+    if (result.toolCalls?.length) result.invalidToolCalls = true;
+    delete result.toolCalls;
+  }
+  return result;
 }

@@ -61,6 +61,12 @@ describe("resolveTemperature", () => {
 });
 
 describe("resolveMaxTokens — teto de OUTPUT (≠ context window)", () => {
+  it("DeepSeek V4 datado recebe o piso sem ultrapassar o teto existente", () => {
+    for (const model of ["deepseek/deepseek-v4-flash-0731", "deepseek/deepseek-v4-pro", "deepseek-ai/deepseek-v4.1-flash"]) {
+      expect(resolveMaxTokens("openrouter", model, 512, "low")).toBe(8192);
+    }
+    expect(resolveMaxTokens("openrouter", "deepseek/deepseek-chat", 512, "low")).toBe(512);
+  });
   it("Effort Max (~159k) clampa pro limite real de cada modelo", () => {
     // Claude 4.x = 128k (não os 159k que o Effort pede)
     expect(resolveMaxTokens("anthropic", "claude-opus-4-8", 159000)).toBe(128000);

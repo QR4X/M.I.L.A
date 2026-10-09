@@ -33,7 +33,7 @@ describe("resolveEffortConfig", () => {
     const cfg = resolveEffortConfig("low", { low: { maxTokens: 999 } });
     expect(cfg.maxTokens).toBe(999);
     // resto continua o default de 'low'
-    expect(cfg.agentMaxTurns).toBe(DEFAULT_EFFORT_CONFIGS.low.agentMaxTurns);
+    expect(cfg).not.toHaveProperty("agentMaxTurns");
     expect(cfg.vaultTopK).toBe(DEFAULT_EFFORT_CONFIGS.low.vaultTopK);
   });
 

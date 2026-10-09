@@ -1,6 +1,6 @@
 // src/components/_shared/effort.ts
 // Effort = intensidade do processamento. Centraliza TODOS os parâmetros que
-// variam por nível (max_tokens, agent turns, temperatura, vault lookup, etc).
+// variam por nível (max_tokens, temperatura, vault lookup, etc).
 //
 // v0.1.73: expandido pra EffortConfig completo + overrides por usuário via
 // Settings → Effort. Cada nível ganhou aba dedicada nas Settings, permitindo
@@ -50,11 +50,6 @@ export const EFFORT_TAGLINES: Record<EffortLevel, string> = {
  * Config completo por effort — TODOS os parâmetros que variam por nível.
  * Cada campo é independente; o user pode override qualquer um via Settings.
  *
- * agentMaxTurns:
- *   Quantos rounds de tool-calling o agent pode fazer antes de desistir.
- *   0 = uncapped (anti-loop só pega via loopDetectionWindow).
- *   Antes era hardcoded em 10 — agora escala com effort.
- *
  * temperature:
  *   -1 = não enviar (provider usa default próprio).
  *   0..2 = enviar valor literal. Effort mais alto → temp mais baixa pra
@@ -80,7 +75,6 @@ export const EFFORT_TAGLINES: Record<EffortLevel, string> = {
  */
 export interface EffortConfig {
   maxTokens: number;
-  agentMaxTurns: number;
   vaultTopK: number;
   vaultExcerptChars: number;
   temperature: number;
@@ -92,13 +86,11 @@ export interface EffortConfig {
 
 /**
  * Defaults built-in — escalonados pra cada nível usar bem a janela do modelo.
- * Max é uncapped tanto em tokens (0 → 80% do context) quanto em turns
- * (200, suficiente pra qualquer task realista; loopDetection corta abuse).
+ * Max pede 80% do contexto em tokens. O agente não tem teto de turnos.
  */
 export const DEFAULT_EFFORT_CONFIGS: Record<EffortLevel, EffortConfig> = {
   low: {
     maxTokens: 512,
-    agentMaxTurns: 5,
     vaultTopK: 3,
     vaultExcerptChars: 300,
     temperature: 0.7,
@@ -109,7 +101,6 @@ export const DEFAULT_EFFORT_CONFIGS: Record<EffortLevel, EffortConfig> = {
   },
   med: {
     maxTokens: 2048,
-    agentMaxTurns: 12,
     vaultTopK: 5,
     vaultExcerptChars: 500,
     temperature: 0.7,
@@ -120,7 +111,6 @@ export const DEFAULT_EFFORT_CONFIGS: Record<EffortLevel, EffortConfig> = {
   },
   high: {
     maxTokens: 6000,
-    agentMaxTurns: 25,
     vaultTopK: 7,
     vaultExcerptChars: 800,
     temperature: 0.5,
@@ -131,7 +121,6 @@ export const DEFAULT_EFFORT_CONFIGS: Record<EffortLevel, EffortConfig> = {
   },
   xhigh: {
     maxTokens: 16000,
-    agentMaxTurns: 60,
     vaultTopK: 9,
     vaultExcerptChars: 1200,
     temperature: 0.3,
@@ -142,7 +131,6 @@ export const DEFAULT_EFFORT_CONFIGS: Record<EffortLevel, EffortConfig> = {
   },
   max: {
     maxTokens: 0,
-    agentMaxTurns: 200,
     vaultTopK: 12,
     vaultExcerptChars: 2000,
     temperature: 0.2,
@@ -170,7 +158,6 @@ export function resolveEffortConfig(
   if (!override) return base;
   return {
     maxTokens: override.maxTokens ?? base.maxTokens,
-    agentMaxTurns: override.agentMaxTurns ?? base.agentMaxTurns,
     vaultTopK: override.vaultTopK ?? base.vaultTopK,
     vaultExcerptChars: override.vaultExcerptChars ?? base.vaultExcerptChars,
     temperature: override.temperature ?? base.temperature,
@@ -239,20 +226,14 @@ export function tokensCurtos(n: number): string {
   return `${Math.round(n / 100) / 10}k`;
 }
 
-/** "≤2k tok · 12 turns" — o que separa um nível do outro, com os números que
+/** "≤2k tok" — o que separa um nível do outro, com os números que
  *  valem de verdade. */
 export function effortNumbers(cfg: EffortConfig): string {
   const tok =
     cfg.maxTokens === 0
       ? tr("up to {pct}% of context", { pct: cfg.contextReservePercent })
       : tr("≤{n} tok", { n: tokensCurtos(cfg.maxTokens) });
-  const voltas =
-    cfg.agentMaxTurns === 0
-      ? tr("no turn cap")
-      : cfg.agentMaxTurns === 1
-        ? tr("1 turn")
-        : tr("{n} turns", { n: cfg.agentMaxTurns });
-  return `${tok} · ${voltas}`;
+  return tok;
 }
 
 /**

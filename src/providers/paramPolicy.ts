@@ -198,9 +198,11 @@ export function maxOutputTokens(provider: string, model: string): number {
  *   - locais que pensam por padrão: gpt-oss, qwen3;
  *   - routers como openrouter/auto, que podem encaminhar dinamicamente para
  *     modelos de raciocínio sem aviso prévio.
+ *   - DeepSeek V4 Flash/Pro, inclusive variantes versionadas e datadas.
  */
 export function pensaAntes(_provider: string, model: string): boolean {
   const id = (model || "").toLowerCase();
+  if (/deepseek-v4(?:[.-]\d+)?-(flash|pro)(?:[-:]|$)/.test(id)) return true;
   if (id === "openrouter/auto" || id.endsWith("/auto") || id.includes("router")) return true;
   if (isReasoningModel(model)) return true;
   const c = claudeVersao(model);

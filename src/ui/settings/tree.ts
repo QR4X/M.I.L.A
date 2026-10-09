@@ -495,7 +495,7 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       chat,
       tr("Effort"),
       null,
-      tr("How hard the model works: length, agent turns, temperature."),
+      tr("How hard the model works: length, temperature."),
       "defaultEffort",
       () =>
         EFFORT_LEVELS.map((l) => ({
@@ -545,7 +545,6 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
             "tokens",
             "temperature",
             "temperatura",
-            "turns",
             "agent",
           ],
         }

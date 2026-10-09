@@ -34,6 +34,13 @@ const baseChat: ChatData = {
 };
 
 describe("chat persistence round-trip", () => {
+  it("preserves failed responses with completed tool actions", () => {
+    const chat: ChatData = { ...baseChat, messages: [{
+      type: "ai-response", content: "[Error] output limit", timestamp: 1, isError: true,
+      agentSteps: [{ id: "call-1", name: "vault_read", arguments: { path: "a.md" }, result: "already read", ok: true }],
+    }] };
+    expect(parseChatMarkdown(renderChatMarkdown(chat))).toEqual(chat);
+  });
   it("preserva todos os campos do chat (com code block, --- e reação)", () => {
     const restored = parseChatMarkdown(renderChatMarkdown(baseChat));
     expect(restored).toEqual(baseChat);

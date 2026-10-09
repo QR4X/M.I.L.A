@@ -63,8 +63,8 @@ export const PT_SETTINGS: Record<string, string> = {
   "Chat, Vault Q&A or Agent. Locks on the first message.":
     "Chat, Vault Q&A ou Agent. Fica fixo a partir da primeira mensagem.",
   Effort: "Esforço",
-  "How hard the model works: length, agent turns, temperature.":
-    "O quanto o modelo se esforça: tamanho, turnos do agente, temperatura.",
+  "How hard the model works: length, temperature.":
+    "O quanto o modelo se esforça: tamanho, temperatura.",
   Language: "Idioma",
   "Interface, chat errors — and the language the model answers in. The creation assistant follows it too. \"Same as Obsidian\" follows the language Obsidian is set to. A few things, like command names, only switch after you reload Obsidian.":
     "Interface, erros da conversa — e o idioma em que o modelo responde. A assistente de criação segue o mesmo. \"Igual ao Obsidian\" usa o idioma do Obsidian. Algumas coisas, como os nomes dos comandos, só mudam depois que você recarrega o Obsidian.",
@@ -203,14 +203,11 @@ export const PT_SETTINGS: Record<string, string> = {
   Relentless: "Incansável",
   "up to {pct}% of context": "até {pct}% do contexto",
   "≤{n} tok": "≤{n} tok",
-  "no turn cap": "sem teto de turnos",
-  "1 turn": "1 turno",
-  "{n} turns": "{n} turnos",
 
   // ── ui/settings/effortEditor.ts ───────────────────────────────────────────
   "Reply length": "Tamanho da resposta",
-  "The longest a reply can get, in tokens — longer costs more. No cap lets it use up to the share of context below. Models that think first (GPT-5, the o-series, Claude 5, Fable, Gemini 2.5 and 3) spend part of it thinking, so they always get at least 16k (32k on High, 64k from Extra high), and where the provider allows, the level also sets how hard they think. Each model has its own ceiling (4k on NVIDIA, 64k on Claude Haiku 4.5…), and the plugin never asks above it.":
-    "O máximo que uma resposta pode ter, em tokens — mais longa custa mais. Sem teto deixa ela usar até a parte do contexto abaixo. Os modelos que pensam antes (GPT-5, a série o, Claude 5, Fable, Gemini 2.5 e 3) gastam parte disso pensando, então sempre ganham pelo menos 16k (32k no Alto, 64k a partir do Extra alto) e, onde o provedor deixa, o nível também define o quanto eles pensam. Cada modelo tem o seu teto (4k na NVIDIA, 64k no Claude Haiku 4.5…), e o plugin nunca pede acima dele.",
+  "The longest a reply can get, in tokens — longer costs more. No cap lets it use up to the share of context below. Models that think first (GPT-5, the o-series, Claude 5, Fable, Gemini 2.5 and 3, DeepSeek V4) spend part of it thinking, so the plugin requests at least 16k (32k on High, 64k from Extra high) where the model ceiling permits. Where the provider allows, the level also sets how hard they think. Existing model ceilings still apply (8k for DeepSeek), even with No cap.":
+    "O máximo que uma resposta pode ter, em tokens — mais longa custa mais. Sem teto usa até a parte do contexto abaixo. Modelos que pensam antes (GPT-5, série o, Claude 5, Fable, Gemini 2.5 e 3, DeepSeek V4) gastam parte disso no raciocínio. O plugin pede pelo menos 16k (32k no Alto, 64k a partir do Extra alto) quando o teto do modelo permite. Onde o provedor deixa, o nível também controla o esforço. Os tetos existentes continuam valendo (8k para DeepSeek), mesmo sem limite de resposta.",
   "No cap": "Sem teto",
   "{n} tokens": "{n} tokens",
   "Share of context": "Parte do contexto",
@@ -221,9 +218,6 @@ export const PT_SETTINGS: Record<string, string> = {
   "How adventurous the wording is: low sticks to the likeliest answer, high is more creative and less predictable. Provider default sends nothing. Not every model takes it — the newest Claude (Fable, Opus 4.7+, Sonnet 5+) and the reasoning models (GPT-5, the o-series, DeepSeek R1) always use their own, so the plugin leaves it out for them. Claude goes up to 1 and NVIDIA from 0.01 to 1 — values outside are brought in.":
     "O quanto o texto se arrisca: baixa fica na resposta mais provável, alta é mais criativa e menos previsível. Padrão do provedor não manda nada. Nem todo modelo aceita — os Claude mais novos (Fable, Opus 4.7+, Sonnet 5+) e os modelos de raciocínio (GPT-5, a série o, DeepSeek R1) sempre usam a própria, então o plugin deixa ela de fora pra eles. O Claude vai até 1 e a NVIDIA de 0.01 a 1 — valores fora disso são trazidos pra dentro.",
   "Provider default": "Padrão do provedor",
-  "Agent turns": "Turnos do agente",
-  "How many rounds of tool use (read, search, edit…) the Agent gets before it stops and answers. No cap leaves only the loop guard to stop it.":
-    "Quantas rodadas de uso de ferramentas (ler, buscar, editar…) o agente tem antes de parar e responder. Sem teto deixa só a trava de repetição pra parar ele.",
   "Tool retries": "Novas tentativas",
   "How many times the Agent retries a tool that failed for a passing reason: network, timeout, a locked file. A wrong path is never retried.":
     "Quantas vezes o agente tenta de novo uma ferramenta que falhou por um motivo passageiro: rede, tempo esgotado, um arquivo travado. Um caminho errado nunca é repetido.",
