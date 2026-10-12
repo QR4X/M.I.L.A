@@ -166,6 +166,9 @@ export const PT_SETTINGS: Record<string, string> = {
   "Show diff before applying edits": "Mostrar o diff antes de aplicar as edições",
   "Preview every change the agent wants to write.":
     "Ver antes cada mudança que o agente quer escrever.",
+  "Agent instructions file": "Arquivo de instruções do agente",
+  "Vault path to an instructions file read fresh on every turn (default: AGENT.md). Falls back to agent.md or CLAUDE.md if empty.":
+    "Caminho no vault para o arquivo de instruções lido a cada turno (padrão: AGENT.md). Se vazio, tenta agent.md ou CLAUDE.md.",
   "Web access": "Acesso à web",
   "Let the agent search the web and open public pages when a task needs it. In Ask and Vault, each request shows you the address or the search first; local addresses are always refused.":
     "Deixa o agente buscar na web e abrir páginas públicas quando a tarefa precisar. No Ask e no Vault, cada pedido mostra antes o endereço ou a busca; endereços locais são sempre recusados.",

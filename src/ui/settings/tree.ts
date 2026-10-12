@@ -870,6 +870,14 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       "agentDiffApproval",
       { aliases: ["diff", "preview", "aprovação"] }
     ),
+    text(
+      tr("Agent instructions file"),
+      tr(
+        "Vault path to an instructions file read fresh on every turn (default: AGENT.md). Falls back to agent.md or CLAUDE.md if empty."
+      ),
+      "agentInstructionsPath",
+      { aliases: ["agent.md", "claude.md", "instructions", "instruções", "regras"] }
+    ),
     toggle(
       tr("Web access"),
       tr(

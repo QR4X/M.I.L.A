@@ -33,6 +33,7 @@ import {
 import type { MessageAttachment, ProviderMessage } from "../providers/base";
 import { responseIssue } from "../providers/base";
 import type { AIToolStep, PermissionLevel } from "../agent/types";
+import { loadAgentMd } from "./agentMd";
 import type { EngineCtx } from "./chatEngine";
 import { buscarContextoDoVault } from "./vaultLookup";
 
@@ -146,6 +147,11 @@ export async function runAgentTurn(
     ((nome === "web_search" || nome === "web_fetch") && !webLigada) ||
     (nome === "web_search" && !tavily);
 
+  const agentMdBlock = await loadAgentMd(
+    plugin.app,
+    plugin.settings.agentInstructionsPath
+  );
+
   const history: ProviderMessage[] = [
     {
       role: "system",
@@ -153,7 +159,8 @@ export async function runAgentTurn(
         useChatStore.getState().sessionPersona,
         t.agent.systemPrompt + (webLigada ? t.agent.webPrompt : ""),
         { suffix: t.systemPrompt.vaultQaSuffix, block: vaultContextBlock },
-        useChatStore.getState().sessionInstructions
+        useChatStore.getState().sessionInstructions,
+        agentMdBlock
       ),
     },
     // toolMode=true → agentSteps são expandidos pro shape wire (replay preciso).
