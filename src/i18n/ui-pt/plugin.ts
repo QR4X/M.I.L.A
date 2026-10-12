@@ -21,6 +21,7 @@ export const PT_PLUGIN: Record<string, string> = {
     "Índice RAG grande demais pro mobile ({mb} MB) — busca semântica desligada aqui pra evitar crash. Use no desktop ou reduza o índice.",
   // Comando da paleta
   "Open panel": "Abrir o painel",
+  "Open agent instructions (AGENT.md)": "Abrir instruções do agente (AGENT.md)",
   // Limite de gasto do dia
   "You've used 80% of today's {limit} spending limit ({spent}).":
     "Você já usou 80% do limite de gasto de hoje: {spent} de {limit}.",

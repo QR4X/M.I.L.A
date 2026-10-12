@@ -57,6 +57,7 @@ import { registrarComandosDoEditor } from "./editor/comandos";
 import { esquecerPedidos } from "./editor/ponte";
 import { LOCALES, resolverIdioma } from "./i18n";
 import { definirIdiomaDaInterface, tr } from "./i18n/tr";
+import { openOrCreateAgentMd } from "./core/agentMd";
 
 /** Resultado do último teste de credencial de um provider. */
 export interface ProviderStatus {
@@ -218,6 +219,8 @@ export interface AxxaSettings {
   // ---- Agent
   /** ask | vault | yolo */
   agentPermissionLevel: string;
+  /** Caminho do arquivo de instruções lido a cada turno (vazio = busca AGENT.md, CLAUDE.md, etc). */
+  agentInstructionsPath: string;
   /** Preview/diff antes de gravar qualquer escrita do agente. */
   agentDiffApproval: boolean;
   /** O agente pode buscar na web e abrir páginas (agent/web.ts). */
@@ -330,6 +333,7 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   ragAutoReindex: false,
   ragMobileSkipNoticeShown: false,
   agentPermissionLevel: "ask",
+  agentInstructionsPath: "",
   agentDiffApproval: true,
   agentWeb: true,
   tavilyApiKey: "",
@@ -1151,6 +1155,14 @@ export default class AxxaPlugin extends Plugin {
       id: "open-panel",
       name: tr("Open panel"),
       callback: () => this.activateView(),
+    });
+
+    this.addCommand({
+      id: "open-agent-instructions",
+      name: tr("Open agent instructions (AGENT.md)"),
+      callback: () => {
+        void openOrCreateAgentMd(this.app, this.settings.agentInstructionsPath);
+      },
     });
 
     // O AXXA a partir da nota: comandos (perguntar, resumir, reescrever,

@@ -24,7 +24,7 @@ import { resolve } from "node:path";
 // fim e não faz conta nenhuma. Quem precisar de uma exceção que a escreva aqui
 // junto com o motivo; sem isso, este teste quebra.
 
-const CSS = readFileSync(resolve(__dirname, "../styles/main.css"), "utf8");
+const CSS = readFileSync(resolve(__dirname, "../styles/main.css"), "utf8").replace(/\r\n/g, "\n");
 
 /** O corpo da primeira regra cujo seletor contém `agulha`. */
 function bloco(agulha: string): string {

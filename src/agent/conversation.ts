@@ -32,6 +32,15 @@ export interface ChatSystemParts {
    * que escreveu "responda em tópicos curtos" pediu isso.
    */
   instructions?: string;
+  /** Instruções globais do AGENT.md (lidas do vault a cada turno). */
+  agentMd?: string;
+}
+
+/**
+ * O bloco de instruções globais do AGENT.md (lido a cada turno).
+ */
+export function blocoAgentMd(conteudo?: string): string {
+  return conteudo && conteudo.trim() ? "\n\n[AGENT.md]\n" + conteudo.trim() : "";
 }
 
 /**
@@ -61,9 +70,10 @@ export function blocoDeNotasAnexadas(
   );
 }
 
-/** Monta o system prompt do CHAT/Vault-QA: (persona || base) + style + vault + notes. */
+/** Monta o system prompt do CHAT/Vault-QA: (persona || base) + agentMd + proj + style + vault + notes. */
 export function buildChatSystemPrompt(p: ChatSystemParts): string {
   const head = (p.persona && p.persona.trim()) || p.base;
+  const agentMd = blocoAgentMd(p.agentMd);
   const proj = blocoDeInstrucoes(p.instructions);
   const style =
     p.styleInstruction && p.styleInstruction.trim()
@@ -73,7 +83,7 @@ export function buildChatSystemPrompt(p: ChatSystemParts): string {
     p.vaultBlock && p.vaultBlock.length > 0
       ? (p.vaultSuffix ?? "") + p.vaultBlock
       : "";
-  return head + proj + style + vault + (p.noteBlock ?? "");
+  return head + agentMd + proj + style + vault + (p.noteBlock ?? "");
 }
 
 /**
@@ -90,9 +100,12 @@ export function buildAgentSystemPrompt(
   vault?: { suffix?: string; block?: string },
   /** Instruções do projeto — depois do prompt do agente, antes das notas: as
    *  regras da casa continuam valendo, e o que o projeto pede vem por cima. */
-  instructions?: string
+  instructions?: string,
+  /** Instruções globais do AGENT.md (lido a cada turno). */
+  agentMd?: string
 ): string {
   const p = persona && persona.trim();
+  const amd = blocoAgentMd(agentMd);
   const proj = instructions && instructions.trim();
   const notas =
     vault?.block && vault.block.length > 0
@@ -101,6 +114,7 @@ export function buildAgentSystemPrompt(
   return (
     (p ? p + "\n\n" : "") +
     agentPrompt +
+    amd +
     (proj ? "\n\n" + proj : "") +
     notas
   );

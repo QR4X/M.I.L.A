@@ -24,6 +24,7 @@ import type {
 } from "../providers/base";
 import type AxxaPlugin from "../main";
 import { buscarContextoDoVault } from "./vaultLookup";
+import { loadAgentMd } from "./agentMd";
 
 /** Ref mutável do AbortController do turno em andamento (null = ocioso). */
 export interface AbortRef {
@@ -151,6 +152,10 @@ export async function streamReply(
       // de entrada (ver blocoDeNotasAnexadas): o número de lá é o texto daqui.
       noteContextBlock = blocoDeNotasAnexadas(noteAtts);
     }
+    const agentMdBlock = await loadAgentMd(
+      plugin.app,
+      plugin.settings.agentInstructionsPath
+    );
     const fullSystem = buildChatSystemPrompt({
       persona: useChatStore.getState().sessionPersona,
       base: t.systemPrompt.base,
@@ -159,6 +164,7 @@ export async function streamReply(
       noteBlock: noteContextBlock,
       instructions: useChatStore.getState().sessionInstructions,
       styleInstruction: resolveStyleInstruction(),
+      agentMd: agentMdBlock,
     });
     const history: ProviderMessage[] = [
       { role: "system", content: fullSystem },

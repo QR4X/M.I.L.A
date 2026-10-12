@@ -50,6 +50,7 @@ const TEXT_KEYS = [
   "chatsPath",
   "skillsPath",
   "agentPermissionLevel",
+  "agentInstructionsPath",
   "ragQuantProfile",
   "ragIndexPath",
 ] as const;
@@ -126,6 +127,9 @@ export function applyControl(
       return;
     case "skillsPath":
       s.skillsPath = v.trim() || DEFAULT_SKILLS_PATH;
+      return;
+    case "agentInstructionsPath":
+      s.agentInstructionsPath = v.trim();
       return;
     // A do índice vira caminho de arquivo (`<pasta>/embeddings.json`): uma
     // barra na ponta faria `pasta//embeddings.json`.
