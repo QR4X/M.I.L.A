@@ -52,8 +52,6 @@ const TEXT_KEYS = [
   "agentPermissionLevel",
   "ragQuantProfile",
   "ragIndexPath",
-  "uiFontFamily",
-  "uiFontSize",
 ] as const;
 
 export type BoolKey = (typeof BOOL_KEYS)[number];

@@ -159,6 +159,7 @@ export class ConfirmModal extends Modal {
   }
 
   onOpen(): void {
+    this.modalEl.addClass("axxa-native-confirm-modal");
     this.titleEl.setText(this.opts.title);
     if (this.opts.body) this.contentEl.createEl("p", { text: this.opts.body });
     new Setting(this.contentEl)

@@ -192,6 +192,7 @@ export class IdiomaModal extends SuggestModal<string> {
     private readonly escolher: (idioma: string) => void
   ) {
     super(app);
+    this.modalEl.addClass("axxa-language-modal");
     this.setPlaceholder(tr("Translate into…"));
   }
 

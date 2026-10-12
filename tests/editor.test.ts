@@ -36,6 +36,7 @@ describe("ações no texto", () => {
 
   it("o idioma digitado que não está na lista vira a primeira opção", () => {
     const m = new IdiomaModal({} as never, () => {});
+    expect(m.modalEl.hasClass("axxa-language-modal")).toBe(true);
     expect(m.getSuggestions("port")).toEqual(["port", "Portuguese (Brazil)", "Portuguese (Portugal)"]);
     expect(m.getSuggestions("Spanish")).toEqual(["Spanish"]);
     expect(m.getSuggestions("").length).toBeGreaterThan(10);

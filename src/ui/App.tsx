@@ -7,7 +7,6 @@
 // Tudo que a UI faz passa pela ChatSession (src/core/session.ts) ou pelo plugin.
 
 import { useCallback, useEffect, useReducer, useState } from "react";
-import type { CSSProperties } from "react";
 import type AxxaPlugin from "../main";
 import { isChatMode, type ChatSession } from "../core/session";
 import { SEGMENT_ALL } from "./modules";
@@ -29,7 +28,6 @@ import { ouvirPedidos } from "../editor/ponte";
 import { readNote } from "./notePicker";
 import { useChatStore } from "../store/chat";
 import { tr } from "../i18n/tr";
-import { fontVarsFromSettings } from "./fontVars";
 
 export interface ComposerInject {
   text: string;
@@ -164,13 +162,6 @@ export function App({
     setView("chat");
   };
 
-  // A fonte da interface (Settings › Chat › Appearance): vazias nas settings,
-  // nenhuma variável é escrita e o app usa a do Obsidian; preenchidas, o CSS
-  // da raiz consome (--axxa-font-family/--axxa-font-size) e reescala os
-  // tokens de tamanho. O App re-renderiza a cada save (onSettingsChange), então
-  // a troca aparece na hora.
-  const fontStyle = fontVarsFromSettings(plugin.settings) as CSSProperties;
-
   return (
     <PainelCtx.Provider
       value={{
@@ -189,7 +180,7 @@ export function App({
         instrucoesDe: (chat: ChatSummary) => setInstrucoesPara(chat),
       }}
     >
-    <div className="axxa-root" style={fontStyle}>
+    <div className="axxa-root">
       {view === "home" ? (
         <Dashboard
           plugin={plugin}

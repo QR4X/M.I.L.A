@@ -227,11 +227,6 @@ export interface AxxaSettings {
   // ---- Mobile
   /** Tela cheia no mobile: esconde o chrome da gaveta e a navbar global. */
   mobileFullscreen: boolean;
-  // ---- Aparência da interface
-  /** Fonte da interface do plugin (CSS font-family). Vazio = a do Obsidian. */
-  uiFontFamily: string;
-  /** Corpo da interface do plugin, em px. Vazio = o do Obsidian. */
-  uiFontSize: string;
 }
 
 const DEFAULT_SETTINGS: AxxaSettings = {
@@ -339,9 +334,6 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   agentWeb: true,
   tavilyApiKey: "",
   mobileFullscreen: false,
-  // A interface nasce com a fonte e o corpo do Obsidian (vazios = herda).
-  uiFontFamily: "",
-  uiFontSize: "",
 };
 
 export default class AxxaPlugin extends Plugin {

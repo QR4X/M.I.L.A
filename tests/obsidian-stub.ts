@@ -47,6 +47,15 @@ export class Modal {}
 // A lista de escolha do Obsidian (o "Translate selection…" usa): o mínimo pra
 // construir e consultar as sugestões num teste.
 export class SuggestModal<T> {
+  modalEl = {
+    classes: new Set<string>(),
+    addClass(...classes: string[]): void {
+      for (const cls of classes) this.classes.add(cls);
+    },
+    hasClass(cls: string): boolean {
+      return this.classes.has(cls);
+    },
+  };
   constructor(public app?: unknown) {}
   setPlaceholder(_p: string): void {}
   open(): void {}
