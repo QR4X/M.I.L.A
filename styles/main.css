@@ -571,18 +571,37 @@ body.theme-dark {
   --axxa-e2: 0 4px 12px rgba(0, 0, 0, 0.42), 0 12px 32px rgba(0, 0, 0, 0.36);
 }
 
+/* Inclui menus soltos e modais nativos, sem alterar o resto do Obsidian.
+   As variaveis continuam ligadas a Appearance, inclusive em outras janelas. */
+.axxa-root,
+.axxa-settings-root,
+.axxa-pop-layer,
+.axxa-modal-container,
+.axxa-effort-modal,
+.axxa-native-confirm-modal,
+.axxa-language-modal {
+  font-family: var(--font-interface);
+  font-size: var(--font-text-size);
+  --font-ui-smaller: calc(var(--font-text-size) * 0.8);
+  --font-ui-small: calc(var(--font-text-size) * 0.875);
+  --font-ui-medium: var(--font-text-size);
+  --font-ui-large: calc(var(--font-text-size) * 1.25);
+}
+
+:is(.axxa-root, .axxa-settings-root, .axxa-pop-layer, .axxa-modal-container,
+    .axxa-effort-modal, .axxa-native-confirm-modal, .axxa-language-modal)
+  :is(button, input, textarea, select, code, pre, .markdown-rendered,
+      .modal-title, h1, h2, h3, h4, h5, h6) {
+  font-family: var(--font-interface);
+}
+
 .axxa-root {
-  /* Fonte de LEITURA da resposta. Serifa, como na referência: texto corrido em
-     sans lê como interface; em serifa lê como texto. Trocar por
-     `var(--font-text)` devolve a fonte do vault. */
   /* Margem lateral do conteúdo — mensagens, composer e as homes usam ESTA.
      Eram dois números diferentes (12 no texto, 16 no composer) e a conta de
      4px sobrava como um degrau: o texto passava por fora do cartão do
      composer e ele parecia ter uma borda que não existia. O 16 é o valor
      medido no print da referência. */
   --axxa-gutter: 16px;
-  --axxa-read-font: ui-serif, "Iowan Old Style", "Palatino Linotype", Georgia,
-    "Noto Serif", "Times New Roman", serif;
   --axxa-1: 4px;
   --axxa-2: 8px;
   --axxa-3: 12px;
@@ -1214,7 +1233,7 @@ body.theme-dark {
 
 /* O total é o número grande da linha de cima; o resto da linha é apoio. */
 .axxa-root .axxa-usage-big {
-  font-family: var(--axxa-read-font);
+  font-family: var(--font-interface);
   font-size: 1.45em;
   line-height: 1.1;
   color: var(--text-normal);
@@ -2982,17 +3001,8 @@ body.theme-dark {
 
 .axxa-root .axxa-markdown {
   white-space: normal;
-  /* Tipografia de LEITURA, não de interface.
-     SERIFA no corpo: é a diferença mais visível entre a referência e o que
-     tínhamos — texto corrido em sans lê como interface, em serifa lê como
-     texto. Código e tabela continuam com a fonte que lhes cabe. */
-  font-family: var(--axxa-read-font);
-  /* 16, não 17. Serifa a 17 LÊ maior que a sem-serifa de 18 do composer — a
-     altura-de-x é maior e o traço é mais pesado —, e o resultado era o texto
-     da resposta parecendo maior que o que você acabou de digitar. Medido:
-     resposta 17px serif vs composer 18px sans. Com 16 os dois empatam no
-     olho, que é o que importa aqui. */
-  font-size: 16px;
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-medium);
   line-height: 1.62;
   color: var(--text-normal);
   /* Ligaduras e números proporcionais: detalhe barato que separa "texto" de
@@ -3084,7 +3094,7 @@ body.theme-dark {
   border-radius: var(--axxa-r-sm);
   background-color: var(--axxa-hover);
   color: var(--text-accent);
-  font-family: var(--font-monospace);
+  font-family: var(--font-interface);
   font-size: 0.85em;
   word-break: break-word;
 }
@@ -3110,7 +3120,7 @@ body.theme-dark {
   padding: 0;
   background: none;
   color: inherit;
-  font-family: var(--font-monospace);
+  font-family: var(--font-interface);
   font-size: 0.82em;
   line-height: 1.5;
   /* `pre-wrap` mantém a indentação e as quebras do código, mas deixa a linha
@@ -3232,8 +3242,7 @@ body.theme-dark {
   border-radius: var(--axxa-r-sm);
 }
 
-/* Título dentro da resposta continua em serifa, mas com peso — hierarquia sem
-   mudar de família no meio do texto. */
+/* Hierarquia sem mudar de familia no meio do texto. */
 .axxa-root .axxa-markdown h1,
 .axxa-root .axxa-markdown h2,
 .axxa-root .axxa-markdown h3,
@@ -3245,7 +3254,7 @@ body.theme-dark {
   align-self: flex-end;
   max-width: 85%;
   padding: var(--axxa-3) var(--axxa-4);
-  font-size: 16px;
+  font-size: var(--font-ui-medium);
   line-height: 1.5;
   border-radius: var(--axxa-r-lg);
   border-bottom-right-radius: var(--axxa-r-sm);
@@ -3485,7 +3494,7 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-composer {
   width: 20px;
   border: none;
   background: none;
-  font-size: 14px;
+  font-size: var(--font-ui-small);
   line-height: 1;
 }
 
@@ -3819,10 +3828,7 @@ body.is-mobile.axxa-keyboard-open .axxa-root .axxa-composer {
   outline: none;
   color: var(--text-normal);
   font-family: inherit;
-  /* 18px. Medido nos prints: a altura-x é a mesma nos dois (19px device), mas
-     as maiúsculas da referência são 12% mais altas — diferença de família, não
-     de corpo. 1px fecha a maior parte da distância sem estourar a linha. */
-  font-size: 18px;
+  font-size: var(--font-ui-medium);
   line-height: 1.4;
   resize: none;
 }
@@ -4277,7 +4283,7 @@ body.theme-light .axxa-root .axxa-sheet {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-family: var(--font-monospace);
+  font-family: var(--font-interface);
   font-size: var(--font-ui-small);
 }
 
@@ -4817,7 +4823,7 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
 }
 
 .axxa-confirm-modal .axxa-confirm-tool-name {
-  font-family: var(--font-monospace);
+  font-family: var(--font-interface);
   font-size: var(--font-ui-small);
   color: var(--text-accent);
 }
@@ -4854,7 +4860,7 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
 }
 
 .axxa-confirm-modal .axxa-confirm-path-val {
-  font-family: var(--font-monospace);
+  font-family: var(--font-interface);
   font-size: var(--font-ui-small);
   word-break: break-word;
 }
@@ -4874,7 +4880,7 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
   padding: var(--size-4-2) var(--size-4-3);
   border-radius: var(--radius-m);
   background-color: var(--background-modifier-hover);
-  font-family: var(--font-monospace);
+  font-family: var(--font-interface);
   font-size: var(--font-ui-smaller);
   line-height: 1.45;
   white-space: pre-wrap;
@@ -4888,7 +4894,7 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
    A tinta verde/vermelha continua: ela é a semântica do diff. */
 .axxa-confirm-modal .axxa-diff-block.is-rich {
   white-space: normal;
-  font-family: var(--font-text);
+  font-family: var(--font-interface);
   font-size: var(--font-ui-small);
   line-height: 1.5;
 }
@@ -5845,7 +5851,7 @@ input[type="range"].axxa-slider::-webkit-slider-thumb {
   flex: 0 0 auto;
   padding: 1px 6px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: calc(var(--font-text-size) * 0.625);
   font-weight: var(--font-semibold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -6022,7 +6028,7 @@ input[type="range"].axxa-slider::-webkit-slider-thumb {
   gap: var(--axxa-2);
   min-width: 0;
   color: var(--text-accent);
-  font-family: var(--font-text);
+  font-family: var(--font-interface);
   font-size: var(--font-ui-small);
 }
 
@@ -6036,8 +6042,8 @@ input[type="range"].axxa-slider::-webkit-slider-thumb {
   background: none;
   box-shadow: none;
   color: var(--text-accent);
-  font-family: var(--font-text);
-  font-size: 15px;
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-medium);
   cursor: pointer;
   max-width: 100%;
 }
@@ -6237,8 +6243,8 @@ input[type="range"].axxa-slider::-webkit-slider-thumb {
   background: none;
   box-shadow: none;
   color: var(--text-muted);
-  font-family: var(--font-text);
-  font-size: 15px;
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-medium);
   cursor: pointer;
 }
 
@@ -6257,8 +6263,8 @@ input[type="range"].axxa-slider::-webkit-slider-thumb {
 
 /* Raciocínio é PROSA, não saída de comando: fonte de leitura e sem mono. */
 .axxa-root .axxa-tool-block.is-prose {
-  font-family: var(--font-text);
-  font-size: 15px;
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-medium);
   line-height: 1.55;
   background-color: transparent;
   padding: 0;
@@ -6335,7 +6341,7 @@ input[type="range"].axxa-slider::-webkit-slider-thumb {
   border-radius: var(--axxa-r);
   background-color: var(--axxa-hover);
   color: var(--text-normal);
-  font-family: var(--font-monospace);
+  font-family: var(--font-interface);
   font-size: var(--font-ui-smaller);
   line-height: 1.45;
   white-space: pre-wrap;
@@ -6387,7 +6393,7 @@ input[type="range"].axxa-slider::-webkit-slider-thumb {
   flex-direction: column;
   justify-content: flex-end;
   color: var(--text-muted);
-  font-size: 1.05rem;
+  font-size: calc(var(--font-text-size) * 1.05);
   font-style: italic;
   line-height: 1.4;
 }

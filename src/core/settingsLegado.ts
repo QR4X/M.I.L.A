@@ -11,7 +11,12 @@
 // data.json SALVO como sinal de uso — por isso a limpeza roda nas settings em
 // memória, depois dela, e não no que veio do disco.
 
-export const CAMPOS_MORTOS = ["roleModels", "modelProvider"] as const;
+export const CAMPOS_MORTOS = [
+  "roleModels",
+  "modelProvider",
+  "uiFontFamily",
+  "uiFontSize",
+] as const;
 
 /** Tira das settings em memória o que nada lê. A próxima gravação já sai sem. */
 export function limparCamposMortos(s: object): void {
