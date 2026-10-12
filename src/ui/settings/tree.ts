@@ -526,6 +526,27 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
     ),
   ]);
 
+  // A aparência da interface: a fonte e o corpo do plugin. Os dois nascem
+  // vazios (a do Obsidian); preencher é opt-in.
+  group(chat, { heading: tr("Appearance") }, [
+    text(
+      tr("Interface font"),
+      tr(
+        "CSS font-family for the whole plugin UI. Empty = the font Obsidian uses."
+      ),
+      "uiFontFamily",
+      { aliases: ["fonte", "font", "tipografia", "typography", "família", "family"] }
+    ),
+    text(
+      tr("Interface font size"),
+      tr(
+        "Base size in pixels, like 15 or 16. Empty = the size Obsidian uses. The rest of the plugin scales with it."
+      ),
+      "uiFontSize",
+      { aliases: ["tamanho", "size", "zoom", "texto", "text"] }
+    ),
+  ]);
+
   // O que cada nível de esforço FAZ — tokens, voltas do agente, temperatura,
   // quanto do vault entra. O motor sempre leu isto (effortConfigs); a tela
   // sumiu na 0.4.0 e voltou: uma linha por nível, que abre o editor dele.

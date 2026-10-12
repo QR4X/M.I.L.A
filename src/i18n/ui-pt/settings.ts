@@ -24,6 +24,15 @@ export const PT_SETTINGS: Record<string, string> = {
   "This setting failed to draw — see the developer console.":
     "Não deu pra desenhar esta configuração — veja o console do desenvolvedor.",
 
+  // ── ui/settings/tree.ts: Aparência (fonte e corpo da interface) ──────────
+  Appearance: "Aparência",
+  "Interface font": "Fonte da interface",
+  "CSS font-family for the whole plugin UI. Empty = the font Obsidian uses.":
+    "Font-family CSS pra toda a interface do plugin. Vazio = a fonte que o Obsidian usa.",
+  "Interface font size": "Tamanho da fonte da interface",
+  "Base size in pixels, like 15 or 16. Empty = the size Obsidian uses. The rest of the plugin scales with it.":
+    "Tamanho base em pixels, tipo 15 ou 16. Vazio = o tamanho que o Obsidian usa. O resto do plugin acompanha.",
+
   // ── ui/settings/tree.ts: Provedores ───────────────────────────────────────
   // O nome longo (com o provedor) é o da busca; o curto é o da tela.
   "{provider} API key": "{provider}: chave de API",

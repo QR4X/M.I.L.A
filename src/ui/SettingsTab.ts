@@ -78,6 +78,7 @@ import {
   writeControl,
   type TextKey,
 } from "./settings/values";
+import { fontVarsFromSettings } from "./fontVars";
 import { openActions } from "./menu";
 import { modelLogo } from "../providers/modelLogo";
 import { putThumb, seedThumb, thumbOf, type Thumb } from "./settings/thumb";
@@ -412,6 +413,11 @@ export class AxxaSettingsTab extends PluginSettingTab {
     if (!PROVIDER_FIELDS[this.provider]) this.provider = PROVIDERS[0].id;
     el.dataset.axxaTab = this.tab;
     el.dataset.axxaProv = this.provider;
+    // A fonte das settings segue a do app (Aparência) — senão a tela de
+    // configuração mostraria um preview mentiroso do que se vai ver.
+    for (const [k, v] of Object.entries(fontVarsFromSettings(this.plugin.settings))) {
+      el.style.setProperty(k, v);
+    }
   }
 
   private blurbOf(id: TabId): string {

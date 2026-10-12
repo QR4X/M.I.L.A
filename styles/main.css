@@ -572,6 +572,13 @@ body.theme-dark {
 }
 
 .axxa-root {
+  /* Fonte e corpo da INTERFACE. Vazios por padrão (a do Obsidian): as settings
+     de Aparência (uiFontFamily/uiFontSize) escrevem --axxa-font-family e
+     --axxa-font-size aqui, inline, via src/ui/fontVars.ts — e reescalam os
+     tokens --font-ui-* do Obsidian junto. A leitura das respostas continua na
+     serifa (--axxa-read-font, abaixo), de propósito. */
+  font-family: var(--axxa-font-family, var(--font-interface, inherit));
+  font-size: var(--axxa-font-size, inherit);
   /* Fonte de LEITURA da resposta. Serifa, como na referência: texto corrido em
      sans lê como interface; em serifa lê como texto. Trocar por
      `var(--font-text)` devolve a fonte do vault. */
