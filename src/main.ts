@@ -10,7 +10,7 @@ import { AxxaView, VIEW_TYPE_AXXA } from "./ui/AxxaView";
 import { FONTE_DO_HOVER } from "./ui/linksDaResposta";
 import { registerBrandLogos } from "./ui/brandLogos";
 import { AxxaSettingsTab } from "./ui/SettingsTab";
-import { startupMode } from "./ui/modules";
+import { startupOpensPanel } from "./ui/modules";
 import { VectorIndex, loadIndex, RAG_SHARD_SIZE } from "./rag/vectorIndex";
 import { indexVault } from "./rag/indexer";
 import {
@@ -1215,7 +1215,7 @@ export default class AxxaPlugin extends Plugin {
     // cair direto na conversa nova. Sem abrir o painel aqui, a conversa nova
     // ficava pronta ATRÁS da sidebar fechada — e ainda era preciso deslizar
     // pra dentro pra ver. Com o modo escolhido, revelamos a view de propósito.
-    if (startupMode(this.settings.startupChatMode)) {
+    if (startupOpensPanel(this.settings.startupChatMode)) {
       // Um instante DEPOIS do layout: no celular o Obsidian reativa o editor
       // (a última nota aberta) logo após o onLayoutReady, e um reveal imediato
       // era desfeito — o chat abria e o editor voltava por cima. Deferir um

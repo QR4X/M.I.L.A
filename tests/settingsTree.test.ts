@@ -135,7 +135,7 @@ describe("o que a busca acha", () => {
     "Usage tier",
     "Provider",
     "Mode",
-    "Start with a new chat",
+    "Open on startup",
     "Effort",
     "Language",
     "Assistant model",

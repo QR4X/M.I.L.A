@@ -62,9 +62,9 @@ export const PT_SETTINGS: Record<string, string> = {
   Mode: "Modo",
   "Chat, Vault Q&A or Agent. Locks on the first message.":
     "Chat, Vault Q&A ou Agent. Fica fixo a partir da primeira mensagem.",
-  "Start with a new chat": "Começar com uma conversa nova",
-  "Open the panel straight into a new chat of this mode instead of the dashboard. \"Dashboard\" keeps the current behaviour.":
-    "Abre o painel direto numa conversa nova deste modo, em vez do dashboard. \"Dashboard\" mantém o comportamento atual.",
+  "Open on startup": "Abrir ao iniciar",
+  "What opens when M.I.L.A starts: a fresh chat of this mode, or its dashboard. \"Off\" keeps M.I.L.A closed — Obsidian opens your notes as usual.":
+    "O que abre quando o M.I.L.A inicia: uma conversa nova deste modo, ou a dashboard dele. \"Off\" mantém o M.I.L.A fechado — o Obsidian abre suas notas normalmente.",
   Dashboard: "Dashboard",
   Effort: "Esforço",
   "How hard the model works: length, temperature.":

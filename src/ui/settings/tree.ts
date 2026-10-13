@@ -42,7 +42,7 @@ import {
   type EffortLevel,
 } from "../../core/effort";
 import { CHAT_MODES } from "../../core/session";
-import { MODULES } from "../modules";
+import { MODULES, STARTUP_DASHBOARD } from "../modules";
 import { QUANT_ITENS } from "./indice";
 import { LOCALES } from "../../i18n";
 import { marca, tr } from "../../i18n/tr";
@@ -493,21 +493,36 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
     ),
     escolha(
       chat,
-      tr("Start with a new chat"),
+      tr("Open on startup"),
       null,
       tr(
-        "Open the panel straight into a new chat of this mode instead of the dashboard. \"Dashboard\" keeps the current behaviour."
+        "What opens when M.I.L.A starts: a fresh chat of this mode, or its dashboard. \"Off\" keeps M.I.L.A closed — Obsidian opens your notes as usual."
       ),
       "startupChatMode",
       () => [
-        { value: "", label: tr("Dashboard"), icon: "layout-dashboard" },
+        { value: "", label: tr("Off"), icon: "power" },
+        {
+          value: STARTUP_DASHBOARD,
+          label: tr("Dashboard"),
+          icon: "layout-dashboard",
+        },
         ...CHAT_MODES.map((m) => ({
           value: m,
           label: tr(MODULES[m].label),
           icon: MODULES[m].icon,
         })),
       ],
-      { aliases: ["startup", "start", "boot", "on open", "abrir ao iniciar", "início"] }
+      {
+        aliases: [
+          "startup",
+          "start",
+          "boot",
+          "on open",
+          "abrir ao iniciar",
+          "início",
+          "dashboard",
+        ],
+      }
     ),
     escolha(
       chat,

@@ -19,6 +19,7 @@ import {
   relativeShort,
   searchChats,
   startupMode,
+  startupOpensPanel,
 } from "../src/ui/modules";
 import { CHAT_MODES } from "../src/core/session";
 import type { ChatSummary } from "../src/core/chatPersistence";
@@ -436,5 +437,25 @@ describe("startupMode", () => {
     expect(startupMode(undefined)).toBeNull();
     expect(startupMode(null)).toBeNull();
     expect(startupMode("pesquisa")).toBeNull();
+  });
+
+  it("a dashboard não inicia conversa nenhuma", () => {
+    expect(startupMode("dashboard")).toBeNull();
+  });
+});
+
+describe("startupOpensPanel", () => {
+  it("abre o painel na dashboard e em qualquer modo de conversa", () => {
+    expect(startupOpensPanel("dashboard")).toBe(true);
+    expect(startupOpensPanel("chat")).toBe(true);
+    expect(startupOpensPanel("vault-qa")).toBe(true);
+    expect(startupOpensPanel("agent")).toBe(true);
+  });
+
+  it("vazio, ausente ou desconhecido não abre nada", () => {
+    expect(startupOpensPanel("")).toBe(false);
+    expect(startupOpensPanel(undefined)).toBe(false);
+    expect(startupOpensPanel(null)).toBe(false);
+    expect(startupOpensPanel("pesquisa")).toBe(false);
   });
 });

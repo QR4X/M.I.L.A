@@ -324,6 +324,21 @@ export function startupMode(valor: string | undefined | null): ChatMode | null {
 }
 
 /**
+ * O valor de `startupChatMode` que abre o painel na DASHBOARD (a home do
+ * M.I.L.A), sem iniciar conversa nenhuma.
+ */
+export const STARTUP_DASHBOARD = "dashboard";
+
+/**
+ * O painel deve abrir JUNTO com o Obsidian? Vale para a dashboard e para os
+ * modos de conversa. Vazio, ausente ou desconhecido = false: o M.I.L.A fica
+ * fechado e o Obsidian abre as notas, como sempre.
+ */
+export function startupOpensPanel(valor: string | undefined | null): boolean {
+  return valor === STARTUP_DASHBOARD || isChatMode(valor);
+}
+
+/**
  * A lista que aquela aba mostra.
  *
  * A sentinela ainda devolve tudo — não porque exista uma aba "All", mas
