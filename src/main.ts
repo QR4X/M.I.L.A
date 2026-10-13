@@ -231,6 +231,9 @@ export interface AxxaSettings {
   agentWeb: boolean;
   /** Chave da busca na web (Tavily). Vai pro keychain, como as outras. */
   tavilyApiKey: string;
+  // ---- Extensions
+  /** Transcrição de Instagram Reels via link com Whisper (sem upload de arquivo de vídeo). */
+  instagramReelsEnabled: boolean;
   // ---- Mobile
   /** Tela cheia no mobile: esconde o chrome da gaveta e a navbar global. */
   mobileFullscreen: boolean;
@@ -344,6 +347,7 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   agentDiffApproval: true,
   agentWeb: true,
   tavilyApiKey: "",
+  instagramReelsEnabled: true,
   mobileFullscreen: false,
 };
 

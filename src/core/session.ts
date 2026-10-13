@@ -46,6 +46,12 @@ import type { Project } from "../projects";
 import { previewFromText } from "./chatPreview";
 import { vaultAtivo } from "./vaultContext";
 import { keepConversationMessage } from "../agent/conversation";
+import {
+  findInstagramUrlInText,
+  extractInstagramShortcode,
+  transcribeInstagramReel,
+  reelAttachment,
+} from "./instagramResolver";
 
 export type ChatMode = "chat" | "vault-qa" | "agent";
 export const CHAT_MODES: ChatMode[] = ["chat", "vault-qa", "agent"];
@@ -352,8 +358,34 @@ export class ChatSession {
     // Anexos escolhidos no composer (nota, imagem, texto colado) — o store é
     // quem guarda, porque é ele que a tela observa pra desenhar os chips.
     const pendentes = st.attachments;
-    const attachments = pendentes.length > 0 ? [...pendentes] : undefined;
+    let attachments = pendentes.length > 0 ? [...pendentes] : undefined;
     if (pendentes.length > 0) st.setAttachments([]);
+
+    // Auto-detect Instagram Reel URL in user prompt
+    if (this.plugin.settings.instagramReelsEnabled !== false) {
+      const igUrl = findInstagramUrlInText(trimmed);
+      if (igUrl) {
+        const shortcode = extractInstagramShortcode(igUrl);
+        const alreadyAttached = (attachments ?? []).some(
+          (a) => a.type === "note" && shortcode && a.path.includes(shortcode)
+        );
+        const openAiKey = this.plugin.settings.openaiApiKey?.trim();
+        if (!alreadyAttached && openAiKey) {
+          try {
+            new Notice(tr("Transcribing Instagram Reel…"));
+            const res = await transcribeInstagramReel(igUrl, {
+              apiKey: openAiKey,
+              model: this.plugin.settings.voiceModel || "whisper-1",
+              language: this.plugin.settings.voiceLanguage || undefined,
+            });
+            const reelAtt = reelAttachment(res);
+            attachments = attachments ? [...attachments, reelAtt] : [reelAtt];
+          } catch (err) {
+            console.warn("[M.I.L.A] Auto-Transkription des Instagram Reels fehlgeschlagen:", err);
+          }
+        }
+      }
+    }
 
     st.addMessage({ type: "user", content: trimmed });
     // Carimba de quem é este turno ANTES de começar. É por este id que a tela

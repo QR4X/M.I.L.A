@@ -30,6 +30,10 @@ export const PT_CHAT: Record<string, string> = {
   "This model can't read images.": "Este modelo não lê imagens.",
   "Note not found: {path}": "Nota não encontrada: {path}",
   "Could not read that image.": "Não deu pra ler essa imagem.",
+  "Transcribing Instagram Reel…": "Transcrevendo Instagram Reel…",
+  "Reel transcript attached!": "Transcrição do Reel anexada!",
+  "OpenAI API key required for Reel transcription (Settings › Providers).":
+    "Chave da OpenAI necessária para transcrição de Reels (Configurações › Provedores).",
   "Another chat is still answering — try again in a moment.":
     "Outra conversa ainda está respondendo — tente de novo daqui a pouco.",
   "{n} favorites per provider is the limit — unstar one first.":

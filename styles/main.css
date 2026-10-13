@@ -5000,6 +5000,7 @@ body.is-mobile .modal-container.axxa-confirm-container .modal {
 .axxa-settings-root:not([data-axxa-tab="vault"]) .axxa-set-tab-vault,
 .axxa-settings-root:not([data-axxa-tab="rag"]) .axxa-set-tab-rag,
 .axxa-settings-root:not([data-axxa-tab="agent"]) .axxa-set-tab-agent,
+.axxa-settings-root:not([data-axxa-tab="extensions"]) .axxa-set-tab-extensions,
 .axxa-settings-root:not([data-axxa-tab="mobile"]) .axxa-set-tab-mobile,
 .axxa-settings-root:not([data-axxa-prov="openai"]) .axxa-set-prov-openai,
 .axxa-settings-root:not([data-axxa-prov="anthropic"]) .axxa-set-prov-anthropic,

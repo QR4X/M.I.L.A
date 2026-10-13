@@ -54,7 +54,14 @@ import { FREE_TOKENS_AS_OF } from "../../usage/freeTokens";
 import { OPENAI_TTS_MODELS, OPENAI_VOICES, STT_MODELS } from "../readAloud";
 import type { BoolKey, TextKey } from "./values";
 
-export type TabId = "providers" | "chat" | "vault" | "rag" | "agent" | "mobile";
+export type TabId =
+  | "providers"
+  | "chat"
+  | "vault"
+  | "rag"
+  | "agent"
+  | "extensions"
+  | "mobile";
 
 export interface TabDef {
   id: TabId;
@@ -87,6 +94,11 @@ export const TABS: TabDef[] = [
     id: "agent",
     label: marca("Agent"),
     blurb: marca("What the agent may do to your notes without asking."),
+  },
+  {
+    id: "extensions",
+    label: marca("Extensions"),
+    blurb: marca("Optional extensions and link-based media tools."),
   },
   {
     id: "mobile",
@@ -927,6 +939,33 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       ),
       ui.tavilyKey,
       { visible: () => s().agentWeb !== false, aliases: [...KEY_ALIASES, "tavily", "web search"] }
+    ),
+  ]);
+
+  // ── Extensions ───────────────────────────────────────────────────────────
+  group({ tab: "extensions" }, { heading: tr("Instagram Reels") }, [
+    toggle(
+      tr("Instagram Reels transcription"),
+      tr(
+        "Transcribe public Instagram Reels automatically via link when pasted or sent in chat. Works strictly with URLs — no video files required."
+      ),
+      "instagramReelsEnabled",
+      {
+        aliases: [
+          "instagram",
+          "reels",
+          "transcribe",
+          "transcription",
+          "whisper",
+          "video",
+          "link",
+          "url",
+        ],
+      }
+    ),
+    hintRow(
+      ui.hint(tr("Add your OpenAI key in Providers to transcribe reels.")),
+      () => s().instagramReelsEnabled !== false && !ui.hasCredential("openai")
     ),
   ]);
 

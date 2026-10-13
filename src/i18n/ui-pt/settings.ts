@@ -19,6 +19,9 @@ export const PT_SETTINGS: Record<string, string> = {
   Agent: "Agent",
   "What the agent may do to your notes without asking.":
     "O que o agente pode fazer nas suas notas sem perguntar.",
+  Extensions: "Extensões",
+  "Optional extensions and link-based media tools.":
+    "Extensões opcionais e ferramentas de mídia baseadas em links.",
   Mobile: "Celular",
   "Options that only exist on the phone.": "Opções que só existem no celular.",
   "This setting failed to draw — see the developer console.":
@@ -366,4 +369,12 @@ export const PT_SETTINGS: Record<string, string> = {
   Image: "Imagem",
   Video: "Vídeo",
   Other: "Outros",
+
+  // ── ui/settings/tree.ts: Extensions ───────────────────────────────────────
+  "Instagram Reels": "Instagram Reels",
+  "Instagram Reels transcription": "Transcrição de Instagram Reels",
+  "Transcribe public Instagram Reels automatically via link when pasted or sent in chat. Works strictly with URLs — no video files required.":
+    "Transcreva Instagram Reels públicos automaticamente via link ao colar ou enviar no chat. Funciona estritamente com URLs — sem necessidade de arquivos de vídeo.",
+  "Add your OpenAI key in Providers to transcribe reels.":
+    "Adicione sua chave da OpenAI em Provedores para transcrever reels.",
 };
