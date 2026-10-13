@@ -39,6 +39,7 @@ const BOOL_KEYS = [
 const TEXT_KEYS = [
   "defaultProvider",
   "defaultMode",
+  "startupChatMode",
   "defaultEffort",
   "language",
   "voiceModel",

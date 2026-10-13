@@ -62,6 +62,10 @@ export const PT_SETTINGS: Record<string, string> = {
   Mode: "Modo",
   "Chat, Vault Q&A or Agent. Locks on the first message.":
     "Chat, Vault Q&A ou Agent. Fica fixo a partir da primeira mensagem.",
+  "Start with a new chat": "Começar com uma conversa nova",
+  "Open the panel straight into a new chat of this mode instead of the dashboard. \"Dashboard\" keeps the current behaviour.":
+    "Abre o painel direto numa conversa nova deste modo, em vez do dashboard. \"Dashboard\" mantém o comportamento atual.",
+  Dashboard: "Dashboard",
   Effort: "Esforço",
   "How hard the model works: length, temperature.":
     "O quanto o modelo se esforça: tamanho, temperatura.",

@@ -18,6 +18,7 @@ import {
   relativeDay,
   relativeShort,
   searchChats,
+  startupMode,
 } from "../src/ui/modules";
 import { CHAT_MODES } from "../src/core/session";
 import type { ChatSummary } from "../src/core/chatPersistence";
@@ -418,5 +419,22 @@ describe("defaultSegment", () => {
   it("padrão ausente ou inválido cai em chat", () => {
     expect(defaultSegment([], undefined)).toBe("chat");
     expect(defaultSegment([], "modo-que-nao-existe")).toBe("chat");
+  });
+});
+
+describe("startupMode", () => {
+  it("devolve o modo quando é um dos que o motor conhece", () => {
+    expect(startupMode("agent")).toBe("agent");
+    expect(startupMode("chat")).toBe("chat");
+    expect(startupMode("vault-qa")).toBe("vault-qa");
+  });
+
+  it("vazio, ausente ou desconhecido devolve null (abre no dashboard)", () => {
+    // Um valor inválido no data.json não pode prender ninguém numa tela que
+    // não existe.
+    expect(startupMode("")).toBeNull();
+    expect(startupMode(undefined)).toBeNull();
+    expect(startupMode(null)).toBeNull();
+    expect(startupMode("pesquisa")).toBeNull();
   });
 });

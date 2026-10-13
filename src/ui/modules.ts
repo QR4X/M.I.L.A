@@ -314,6 +314,16 @@ export function defaultSegment(
 }
 
 /**
+ * O modo da conversa NOVA que abre JUNTO do painel (settings › Chat › "Start
+ * with a new chat"). Vazio, ausente ou um id desconhecido devolve null — e aí o
+ * painel abre como sempre, o dashboard. Um valor inválido não pode prender
+ * ninguém numa tela que não existe.
+ */
+export function startupMode(valor: string | undefined | null): ChatMode | null {
+  return isChatMode(valor) ? valor : null;
+}
+
+/**
  * A lista que aquela aba mostra.
  *
  * A sentinela ainda devolve tudo — não porque exista uma aba "All", mas
