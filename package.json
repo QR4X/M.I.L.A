@@ -1,6 +1,6 @@
 {
   "name": "axxa-agent",
-  "version": "0.9.30",
+  "version": "0.9.31",
   "description": "AXXA Agent (Obsidian plugin).",
   "license": "GPL-3.0-or-later",
   "private": true,
