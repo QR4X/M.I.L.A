@@ -193,6 +193,9 @@ export interface AxxaSettings {
   unreadChats: string[];
   /** chat | vault-qa | agent */
   defaultMode: string;
+  /** Ao abrir o painel, começa direto numa conversa NOVA deste modo
+   *  (chat | vault-qa | agent). Vazio = o painel de sempre (dashboard). */
+  startupChatMode: string;
   /** low | med | high | xhigh | max */
   defaultEffort: string;
   /** Overrides do usuário por nível de effort (ausente = DEFAULT_EFFORT_CONFIGS). */
@@ -313,6 +316,9 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   discoveredEmbeddings: {},
   unreadChats: [],
   defaultMode: "chat",
+  // Vazio: quem instala abre no painel (dashboard), como sempre. Quem quer cair
+  // direto numa conversa nova escolhe o modo nas settings.
+  startupChatMode: "",
   defaultEffort: "med",
   effortConfigs: {},
   // Quem instala agora começa no idioma do Obsidian; quem já tinha o

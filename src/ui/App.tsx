@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useReducer, useState } from "react";
 import type AxxaPlugin from "../main";
 import { isChatMode, type ChatSession } from "../core/session";
-import { SEGMENT_ALL } from "./modules";
+import { SEGMENT_ALL, startupMode } from "./modules";
 import type { Skill } from "../skills/skills";
 import { ChatView } from "./ChatView";
 import { Dashboard } from "./Dashboard";
@@ -42,12 +42,15 @@ export function App({
   session: ChatSession;
 }) {
   // Abre no PAINEL, não numa conversa vazia: a primeira pergunta de quem
-  // abre o app não é "o que eu escrevo", é "onde eu estava".
-  const [view, setView] = useState<ViewId>("home");
+  // abre o app não é "o que eu escrevo", é "onde eu estava". A exceção é quem
+  // pediu nas settings (Chat → "Start with a new chat") para cair direto numa
+  // conversa nova de um modo: aí já é nela que se começa.
+  const modoDeAbertura = startupMode(plugin.settings.startupChatMode);
+  const [view, setView] = useState<ViewId>(modoDeAbertura ? "chat" : "home");
   const [menuOpen, setMenuOpen] = useState(false);
   /** De qual módulo é a home que está aberta (ou foi a última). */
   const [modulo, setModulo] = useState<string>(
-    () => plugin.settings.defaultMode || "chat"
+    () => modoDeAbertura ?? (plugin.settings.defaultMode || "chat")
   );
   const [inject, setInject] = useState<ComposerInject | null>(null);
   /** De onde se entrou na conversa — é pra lá que a seta de voltar leva.
@@ -90,6 +93,18 @@ export function App({
       u1();
       u2();
     };
+  }, [session, plugin]);
+
+  // Ao ABRIR o painel, a conversa nova do modo escolhido já está na tela: a
+  // pessoa digita e envia. Roda uma vez por montagem da view (é o "ao abrir"):
+  // `session` e `plugin` são estáveis enquanto a view viver.
+  useEffect(() => {
+    const m = startupMode(plugin.settings.startupChatMode);
+    if (!m) return;
+    session.newChat(m);
+    setInject({ text: "", nonce: Date.now() });
+    setVoltarPara("home");
+    setView("chat");
   }, [session, plugin]);
 
   // O que vem do EDITOR (comandos e clique direito — ver editor/ponte.ts):

@@ -493,6 +493,24 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
     ),
     escolha(
       chat,
+      tr("Start with a new chat"),
+      null,
+      tr(
+        "Open the panel straight into a new chat of this mode instead of the dashboard. \"Dashboard\" keeps the current behaviour."
+      ),
+      "startupChatMode",
+      () => [
+        { value: "", label: tr("Dashboard"), icon: "layout-dashboard" },
+        ...CHAT_MODES.map((m) => ({
+          value: m,
+          label: tr(MODULES[m].label),
+          icon: MODULES[m].icon,
+        })),
+      ],
+      { aliases: ["startup", "start", "boot", "on open", "abrir ao iniciar", "início"] }
+    ),
+    escolha(
+      chat,
       tr("Effort"),
       null,
       tr("How hard the model works: length, temperature."),
