@@ -196,6 +196,48 @@ describe("transcribeInstagramReel & reelAttachment", () => {
     expect(attachment.content).toContain("Gesprochenes Transkript:\nHier ist der gesprochene Text des Videos.");
   });
 
+  it("funktioniert nahtlos mit OpenRouter-Key und Endpunkt", async () => {
+    let transcribeCalledWith: any = null;
+    __setRequestUrl(async (opts: any) => {
+      if (opts.url.includes("graphql")) {
+        return {
+          status: 200,
+          json: {
+            data: {
+              shortcode_media: {
+                is_video: true,
+                video_url: "https://test.com/reel.mp4",
+              },
+            },
+          },
+        };
+      }
+      if (opts.url.includes("reel.mp4")) {
+        return {
+          status: 200,
+          arrayBuffer: new Uint8Array([1, 2, 3]).buffer,
+        };
+      }
+      if (opts.url.includes("openrouter.ai/api/v1/audio/transcriptions")) {
+        transcribeCalledWith = opts;
+        return {
+          status: 200,
+          json: { text: "Transkribiert mit OpenRouter Whisper!" },
+        };
+      }
+      return { status: 404 };
+    });
+
+    const result = await transcribeInstagramReel("https://www.instagram.com/reel/C8abc_123/", {
+      apiKey: "sk-or-v1-testkey",
+      provider: "openrouter",
+    });
+
+    expect(result.transcript).toBe("Transkribiert mit OpenRouter Whisper!");
+    expect(transcribeCalledWith.url).toBe("https://openrouter.ai/api/v1/audio/transcriptions");
+    expect(transcribeCalledWith.headers["HTTP-Referer"]).toBe("https://github.com/axxalab/axxa-agent");
+  });
+
   it("deaktiviertes instagramReelsEnabled schaltet die Tool- und Link-Erkennung ab", async () => {
     const { applyControl, readControl } = await import("../src/ui/settings/values");
     const settings: any = { instagramReelsEnabled: true };

@@ -15,8 +15,10 @@
 import { requestUrl } from "obsidian";
 import { ProviderError } from "./base";
 
-const OPENAI_TRANSCRIBE_ENDPOINT =
+export const OPENAI_TRANSCRIBE_ENDPOINT =
   "https://api.openai.com/v1/audio/transcriptions";
+export const OPENROUTER_TRANSCRIBE_ENDPOINT =
+  "https://openrouter.ai/api/v1/audio/transcriptions";
 
 /** Teto do arquivo aceito pela API (25MB) — barrado antes de subir. */
 export const TRANSCRIBE_MAX_BYTES = 25 * 1024 * 1024;
@@ -97,13 +99,48 @@ export function audioMimeFor(path: string): string {
 
 export interface TranscribeOptions {
   apiKey: string;
-  /** gpt-4o-mini-transcribe (default), gpt-4o-transcribe ou whisper-1. */
+  /** Provider: "openai" ou "openrouter". Se omitido, auto-detecta por sk-or- ou endpoint. */
+  provider?: "openai" | "openrouter";
+  /** Endpoint customizado (opcional). */
+  endpoint?: string;
+  /** gpt-4o-mini-transcribe, whisper-1, openai/whisper-large-v3, etc. */
   model: string;
   data: Uint8Array;
   /** Nome com extensão — a API usa pra sniffar o formato. */
   filename: string;
   /** ISO-639-1 opcional; sem isso o modelo detecta sozinho. */
   language?: string;
+}
+
+export interface TranscribeCredentialSettings {
+  openaiApiKey?: string;
+  openrouterApiKey?: string;
+  defaultProvider?: string;
+}
+
+export interface TranscribeCredential {
+  apiKey: string;
+  provider: "openai" | "openrouter";
+}
+
+/**
+ * Ermittelt den Transkriptions-Schlüssel (OpenAI oder OpenRouter).
+ * Unterstützt beide Anbieter nahtlos für Whisper STT & Reel-Transkription.
+ */
+export function getTranscriptionCredential(
+  settings: TranscribeCredentialSettings
+): TranscribeCredential | null {
+  const oai = settings.openaiApiKey?.trim();
+  const or = settings.openrouterApiKey?.trim();
+  if (oai && or) {
+    if (settings.defaultProvider === "openrouter") {
+      return { apiKey: or, provider: "openrouter" };
+    }
+    return { apiKey: oai, provider: "openai" };
+  }
+  if (oai) return { apiKey: oai, provider: "openai" };
+  if (or) return { apiKey: or, provider: "openrouter" };
+  return null;
 }
 
 /**
@@ -115,7 +152,7 @@ export async function transcribeAudio(
   opts: TranscribeOptions
 ): Promise<string> {
   if (!opts.apiKey?.trim()) {
-    throw new ProviderError("OpenAI API key not configured.", "no-key");
+    throw new ProviderError("OpenAI or OpenRouter API key not configured.", "no-key");
   }
   if (opts.data.byteLength === 0) {
     throw new ProviderError("Empty audio file.", "unknown");
@@ -124,8 +161,23 @@ export async function transcribeAudio(
     throw new ProviderError("Audio file too large (max 25MB).", "unknown");
   }
 
+  const isRouter =
+    opts.provider === "openrouter" ||
+    Boolean(opts.endpoint && opts.endpoint.includes("openrouter.ai")) ||
+    (!opts.provider && opts.apiKey.trim().startsWith("sk-or-"));
+
+  const endpoint =
+    opts.endpoint ??
+    (isRouter ? OPENROUTER_TRANSCRIBE_ENDPOINT : OPENAI_TRANSCRIBE_ENDPOINT);
+
+  const model = isRouter
+    ? opts.model.includes("/")
+      ? opts.model
+      : `openai/${opts.model}`
+    : opts.model.replace(/^openai\//, "");
+
   const fields: MultipartField[] = [
-    { name: "model", value: opts.model },
+    { name: "model", value: model },
     {
       name: "file",
       filename: opts.filename,
@@ -137,13 +189,21 @@ export async function transcribeAudio(
 
   const { body, contentType } = buildMultipartBody(fields);
 
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${opts.apiKey.trim()}`,
+  };
+  if (isRouter) {
+    headers["HTTP-Referer"] = "https://github.com/axxalab/axxa-agent";
+    headers["X-Title"] = "M.I.L.A";
+  }
+
   let res;
   try {
     res = await requestUrl({
-      url: OPENAI_TRANSCRIBE_ENDPOINT,
+      url: endpoint,
       method: "POST",
       contentType,
-      headers: { Authorization: `Bearer ${opts.apiKey.trim()}` },
+      headers,
       body,
       throw: false,
     });
@@ -155,13 +215,21 @@ export async function transcribeAudio(
     throw new ProviderError("Invalid API key.", "invalid-key");
   }
   if (res.status === 429) {
-    throw new ProviderError("OpenAI transcription rate limit.", "rate-limit");
+    throw new ProviderError(
+      isRouter
+        ? "OpenRouter transcription rate limit or insufficient credits."
+        : "OpenAI transcription rate limit.",
+      "rate-limit"
+    );
   }
   if (res.status < 200 || res.status >= 300) {
     const msg =
       (res.json as { error?: { message?: string } } | undefined)?.error?.message ??
       `HTTP ${res.status}`;
-    throw new ProviderError(`OpenAI transcription: ${msg}`, "unknown");
+    throw new ProviderError(
+      `${isRouter ? "OpenRouter" : "OpenAI"} transcription: ${msg}`,
+      "unknown"
+    );
   }
 
   const text = extractTranscript(res.json, res.text);

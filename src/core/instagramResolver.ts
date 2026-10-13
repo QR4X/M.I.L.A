@@ -12,9 +12,17 @@
 // Alles läuft rein im Client/Plugin ohne eigenen Server und ohne Binaries (ffmpeg/yt-dlp).
 
 import { requestUrl } from "obsidian";
-import { transcribeAudio } from "../providers/transcribe";
+import {
+  transcribeAudio,
+  getTranscriptionCredential,
+  type TranscribeCredential,
+  type TranscribeCredentialSettings,
+} from "../providers/transcribe";
 import { ProviderError } from "../providers/base";
 import type { NoteAttachment } from "../providers/base";
+
+export { getTranscriptionCredential };
+export type { TranscribeCredential, TranscribeCredentialSettings };
 
 /** Standard Instagram Web App ID (öffentlich für Web-Clients). */
 export const IG_APP_ID = "936619743392459";
@@ -218,6 +226,7 @@ export async function downloadInstagramMedia(videoUrl: string): Promise<Uint8Arr
 
 export interface TranscribeReelOptions {
   apiKey: string;
+  provider?: "openai" | "openrouter";
   model?: string;
   language?: string;
 }
@@ -244,9 +253,12 @@ export async function transcribeInstagramReel(
   const mediaInfo = await resolveInstagramVideoUrl(shortcode);
   const videoBytes = await downloadInstagramMedia(mediaInfo.videoUrl);
 
+  const defaultModel = opts.provider === "openrouter" ? "openai/whisper-1" : "whisper-1";
+
   const transcript = await transcribeAudio({
     apiKey: opts.apiKey,
-    model: opts.model || "whisper-1",
+    provider: opts.provider,
+    model: opts.model || defaultModel,
     data: videoBytes,
     filename: `${shortcode}.mp4`,
     language: opts.language,
@@ -264,7 +276,6 @@ export async function transcribeInstagramReel(
  * Erstellt ein fertiges NoteAttachment für den Chat aus dem Transkript.
  */
 export function reelAttachment(result: ReelTranscriptResult): NoteAttachment {
-  const header = `Instagram Reel (${result.shortcode}) — ${result.url}`;
   const parts: string[] = [`Quelle: ${result.url}`];
   if (result.caption) {
     parts.push(`Beschreibung:\n${result.caption}`);

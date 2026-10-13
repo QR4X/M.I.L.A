@@ -665,8 +665,8 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       }
     ),
     hintRow(
-      ui.hint(tr("Dictation runs on OpenAI — add that key in Providers.")),
-      () => voiceOn() && !ui.hasCredential("openai")
+      ui.hint(tr("Dictation runs on OpenAI or OpenRouter — add that key in Providers.")),
+      () => voiceOn() && !ui.hasCredential("openai") && !ui.hasCredential("openrouter")
     ),
     escolha(
       chat,
@@ -964,8 +964,11 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       }
     ),
     hintRow(
-      ui.hint(tr("Add your OpenAI key in Providers to transcribe reels.")),
-      () => s().instagramReelsEnabled !== false && !ui.hasCredential("openai")
+      ui.hint(tr("Add your OpenAI or OpenRouter key in Providers to transcribe reels.")),
+      () =>
+        s().instagramReelsEnabled !== false &&
+        !ui.hasCredential("openai") &&
+        !ui.hasCredential("openrouter")
     ),
   ]);
 
