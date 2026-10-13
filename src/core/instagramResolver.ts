@@ -276,7 +276,6 @@ export async function transcribeInstagramReel(
  * Erstellt ein fertiges NoteAttachment für den Chat aus dem Transkript.
  */
 export function reelAttachment(result: ReelTranscriptResult): NoteAttachment {
-  const header = `Instagram Reel (${result.shortcode}) — ${result.url}`;
   const parts: string[] = [`Quelle: ${result.url}`];
   if (result.caption) {
     parts.push(`Beschreibung:\n${result.caption}`);
