@@ -153,9 +153,10 @@ export function artifactIcon(ext: string): string {
     : "file-audio";
 }
 
-/** Uma "nota" anexada pode ter três origens, e o chip precisa saber qual:
- *  o texto colado, a página buscada e a nota do vault de verdade. */
-export function noteKind(path: string): "link" | "pasted" | "vault" {
+/** Uma "nota" anexada pode ter quatro origens, e o chip precisa saber qual:
+ *  o texto colado, o link web, o transkript de reel e a nota do vault de verdade. */
+export function noteKind(path: string): "link" | "pasted" | "reel" | "vault" {
+  if (path.startsWith("🎞️") || path.includes("Reel (")) return "reel";
   if (path.includes(" — http") || /^https?:\/\//.test(path)) return "link";
   if (path.startsWith("Pasted text")) return "pasted";
   return "vault";
@@ -178,6 +179,7 @@ export function attachmentThumb(
   if (a.type === "pdf") return { kind: "emoji", char: "📕" };
   if (a.type === "audio") return { kind: "emoji", char: "🎙️" };
   const origem = noteKind(a.path);
+  if (origem === "reel") return { kind: "emoji", char: "🎞️" };
   if (origem === "link") return { kind: "emoji", char: "🔗" };
   if (origem === "pasted") return { kind: "emoji", char: "📋" };
   return { kind: "emoji", char: "📄" };

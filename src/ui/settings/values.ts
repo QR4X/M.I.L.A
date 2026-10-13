@@ -33,6 +33,7 @@ const BOOL_KEYS = [
   "mobileFullscreen",
   "hapticsEnabled",
   "ragStreamShards",
+  "instagramReelsEnabled",
 ] as const;
 
 /** Menus e campos de texto — sempre string do lado do controle. */
@@ -90,6 +91,8 @@ export function readControl(s: AxxaSettings, key: ControlKey): boolean | string 
     // Nasceu ligada (0.9.23): quem já tinha data.json lê o padrão.
     case "agentWeb":
       return s.agentWeb !== false;
+    case "instagramReelsEnabled":
+      return s.instagramReelsEnabled !== false;
     case "travarNoLimite":
       return s.travarNoLimite === true;
     case "language":

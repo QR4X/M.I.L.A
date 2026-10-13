@@ -71,6 +71,11 @@ import {
   GENERATION_DIR,
   type ArtifactLike,
 } from "./attachSources";
+import {
+  isInstagramUrl,
+  transcribeInstagramReel,
+  reelAttachment,
+} from "../core/instagramResolver";
 import { getModelCapabilities } from "../providers/modelCapabilities";
 import { ConfirmModal, PromptModal, openPluginSettings } from "./modals";
 import { desfaziveis, desfazerRodada, desfazerUma, idDesfazivel } from "./agentUndo";
@@ -800,12 +805,46 @@ ${tr("Open Settings › Providers to add it, then run the connection test.")}`,
     }
   };
 
-  /** Colar. Duas coisas que o campo não fazia:
+  const processarInstagramReel = async (url: string) => {
+    if (plugin.settings.instagramReelsEnabled === false) return;
+    const key = plugin.settings.openaiApiKey?.trim();
+    if (!key) {
+      new Notice(
+        tr("OpenAI API key required for Reel transcription (Settings › Providers).")
+      );
+      return;
+    }
+    const notice = new Notice(tr("Transcribing Instagram Reel…"), 0);
+    try {
+      const res = await transcribeInstagramReel(url, {
+        apiKey: key,
+        model: plugin.settings.voiceModel || "whisper-1",
+        language: plugin.settings.voiceLanguage || undefined,
+      });
+      addAttachment(reelAttachment(res));
+      notice.hide();
+      new Notice(tr("Reel transcript attached!"));
+    } catch (err: unknown) {
+      notice.hide();
+      const msg = err instanceof Error ? err.message : String(err);
+      new Notice(`Instagram Reel: ${msg}`);
+    }
+  };
+
+  /** Colar. Três coisas que o campo faz:
+   *   - link de Instagram Reel vira anexo com transkript automático
    *   - imagem da área de transferência (print) vira anexo
    *   - bloco grande vira anexo em vez de virar parede de texto */
   const aoColar = (e: ClipboardEvent<HTMLTextAreaElement>) => {
     const dados = e.clipboardData;
     if (!dados) return;
+
+    const textoColado = dados.getData("text");
+    if (plugin.settings.instagramReelsEnabled !== false && textoColado && isInstagramUrl(textoColado)) {
+      e.preventDefault();
+      void processarInstagramReel(textoColado.trim());
+      return;
+    }
 
     const imagens = Array.from(dados.files ?? []).filter((f) =>
       f.type.startsWith("image/")
@@ -820,10 +859,9 @@ ${tr("Open Settings › Providers to add it, then run the connection test.")}`,
       return;
     }
 
-    const texto = dados.getData("text");
-    if (pasteIsBig(texto)) {
+    if (pasteIsBig(textoColado)) {
       e.preventDefault();
-      addAttachment(pastedNote(texto));
+      addAttachment(pastedNote(textoColado));
     }
   };
 
