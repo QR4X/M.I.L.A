@@ -1216,7 +1216,11 @@ export default class AxxaPlugin extends Plugin {
     // ficava pronta ATRÁS da sidebar fechada — e ainda era preciso deslizar
     // pra dentro pra ver. Com o modo escolhido, revelamos a view de propósito.
     if (startupMode(this.settings.startupChatMode)) {
-      void this.activateView();
+      // Um instante DEPOIS do layout: no celular o Obsidian reativa o editor
+      // (a última nota aberta) logo após o onLayoutReady, e um reveal imediato
+      // era desfeito — o chat abria e o editor voltava por cima. Deferir um
+      // tico faz o reveal pegar DEPOIS da restauração da nota.
+      window.setTimeout(() => void this.activateView(), 250);
     }
   }
 
@@ -1426,8 +1430,14 @@ export default class AxxaPlugin extends Plugin {
       await leaf?.setViewState({ type: VIEW_TYPE_AXXA, active: true });
     }
 
-    if (leaf) void workspace.revealLeaf(leaf);
-    else {
+    if (leaf) {
+      void workspace.revealLeaf(leaf);
+      // No CELULAR, revelar a view não basta: ela pode ficar ATRÁS de uma
+      // gaveta direita FECHADA, e o Obsidian mobile só abre o drawer quando o
+      // split é expandido. É este expand que traz o painel pra frente — o
+      // inverso já é usado em linksDaResposta (rightSplit.collapse).
+      if (Platform.isMobile) workspace.rightSplit?.expand();
+    } else {
       new Notice(tr("Couldn't open the AXXA panel — try toggling the right sidebar."));
     }
   }
