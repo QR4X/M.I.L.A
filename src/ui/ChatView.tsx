@@ -75,6 +75,7 @@ import {
   isInstagramUrl,
   transcribeInstagramReel,
   reelAttachment,
+  getTranscriptionCredential,
 } from "../core/instagramResolver";
 import { getModelCapabilities } from "../providers/modelCapabilities";
 import { ConfirmModal, PromptModal, openPluginSettings } from "./modals";
@@ -807,18 +808,19 @@ ${tr("Open Settings › Providers to add it, then run the connection test.")}`,
 
   const processarInstagramReel = async (url: string) => {
     if (plugin.settings.instagramReelsEnabled === false) return;
-    const key = plugin.settings.openaiApiKey?.trim();
-    if (!key) {
+    const cred = getTranscriptionCredential(plugin.settings);
+    if (!cred) {
       new Notice(
-        tr("OpenAI API key required for Reel transcription (Settings › Providers).")
+        tr("OpenAI or OpenRouter API key required for Reel transcription (Settings › Providers).")
       );
       return;
     }
     const notice = new Notice(tr("Transcribing Instagram Reel…"), 0);
     try {
       const res = await transcribeInstagramReel(url, {
-        apiKey: key,
-        model: plugin.settings.voiceModel || "whisper-1",
+        apiKey: cred.apiKey,
+        provider: cred.provider,
+        model: plugin.settings.voiceModel || (cred.provider === "openrouter" ? "openai/whisper-1" : "whisper-1"),
         language: plugin.settings.voiceLanguage || undefined,
       });
       addAttachment(reelAttachment(res));
@@ -1016,7 +1018,10 @@ ${tr("Open Settings › Providers to add it, then run the connection test.")}`,
   // direto pro textarea — que fica colapsado durante a gravação, então ninguém
   // via nada enquanto falava.
   const voice = useVoice({
-    apiKey: () => plugin.providerCredential("openai"),
+    apiKey: () => {
+      const cred = getTranscriptionCredential(plugin.settings);
+      return cred?.apiKey ?? "";
+    },
     model: () => plugin.settings.voiceModel,
     language: () => plugin.settings.voiceLanguage,
     onTranscript: setLiveText,

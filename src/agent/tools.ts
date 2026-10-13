@@ -432,11 +432,22 @@ export async function toolFetchReelTranscript(
   args: { url: string }
 ): Promise<string> {
   const url = String(args?.url ?? "").trim();
-  const apiKey = ctx.embed?.openaiApiKey?.trim();
-  if (!apiKey) {
-    throw new Error("Transcribing Instagram Reels requires an OpenAI API key (Settings › Providers).");
+  const openAi = ctx.embed?.openaiApiKey?.trim();
+  const openRouter = ctx.embed?.openrouterApiKey?.trim();
+  const cred = openAi
+    ? { apiKey: openAi, provider: "openai" as const }
+    : openRouter
+    ? { apiKey: openRouter, provider: "openrouter" as const }
+    : null;
+  if (!cred) {
+    throw new Error(
+      "Transcribing Instagram Reels requires an OpenAI or OpenRouter API key (Settings › Providers)."
+    );
   }
-  const result = await transcribeInstagramReel(url, { apiKey });
+  const result = await transcribeInstagramReel(url, {
+    apiKey: cred.apiKey,
+    provider: cred.provider,
+  });
   const parts: string[] = [`Source: ${result.url}`];
   if (result.caption) parts.push(`Caption:\n${result.caption}`);
   parts.push(`Spoken Transcript:\n${result.transcript}`);

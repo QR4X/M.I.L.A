@@ -101,6 +101,8 @@ export const PT_SETTINGS: Record<string, string> = {
     "Põe um microfone na caixa de mensagem: você fala, as palavras caem nela e você envia quando estiver contente com elas.",
   "Dictation runs on OpenAI — add that key in Providers.":
     "O ditado roda na OpenAI — adicione essa chave em Provedores.",
+  "Dictation runs on OpenAI or OpenRouter — add that key in Providers.":
+    "O ditado roda na OpenAI ou OpenRouter — adicione essa chave em Provedores.",
   Ears: "Ouvidos",
   "Mini is quick, cheap and gets normal speech right; the full one is better with names, accents and noise.":
     "O Mini é rápido, barato e acerta a fala normal; o completo se sai melhor com nomes, sotaques e ruído.",
@@ -377,4 +379,6 @@ export const PT_SETTINGS: Record<string, string> = {
     "Transcreva Instagram Reels públicos automaticamente via link ao colar ou enviar no chat. Funciona estritamente com URLs — sem necessidade de arquivos de vídeo.",
   "Add your OpenAI key in Providers to transcribe reels.":
     "Adicione sua chave da OpenAI em Provedores para transcrever reels.",
+  "Add your OpenAI or OpenRouter key in Providers to transcribe reels.":
+    "Adicione sua chave da OpenAI ou OpenRouter em Provedores para transcrever reels.",
 };

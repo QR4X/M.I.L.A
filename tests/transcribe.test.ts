@@ -7,6 +7,7 @@ const {
   audioMimeFor,
   extractTranscript,
   transcribeAudio,
+  getTranscriptionCredential,
   TRANSCRIBE_MAX_BYTES,
 } = await import("../src/providers/transcribe");
 const { __setRequestUrl } = await import("./obsidian-stub");
@@ -168,5 +169,78 @@ describe("transcribeAudio — contrato de erro", () => {
   it("200 com corpo vazio não vira transcript fantasma", async () => {
     __setRequestUrl(async () => ({ status: 200, json: {}, text: "" }));
     await expect(transcribeAudio(base)).rejects.toBeInstanceOf(ProviderError);
+  });
+
+  it("suporta OpenRouter com endpoint, headers e modelo prefixado com openai/", async () => {
+    let sent: any = null;
+    __setRequestUrl(async (opts: any) => {
+      sent = opts;
+      return { status: 200, json: { text: "transcrição via openrouter" }, text: "" };
+    });
+
+    const res = await transcribeAudio({
+      ...base,
+      apiKey: "sk-or-v1-abc123xyz",
+      model: "whisper-1",
+    });
+
+    expect(res).toBe("transcrição via openrouter");
+    expect(sent.url).toBe("https://openrouter.ai/api/v1/audio/transcriptions");
+    expect(sent.headers["HTTP-Referer"]).toBe("https://github.com/axxalab/axxa-agent");
+    expect(sent.headers["X-Title"]).toBe("M.I.L.A");
+    expect(dec.decode(sent.body)).toContain("openai/whisper-1");
+  });
+
+  it("OpenRouter mantém modelos que já possuem prefixo com barra", async () => {
+    let sent: any = null;
+    __setRequestUrl(async (opts: any) => {
+      sent = opts;
+      return { status: 200, json: { text: "ok" }, text: "" };
+    });
+
+    await transcribeAudio({
+      ...base,
+      provider: "openrouter",
+      apiKey: "sk-custom-key",
+      model: "openai/whisper-large-v3",
+    });
+
+    expect(sent.url).toBe("https://openrouter.ai/api/v1/audio/transcriptions");
+    expect(dec.decode(sent.body)).toContain("openai/whisper-large-v3");
+  });
+});
+
+describe("getTranscriptionCredential", () => {
+  it("devolve OpenAI se apenas ela estiver configurada", () => {
+    const cred = getTranscriptionCredential({ openaiApiKey: "sk-openai" });
+    expect(cred).toEqual({ apiKey: "sk-openai", provider: "openai" });
+  });
+
+  it("devolve OpenRouter se apenas ela estiver configurada", () => {
+    const cred = getTranscriptionCredential({ openrouterApiKey: "sk-or-v1-xyz" });
+    expect(cred).toEqual({ apiKey: "sk-or-v1-xyz", provider: "openrouter" });
+  });
+
+  it("respeita defaultProvider se ambas estiverem configuradas", () => {
+    expect(
+      getTranscriptionCredential({
+        openaiApiKey: "sk-oai",
+        openrouterApiKey: "sk-or",
+        defaultProvider: "openrouter",
+      })
+    ).toEqual({ apiKey: "sk-or", provider: "openrouter" });
+
+    expect(
+      getTranscriptionCredential({
+        openaiApiKey: "sk-oai",
+        openrouterApiKey: "sk-or",
+        defaultProvider: "openai",
+      })
+    ).toEqual({ apiKey: "sk-oai", provider: "openai" });
+  });
+
+  it("devolve null se nenhuma chave estiver configurada", () => {
+    expect(getTranscriptionCredential({})).toBeNull();
+    expect(getTranscriptionCredential({ openaiApiKey: "", openrouterApiKey: "   " })).toBeNull();
   });
 });

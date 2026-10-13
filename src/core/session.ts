@@ -51,6 +51,7 @@ import {
   extractInstagramShortcode,
   transcribeInstagramReel,
   reelAttachment,
+  getTranscriptionCredential,
 } from "./instagramResolver";
 
 export type ChatMode = "chat" | "vault-qa" | "agent";
@@ -369,13 +370,14 @@ export class ChatSession {
         const alreadyAttached = (attachments ?? []).some(
           (a) => a.type === "note" && shortcode && a.path.includes(shortcode)
         );
-        const openAiKey = this.plugin.settings.openaiApiKey?.trim();
-        if (!alreadyAttached && openAiKey) {
+        const cred = getTranscriptionCredential(this.plugin.settings);
+        if (!alreadyAttached && cred) {
           try {
             new Notice(tr("Transcribing Instagram Reel…"));
             const res = await transcribeInstagramReel(igUrl, {
-              apiKey: openAiKey,
-              model: this.plugin.settings.voiceModel || "whisper-1",
+              apiKey: cred.apiKey,
+              provider: cred.provider,
+              model: this.plugin.settings.voiceModel || (cred.provider === "openrouter" ? "openai/whisper-1" : "whisper-1"),
               language: this.plugin.settings.voiceLanguage || undefined,
             });
             const reelAtt = reelAttachment(res);

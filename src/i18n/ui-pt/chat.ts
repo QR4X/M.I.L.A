@@ -34,6 +34,8 @@ export const PT_CHAT: Record<string, string> = {
   "Reel transcript attached!": "Transcrição do Reel anexada!",
   "OpenAI API key required for Reel transcription (Settings › Providers).":
     "Chave da OpenAI necessária para transcrição de Reels (Configurações › Provedores).",
+  "OpenAI or OpenRouter API key required for Reel transcription (Settings › Providers).":
+    "Chave da OpenAI ou OpenRouter necessária para transcrição de Reels (Configurações › Provedores).",
   "Another chat is still answering — try again in a moment.":
     "Outra conversa ainda está respondendo — tente de novo daqui a pouco.",
   "{n} favorites per provider is the limit — unstar one first.":
