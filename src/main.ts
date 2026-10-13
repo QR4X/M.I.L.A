@@ -10,6 +10,7 @@ import { AxxaView, VIEW_TYPE_AXXA } from "./ui/AxxaView";
 import { FONTE_DO_HOVER } from "./ui/linksDaResposta";
 import { registerBrandLogos } from "./ui/brandLogos";
 import { AxxaSettingsTab } from "./ui/SettingsTab";
+import { startupMode } from "./ui/modules";
 import { VectorIndex, loadIndex, RAG_SHARD_SIZE } from "./rag/vectorIndex";
 import { indexVault } from "./rag/indexer";
 import {
@@ -1209,6 +1210,14 @@ export default class AxxaPlugin extends Plugin {
     // Agent abre sob demanda pela ribbon (ícone do robô) ou pelo comando
     // "Abrir AI Agent". Se o painel estava aberto ao fechar o Obsidian, o
     // próprio Obsidian restaura o layout — respeitando o que o usuário deixou.
+    //
+    // EXCEÇÃO: quem escolheu "Start with a new chat" (startupChatMode) quer
+    // cair direto na conversa nova. Sem abrir o painel aqui, a conversa nova
+    // ficava pronta ATRÁS da sidebar fechada — e ainda era preciso deslizar
+    // pra dentro pra ver. Com o modo escolhido, revelamos a view de propósito.
+    if (startupMode(this.settings.startupChatMode)) {
+      void this.activateView();
+    }
   }
 
   /** Soma um pedido (ou os tokens dele) no livro do dia e agenda a gravação. */
