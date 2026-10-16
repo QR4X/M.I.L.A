@@ -283,8 +283,14 @@ body.is-mobile
    E a seção "começar algo" (`.axxa-start`) somavam o MESMO inset de novo
    embaixo, um sobre o outro — o último cartão parava ~130px acima da borda e
    sobrava um vão morto exatamente onde ficava a barra de seleção de aba, que o
-   fullscreen esconde. Era o "espaço que não enche". Aqui o respiro da base vira
-   só o do app; quem segura a barra de gestos continua sendo o drawer. Mesma
+   fullscreen esconde. Era o "espaço que não enche".
+
+   Na tela cheia o respiro da base vai a ZERO: quem segura a barra de gestos é
+   o próprio drawer (a reserva dele, 34px num aparelho com gesture nav). Sobrava
+   ainda o espaçamento do app — `padding-bottom` da home (--axxa-3), margem
+   (--axxa-5) e `padding-bottom` da .axxa-start (--axxa-3), ~48px empilhados —
+   e era isso que ainda deixava o último cartão alto. Fora do fullscreen nada
+   muda: lá a barra de seleção de aba e a navbar ainda ocupam a base. Mesma
    lição do bloco da 0.2.37 (regra do composer, mais acima). */
 body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-fullscreen .axxa-root .axxa-home,
 body.is-mobile:not(#axxa-especificidade)
@@ -292,7 +298,14 @@ body.is-mobile:not(#axxa-especificidade)
   .axxa-root
   .axxa-dash
   .axxa-start {
-  padding-bottom: var(--axxa-3);
+  padding-bottom: 0;
+}
+body.is-mobile:not(#axxa-especificidade)
+  .workspace-drawer.axxa-fullscreen
+  .axxa-root
+  .axxa-dash
+  .axxa-start {
+  margin-bottom: 0;
 }
 /* Navbar global do Obsidian — é IRMÃ dos drawers (não descendente), então não
    dá pra escopar via `.workspace-drawer`. Fica no body de propósito: a classe
