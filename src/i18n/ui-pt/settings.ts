@@ -184,8 +184,8 @@ export const PT_SETTINGS: Record<string, string> = {
   "For web search, from tavily.com › API keys: 1,000 free searches a month, no card needed. Without it the agent can still open pages. Stored in the OS keychain (not in data.json).":
     "Pra busca na web, em tavily.com › API keys: 1.000 buscas grátis por mês, sem cartão. Sem ela, o agente ainda abre páginas. Guardada no chaveiro do sistema (não no data.json).",
   Fullscreen: "Tela cheia",
-  "Hides the drawer chrome and the global navbar while AXXA is the active tab. The menu button stays, so you are never stuck.":
-    "Esconde a moldura da barra lateral e a barra de navegação global enquanto a AXXA é a aba ativa. O botão de menu fica, então você nunca fica preso.",
+  "Fullscreen hides the drawer chrome and the global navbar while AXXA is the active tab. Chats always use it on their own; this switch only changes the other screens. The menu button stays, so you are never stuck.":
+    "A tela cheia esconde a moldura da barra lateral e a barra de navegação global enquanto a AXXA é a aba ativa. As conversas já ligam sozinhas; esta chave só muda as outras telas. O botão de menu fica, então você nunca fica preso.",
   Haptics: "Vibração",
   "A short buzz on every tap. Android only — iPhone doesn't let a plugin touch the Taptic Engine.":
     "Uma vibração curta a cada toque. Só no Android — o iPhone não deixa um plugin mexer no Taptic Engine.",

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { isRightDrawer, isDrawerOnScreen } from "../src/ui/fullscreenScope";
+import { fullscreenOn, isChatScreen, isDrawerOnScreen, isRightDrawer } from "../src/ui/fullscreenScope";
 
 /** Fake mínimo de Element pro classList que o helper consulta. */
 const drawerEl = (...classes: string[]) =>
@@ -58,5 +58,37 @@ describe("isDrawerOnScreen — quando a navbar global pode sumir", () => {
 
   it("gaveta parcial do modo NÃO-fullscreen (85% da tela) conta como aberta", () => {
     expect(isDrawerOnScreen(rect(60, 340), VW)).toBe(true);
+  });
+});
+
+describe("fullscreenOn — a conversa liga o modo SEM tocar na setting", () => {
+  it("setting desligada + conversa aberta → LIGA", () => {
+    expect(fullscreenOn(false, true)).toBe(true);
+  });
+
+  it("setting ligada → vale em qualquer tela", () => {
+    expect(fullscreenOn(true, false)).toBe(true);
+    expect(fullscreenOn(true, true)).toBe(true);
+  });
+
+  it("desligada e fora da conversa → DESLIGA (nada foi gravado)", () => {
+    expect(fullscreenOn(false, false)).toBe(false);
+  });
+});
+
+describe("isChatScreen — a marca da conversa vem do DOM", () => {
+  const rootEl = (...classes: string[]) =>
+    ({ classList: { contains: (c: string) => classes.includes(c) } }) as Element;
+
+  it("com a marca `axxa-chat-open`, é conversa", () => {
+    expect(isChatScreen(rootEl("axxa-root", "axxa-chat-open"))).toBe(true);
+  });
+
+  it("sem a marca (painel, histórico, uso) não é conversa", () => {
+    expect(isChatScreen(rootEl("axxa-root"))).toBe(false);
+  });
+
+  it("sem root não é conversa", () => {
+    expect(isChatScreen(null)).toBe(false);
   });
 });

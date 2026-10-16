@@ -39,3 +39,30 @@ export function isDrawerOnScreen(
   const visibleWidth = Math.min(r.right, viewportWidth) - Math.max(r.left, 0);
   return visibleWidth >= r.width / 2;
 }
+
+/**
+ * O modo tela cheia deve valer AGORA?
+ *
+ * É um OU de duas fontes:
+ *  - a setting (`mobileFullscreen`), ligada à mão no painel;
+ *  - a CONVERSA aberta — qualquer modo (Chat, Vault Q&A, Agent) — que liga o
+ *    modo sozinha, sem tocar na setting.
+ *
+ * Nada é gravado: ao SAIR da conversa a resposta volta a ser exatamente a da
+ * setting, então quem deixou a tela cheia desligada continua com ela desligada
+ * fora do chat.
+ */
+export function fullscreenOn(settingOn: boolean, chatOpen: boolean): boolean {
+  return settingOn || chatOpen;
+}
+
+/**
+ * A AXXA está mostrando uma CONVERSA? A casca marca o `.axxa-root` com
+ * `axxa-chat-open` quando a tela é a conversa (`view === "chat"`, App.tsx) e
+ * tira a marca ao trocar de tela. Perguntar ao DOM (em vez de guardar estado
+ * aqui) é o que mantém a decisão certa em troca de aba, view fechada e duas
+ * views na mesma gaveta — mesma razão do `axxaNaFrente`.
+ */
+export function isChatScreen(root: Element | null): boolean {
+  return !!root?.classList.contains("axxa-chat-open");
+}

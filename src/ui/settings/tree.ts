@@ -978,7 +978,7 @@ export function buildSettingsTree(ui: SettingsUi): SettingsTree {
       toggle(
         tr("Fullscreen"),
         tr(
-          "Hides the drawer chrome and the global navbar while AXXA is the active tab. The menu button stays, so you are never stuck."
+          "Fullscreen hides the drawer chrome and the global navbar while AXXA is the active tab. Chats always use it on their own; this switch only changes the other screens. The menu button stays, so you are never stuck."
         ),
         "mobileFullscreen",
         { aliases: ["tela cheia", "full screen"] }

@@ -15,7 +15,7 @@ import { createRoot, type Root } from "react-dom/client";
 import type AxxaPlugin from "../main";
 import { ChatSession } from "../core/session";
 import { App } from "./App";
-import { isDrawerOnScreen, isRightDrawer } from "./fullscreenScope";
+import { fullscreenOn, isChatScreen, isDrawerOnScreen, isRightDrawer } from "./fullscreenScope";
 import { hapticsOn, setHapticsEnabled } from "./haptics";
 import { syncSheetStrip } from "./sheetStrip";
 
@@ -77,7 +77,16 @@ export class AxxaView extends ItemView {
     container.empty();
     this.session = new ChatSession(this.plugin);
     this.root = createRoot(container);
-    this.root.render(<App plugin={this.plugin} session={this.session} />);
+    this.root.render(
+      <App
+        plugin={this.plugin}
+        session={this.session}
+        // Trocar de tela muda o alvo do fullscreen (conversa × painel/histórico).
+        // O App avisa na hora: esperar o observer da gaveta (260ms de settle)
+        // faria a moldura aparecer/sumir atrasada ao entrar e sair da conversa.
+        onScreenChange={() => this.applyFullscreen()}
+      />
+    );
 
     // Tato: um ouvinte só, na raiz, pega TODO clique da casca — botão novo
     // nasce com feedback sem ninguém precisar lembrar. Os momentos com
@@ -209,14 +218,19 @@ export class AxxaView extends ItemView {
   // ── fullscreen ────────────────────────────────────────────────────────────
 
   /**
-   * Fullscreen mobile (opt-in, default OFF) — mesma técnica do observer do
-   * teclado: só alterna classes em ancestrais, sem tocar em API interna nem em
-   * variável nativa do Obsidian.
+   * Fullscreen mobile — mesma técnica do observer do teclado: só alterna
+   * classes em ancestrais, sem tocar em API interna nem em variável nativa do
+   * Obsidian.
    *
    * - `.workspace-drawer.axxa-fullscreen` esconde o header da gaveta, que é
    *   redundante quando a AXXA está ativa (temos topbar e menu próprios).
    * - `body.axxa-fullscreen` esconde a navbar global e desliga a reserva de
    *   espaço do composer (a regra `:not(.axxa-fullscreen)` no CSS).
+   *
+   * Vale por DUAS razões (ver fullscreenOn): a setting `mobileFullscreen`
+   * ligada à mão, OU uma CONVERSA aberta — que liga o modo sozinha em qualquer
+   * modo (Chat, Vault Q&A, Agent) sem gravar nada. Fora da conversa o valor
+   * volta a ser exatamente o da setting.
    *
    * Garantias anti-armadilha: só mobile, só na aba ativa da gaveta DIREITA, só
    * enquanto essa gaveta está de fato na tela, saída sempre visível (a topbar
@@ -237,10 +251,11 @@ export class AxxaView extends ItemView {
   /**
    * Recalcula as classes de UMA gaveta pelo que está nela AGORA — não por qual
    * view chamou. A tela cheia vale quando a aba corrente da gaveta direita é
-   * uma view da AXXA (esta ou outra) e a setting está ligada; a faixa, quando
-   * há folha nossa aberta nela (ui/sheetStrip.ts). Perguntar ao DOM é o que
-   * faz troca de aba, folha movida, view fechada e duas views na mesma gaveta
-   * darem o mesmo resultado em qualquer ordem de evento. (A gaveta só põe no
+   * uma view da AXXA (esta ou outra) E a setting está ligada OU a casca está
+   * mostrando uma CONVERSA (fullscreenOn); a faixa, quando há folha nossa
+   * aberta nela (ui/sheetStrip.ts). Perguntar ao DOM é o que faz troca de aba,
+   * folha movida, view fechada e duas views na mesma gaveta darem o mesmo
+   * resultado em qualquer ordem de evento. (A gaveta só põe no
    * `.workspace-drawer-active-tab-content` a folha da aba corrente; as outras
    * saem do DOM.)
    */
@@ -252,7 +267,12 @@ export class AxxaView extends ItemView {
         '.workspace-drawer-active-tab-content .workspace-leaf-content[data-type="axxa-agent"]'
       ) !== null;
     const on =
-      axxaNaFrente && isRightDrawer(drawer) && !!this.plugin.settings.mobileFullscreen;
+      axxaNaFrente &&
+      isRightDrawer(drawer) &&
+      fullscreenOn(
+        !!this.plugin.settings.mobileFullscreen,
+        isChatScreen(drawer.querySelector(".axxa-root"))
+      );
     drawer.classList.toggle("axxa-fullscreen", on);
     // A navbar global é IRMÃ das gavetas (mora no body). Some só ENQUANTO a
     // gaveta da AXXA está na tela: abrir a gaveta esquerda (ou fechar a nossa

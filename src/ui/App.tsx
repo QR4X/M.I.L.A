@@ -37,9 +37,13 @@ export interface ComposerInject {
 export function App({
   plugin,
   session,
+  onScreenChange,
 }: {
   plugin: AxxaPlugin;
   session: ChatSession;
+  /** A TELA mudou (conversa × painel/histórico/uso/…). O fullscreen mobile
+   *  depende disso e é reativo, então a view precisa saber na hora. */
+  onScreenChange?: () => void;
 }) {
   // Abre no PAINEL, não numa conversa vazia: a primeira pergunta de quem
   // abre o app não é "o que eu escrevo", é "onde eu estava". A exceção é quem
@@ -94,6 +98,16 @@ export function App({
       u2();
     };
   }, [session, plugin]);
+
+  // A TELA mudou (conversa ↔ painel/histórico/uso/…)? O fullscreen mobile
+  // depende disso: a conversa liga o modo sozinha, as outras telas devolvem o
+  // valor da setting. Aqui o AxxaView recalcula na hora — sem este aviso a
+  // moldura só apareceria/sumiria quando o observer da gaveta disparasse
+  // (260ms depois). A `view` já mudou no DOM quando o efeito roda, então a
+  // marca `axxa-chat-open` lida pela view é a nova.
+  useEffect(() => {
+    onScreenChange?.();
+  }, [view, onScreenChange]);
 
   // Ao ABRIR o painel, a conversa nova do modo escolhido já está na tela: a
   // pessoa digita e envia. Roda uma vez por montagem da view (é o "ao abrir"):
@@ -195,7 +209,7 @@ export function App({
         instrucoesDe: (chat: ChatSummary) => setInstrucoesPara(chat),
       }}
     >
-    <div className="axxa-root">
+    <div className={view === "chat" ? "axxa-root axxa-chat-open" : "axxa-root"}>
       {view === "home" ? (
         <Dashboard
           plugin={plugin}
