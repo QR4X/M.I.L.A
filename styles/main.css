@@ -276,6 +276,24 @@ body.is-mobile
   .axxa-composer:not([data-mode="vault-qa"]) {
   bottom: 18px;
 }
+/* ── O inset de baixo conta UMA vez só (base da home) ─────────────────────
+   No fullscreen a gaveta do Obsidian já termina acima da barra de gestos: o
+   `--safe-area-inset-bottom` mora no `padding-bottom` do
+   `.workspace-drawer-inner` (ver o bloco comentado na seção da folha). A home
+   E a seção "começar algo" (`.axxa-start`) somavam o MESMO inset de novo
+   embaixo, um sobre o outro — o último cartão parava ~130px acima da borda e
+   sobrava um vão morto exatamente onde ficava a barra de seleção de aba, que o
+   fullscreen esconde. Era o "espaço que não enche". Aqui o respiro da base vira
+   só o do app; quem segura a barra de gestos continua sendo o drawer. Mesma
+   lição do bloco da 0.2.37 (regra do composer, mais acima). */
+body.is-mobile:not(#axxa-especificidade) .workspace-drawer.axxa-fullscreen .axxa-root .axxa-home,
+body.is-mobile:not(#axxa-especificidade)
+  .workspace-drawer.axxa-fullscreen
+  .axxa-root
+  .axxa-dash
+  .axxa-start {
+  padding-bottom: var(--axxa-3);
+}
 /* Navbar global do Obsidian — é IRMÃ dos drawers (não descendente), então não
    dá pra escopar via `.workspace-drawer`. Fica no body de propósito: a classe
    `body.axxa-fullscreen` só existe quando a AXXA é a aba ATIVA do drawer

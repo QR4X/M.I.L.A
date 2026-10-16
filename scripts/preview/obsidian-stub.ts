@@ -24,6 +24,27 @@ export function requireApiVersion(version: string): boolean {
 export function normalizePath(p: string): string {
   return p.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\/|\/$/g, "");
 }
+
+/**
+ * O caminho de um wikilink, sem alias e sem âncora:
+ * `[[Nota|alias#seção]]` → `Nota`. É o que o `abrirLinkDaResposta` usa pra
+ * achar a nota destino.
+ */
+export function getLinkpath(linktext: string): string {
+  return (linktext.split("|")[0] ?? "").split("#")[0]?.trim() ?? "";
+}
+
+/**
+ * Atalhos de teclado. O preview só toca `isModEvent` (Cmd/Ctrl ou botão do
+ * meio), que o clique de wikilink usa pra decidir se abre na aba atual ou numa
+ * nova. No browser não há mod-event do Obsidian — basta distinguir o clique
+ * simples.
+ */
+export const Keymap = {
+  isModEvent(evt?: MouseEvent | KeyboardEvent): boolean {
+    return !!evt && (evt.metaKey || evt.ctrlKey);
+  },
+};
 /**
  * YAML de mentirinha, do tamanho do frontmatter que o app escreve: uma chave
  * por linha, valor entre aspas ou solto.

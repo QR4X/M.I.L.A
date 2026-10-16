@@ -24,7 +24,8 @@
       /* A gaveta, os containers e a leaf são estilizados pelo app.css REAL
          (position: fixed, top/bottom 0, largura parcial). Aqui só o mínimo
          que o app monta via JS: as caixas em coluna. */
-      .workspace-drawer,
+      .workspace-drawer-inner,
+      .workspace-drawer-tab-container,
       .workspace-drawer-active-tab-container,
       .workspace-drawer-active-tab-content,
       .workspace-tab-container,
@@ -35,6 +36,8 @@
         flex-direction: column;
         min-height: 0;
       }
+      .workspace-drawer-inner,
+      .workspace-drawer-tab-container,
       .workspace-drawer-active-tab-container,
       .workspace-drawer-active-tab-content,
       .workspace-tab-container,
@@ -137,27 +140,47 @@
     <div id="behind">editor por tras (workspace)</div>
     <div class="app-container">
       <div class="workspace-drawer mod-right" id="drawer">
-        <div class="workspace-drawer-header">
-          <div class="workspace-drawer-header-name">AXXA Agent</div>
-        </div>
-        <div class="workspace-drawer-active-tab-container">
-          <div class="workspace-drawer-active-tab-content">
-            <!-- `.workspace-tab-container` existia na cadeia da casca antiga,
-                 mas pode não existir na versão atual do Obsidian: o parâmetro
-                 &chain=short tira o elo pra provar que nada depende dele. -->
-            <div class="__TAB_CONTAINER__">
-            <!-- `axxa-leaf`: o AxxaView.onOpen põe esta classe na folha que o
-                 embrulha. Aqui a árvore é montada à mão, então vem escrita. -->
-            <div class="workspace-leaf axxa-leaf">
-              <div
-                class="workspace-leaf-content"
-                data-type="axxa-agent"
-                data-mode="preview"
-              >
-                <div class="view-header"><span>AXXA Agent</span></div>
-                <div class="view-content" id="app"></div>
+        <div class="workspace-drawer-inner">
+          <div class="workspace-drawer-header">
+            <div class="workspace-drawer-header-name">AXXA Agent</div>
+          </div>
+          <!-- O app monta `.workspace-drawer-tab-container` (relativo) com o
+               `.workspace-drawer-active-tab-container` ABSOLUTO dentro, e a
+               barra de seleção de aba (`.workspace-drawer-tab-options`) como
+               irmã do conteúdo. Sem esse nível a barra de baixo não existia no
+               preview — e o vão que ela deixa ao sumir no fullscreen ficava
+               invisível aqui (foi o bug da tela cheia). -->
+          <div class="workspace-drawer-tab-container">
+            <div class="workspace-drawer-active-tab-container">
+              <div class="workspace-drawer-tab-options">
+                <div class="workspace-tab-header workspace-drawer-tab-select">
+                  <div class="workspace-tab-header-inner">
+                    <span class="workspace-tab-header-inner-icon"></span>
+                    <span class="workspace-tab-header-inner-title">AXXA Agent</span>
+                    <span class="workspace-tab-header-inner-chevron"></span>
+                  </div>
+                </div>
+                <div class="workspace-drawer-tab-options-list"></div>
               </div>
-            </div>
+              <div class="workspace-drawer-active-tab-content">
+                <!-- `.workspace-tab-container` existia na cadeia da casca antiga,
+                     mas pode não existir na versão atual do Obsidian: o parâmetro
+                     &chain=short tira o elo pra provar que nada depende dele. -->
+                <div class="__TAB_CONTAINER__">
+                <!-- `axxa-leaf`: o AxxaView.onOpen põe esta classe na folha que o
+                     embrulha. Aqui a árvore é montada à mão, então vem escrita. -->
+                <div class="workspace-leaf axxa-leaf">
+                  <div
+                    class="workspace-leaf-content"
+                    data-type="axxa-agent"
+                    data-mode="preview"
+                  >
+                    <div class="view-header"><span>AXXA Agent</span></div>
+                    <div class="view-content" id="app"></div>
+                  </div>
+                </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
