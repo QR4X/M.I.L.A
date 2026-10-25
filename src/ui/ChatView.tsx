@@ -107,7 +107,7 @@ import { StarterScreen } from "./StarterScreen";
 import { ThinkingLine } from "./Thinking";
 import type { ComposerInject } from "./App";
 import { moduleFabLabel, moduleLabel, modulePlaceholder } from "./modules";
-import { filterModels, groupModels } from "./modelGroups";
+import { filterModels, groupModels, mergeModelOptions } from "./modelGroups";
 // O limite de favoritos é UM número, e ele mora onde se marca o favorito.
 import { FAVORITE_LIMIT } from "./SettingsTab";
 import { texto } from "../core/texto";
@@ -952,6 +952,11 @@ ${tr("Open Settings › Providers to add it, then run the connection test.")}`,
     if (which === "model") {
       setPickProvider(cfg.provider);
       setModelView("root");
+      // A busca nasce zerada a cada abertura, como a das notas no "+": a folha
+      // abre pra ESCOLHER, e um filtro herdado da última vez esconde modelos
+      // sem que ninguém tenha pedido isso.
+      setModelQuery("");
+      setModelTab("");
     }
     if (which === "plus") {
       setPlusView("root");
@@ -1006,8 +1011,16 @@ ${tr("Open Settings › Providers to add it, then run the connection test.")}`,
   const favorites = (
     plugin.settings.favoriteModels?.[pickProvider] ?? []
   ).slice(0, 5);
-  /** O catálogo inteiro do provider — é o que o nível "All models" mostra. */
-  const todosOsModelos = session.modelOptions(pickProvider);
+  /** O catálogo que a última busca trouxe deste provider — a segunda metade
+   *  da lista (ver mergeModelOptions). As identidades são as das settings, e
+   *  as settings TROCAM o array a cada edição (SettingsTab, alinharOllama):
+   *  por isso os dois lados vão separados pro ListaDeModelos, que junta dentro
+   *  do `useMemo` que ele já tinha. Passar a lista já juntada (array novo a
+   *  cada render) invalidava aquele memo — e aí o filtro e o agrupamento
+   *  rodavam a cada tecla digitada, com o catálogo inteiro na mão. */
+  const ativosDoProvider = session.modelOptions(pickProvider);
+  const catalogoDoProvider = plugin.settings.discoveredModels?.[pickProvider] ?? [];
+  const todosOsModelos = mergeModelOptions(ativosDoProvider, catalogoDoProvider);
   const rest = todosOsModelos.filter((m) => !favorites.includes(m));
 
   // ── modo de voz ─────────────────────────────────────────────────────────
@@ -1062,13 +1075,35 @@ ${tr("Open Settings › Providers to add it, then run the connection test.")}`,
     if (voice.state === "idle") setArming(false);
   }, [voice.state]);
 
-  // Trocar de provider ou de nível zera a busca: o que foi digitado era
-  // pergunta pra a lista anterior, e uma busca invisível que esconde modelos
-  // é a mesma armadilha da busca das homes.
+  // Trocar de NÍVEL zera a busca: o que foi digitado era pergunta pra a lista
+  // anterior. Trocar de PROVIDER não zera: a busca agora mora na própria folha,
+  // à vista — a armadilha era a busca INVISÍVEL que escondia modelos. Com o
+  // campo na tela, manter o texto é o que deixa comparar o mesmo nome entre
+  // dois providers sem digitar tudo de novo.
   useEffect(() => {
     setModelQuery("");
     setModelTab("");
-  }, [pickProvider, modelView]);
+  }, [modelView]);
+
+  // A folha abre com o catálogo que já foi buscado NESTE aparelho. Se ninguém
+  // buscou ainda, busca agora e em silêncio: quem abriu a folha quer escolher
+  // um modelo, não caçar um botão nas Settings. Sem chave (ou sem endereço, no
+  // Ollama) não há o que perguntar, e uma falha de rede não vira aviso — ficam
+  // os modelos marcados, que é o que a folha mostrava antes.
+  //
+  // Uma tentativa por provider e por sessão: sem isso, um provider que responde
+  // erro (chave vencida, servidor fora) faria um pedido novo a cada abertura.
+  const catalogosTentados = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (sheet !== "model") return;
+    if (plugin.settings.discoveredModels?.[pickProvider]) return;
+    if (!plugin.providerCredential(pickProvider)) return;
+    if (catalogosTentados.current.has(pickProvider)) return;
+    catalogosTentados.current.add(pickProvider);
+    // Chegando: o `saveSettings` do scan avisa a árvore (App assina
+    // `onSettingsChange`) e a folha redesenha com o catálogo.
+    void plugin.scanModels(pickProvider).catch(() => {});
+  }, [sheet, pickProvider, plugin]);
 
   /**
    * Marca/desmarca um favorito SEM sair da folha.
@@ -1498,6 +1533,27 @@ ${tr("Open Settings › Providers to add it, then run the connection test.")}`,
           />
         )}
 
+        {/* A busca mora na PRIMEIRA tela da folha, não só no nível "All
+            models": quem abriu quer escolher um modelo, e chegar na busca por
+            um nível a mais era um toque em cada troca. O campo não abre o
+            teclado sozinho (ver SheetSearch) — a folha abre pra escolher.
+            Digitando, o resultado aparece AQUI (a lista inteira, filtrada). */}
+        {modelView === "root" && !locked && (
+          <SheetSearch
+            value={modelQuery}
+            placeholder={tr("Search models")}
+            // Só conta quando há busca: `filterModels` sem texto devolveria
+            // uma cópia da lista inteira a cada render — e a folha de modelos
+            // é desenhada mesmo fechada, a cada tecla do rascunho.
+            found={
+              modelQuery.trim()
+                ? filterModels(todosOsModelos, modelQuery, prettyModelName).length
+                : undefined
+            }
+            onChange={setModelQuery}
+          />
+        )}
+
         {modelView === "effort" ? (
           <SheetGroup>
             {EFFORT_LEVELS.map((l) => (
@@ -1514,13 +1570,15 @@ ${tr("Open Settings › Providers to add it, then run the connection test.")}`,
               />
             ))}
           </SheetGroup>
-        ) : modelView === "list" ? (
+        ) : modelView === "list" ||
+          (modelView === "root" && !locked && modelQuery.trim().length > 0) ? (
           <ListaDeModelos
             provider={pickProvider}
             /* TUDO, favoritos inclusive. Com `rest` (o que não é favorito), a
                linha SUMIA sob o dedo ao ser favoritada — ela passava a
                pertencer ao outro nível. "All models" promete todos. */
-            models={todosOsModelos}
+            models={ativosDoProvider}
+            catalogo={catalogoDoProvider}
             atual={pickProvider === cfg.provider ? cfg.model : ""}
             query={modelQuery}
             onQuery={setModelQuery}
@@ -1529,6 +1587,8 @@ ${tr("Open Settings › Providers to add it, then run the connection test.")}`,
             favoritos={favorites}
             onFavorito={(m) => void alternarFavorito(m)}
             onPick={chooseModel}
+            /* Na raiz o campo já está acima; aqui ele não se repete. */
+            busca={modelView !== "root"}
           />
         ) : (
           <>
@@ -1947,6 +2007,7 @@ function ModelRow({
 function ListaDeModelos({
   provider,
   models,
+  catalogo,
   atual,
   query,
   onQuery,
@@ -1955,9 +2016,13 @@ function ListaDeModelos({
   favoritos,
   onFavorito,
   onPick,
+  busca = true,
 }: {
   provider: string;
+  /** O que está marcado pra este provider (o atual incluso). */
   models: string[];
+  /** O que a última busca de catálogo trouxe — vai junto e DEPOIS. */
+  catalogo: string[];
   atual: string;
   query: string;
   onQuery: (v: string) => void;
@@ -1966,10 +2031,21 @@ function ListaDeModelos({
   favoritos: string[];
   onFavorito: (m: string) => void;
   onPick: (m: string) => void;
+  /** Desenha o campo de busca. `false` quando quem chamou já pôs um acima —
+   *  dois campos para a mesma busca divergem na primeira mudança. */
+  busca?: boolean;
 }) {
+  // A junção mora AQUI, com as duas listas como dependência: elas vêm das
+  // settings (identidade trocada a cada edição), então este memo acerta. Se a
+  // lista já viesse juntada de fora, ela seria um array novo por render e o
+  // filtro/agrupamento abaixo rodariam em toda tecla.
+  const lista = useMemo(
+    () => mergeModelOptions(models, catalogo),
+    [models, catalogo]
+  );
   const filtrados = useMemo(
-    () => filterModels(models, query, prettyModelName),
-    [models, query]
+    () => filterModels(lista, query, prettyModelName),
+    [lista, query]
   );
   const grupos = useMemo(
     () => groupModels(provider, filtrados),
@@ -1983,7 +2059,7 @@ function ListaDeModelos({
   const BUSCA_A_PARTIR_DE = 8;
   return (
     <>
-      {models.length >= BUSCA_A_PARTIR_DE && (
+      {busca && lista.length >= BUSCA_A_PARTIR_DE && (
         <SheetSearch
           value={query}
           placeholder={tr("Search models")}

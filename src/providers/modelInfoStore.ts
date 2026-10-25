@@ -236,6 +236,34 @@ function toEnriched(raw: OpenRouterModel): EnrichedModelInfo {
 }
 
 /**
+ * Grava no cache specs JÁ prontas de outra fonte que não o catálogo do
+ * OpenRouter — hoje, o Ollama, que declara `capabilities` no /api/show.
+ * O shape é o mesmo, então quem lê (getEnrichedInfo → getModelCapabilities)
+ * não precisa saber de onde veio. O CALLER persiste (plugin.saveModelInfoCache).
+ */
+export function recordModelInfo(
+  provider: string,
+  model: string,
+  info: EnrichedModelInfo
+): void {
+  CACHE[cacheKey(provider, model)] = info;
+}
+
+/** Match + conversão + gravação — o miolo que os dois caminhos compartilham. */
+function gravarDoCatalogo(
+  catalog: OpenRouterModel[],
+  provider: string,
+  model: string
+): EnrichedModelInfo | null {
+  const raw = matchOpenRouter(catalog, model);
+  if (!raw) return null;
+  const info = toEnriched(raw);
+  info.fetchedAt = new Date().toISOString();
+  CACHE[cacheKey(provider, model)] = info;
+  return info;
+}
+
+/**
  * Busca e cacheia as specs de um modelo via OpenRouter. Retorna a info
  * (e atualiza o cache em memória) ou null se não achou correspondência.
  * O CALLER persiste em disco (plugin.saveModelInfoCache) após sucesso.
@@ -245,10 +273,41 @@ export async function fetchAndCacheModelInfo(
   model: string
 ): Promise<EnrichedModelInfo | null> {
   const catalog = await loadOpenRouterCatalog();
-  const raw = matchOpenRouter(catalog, model);
-  if (!raw) return null;
-  const info = toEnriched(raw);
-  info.fetchedAt = new Date().toISOString();
-  CACHE[cacheKey(provider, model)] = info;
-  return info;
+  return gravarDoCatalogo(catalog, provider, model);
+}
+
+/**
+ * Enriquece uma LISTA de modelos pelo catálogo do OpenRouter — UM GET só (o
+ * catálogo é memoizado) e match por id/cauda, que é o que liga um modelo do
+ * NIM/Ollama/OpenAI ao mesmo modelo publicado lá. Devolve quantos foram
+ * gravados. Nunca lança: sem rede, valem as tabelas curadas.
+ *
+ * Não escreve em disco: quem chama decide quando persistir. Assim uma rodada
+ * sobre seis providers grava UMA vez, e não seis.
+ *
+ * Isto era código morto na 0.9.x: o "Fetch info" por card saiu na migração
+ * pra src/ui e levou o único caller embora. A camada de capacidades seguiu
+ * lendo um cache que ninguém mais escrevia — daí um modelo com visão aparecer
+ * como modelo sem visão só por não estar na tabela por prefixo.
+ */
+export async function enrichModelsFromCatalog(
+  provider: string,
+  models: readonly string[]
+): Promise<number> {
+  // Nada a aprender (todo mundo já está no cache) → nem toca na rede. É o
+  // estado normal depois da primeira sessão: o começo do Obsidian fica sem
+  // GET nenhum.
+  const faltando = models.filter((m) => m && !CACHE[cacheKey(provider, m)]);
+  if (faltando.length === 0) return 0;
+  let catalog: OpenRouterModel[];
+  try {
+    catalog = await loadOpenRouterCatalog();
+  } catch {
+    return 0; // Sem catálogo (offline/throttle): fica a tabela curada.
+  }
+  let gravados = 0;
+  for (const model of faltando) {
+    if (gravarDoCatalogo(catalog, provider, model)) gravados++;
+  }
+  return gravados;
 }
