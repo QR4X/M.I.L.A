@@ -76,3 +76,21 @@ export function filterModels(
       m.toLowerCase().includes(q) || pretty(m).toLowerCase().includes(q)
   );
 }
+
+/**
+ * O que a folha de modelos mostra: o que está MARCADO pra este provider mais o
+ * que a última busca de catálogo trouxe. A ordem é a marcada primeiro (é a que
+ * a pessoa montou em Settings), o resto depois, sem repetir.
+ *
+ * A segunda parte existe porque escolher um modelo que existe mas não estava
+ * marcado exigia sair do chat: Settings › Providers › Fetch models › marcar ›
+ * voltar. A folha é onde essa decisão acontece, então é ela que tem de
+ * alcançar o catálogo.
+ */
+export function mergeModelOptions(
+  ativos: readonly string[],
+  catalogo: readonly string[]
+): string[] {
+  const vistos = new Set(ativos);
+  return [...ativos, ...catalogo.filter((m) => m && !vistos.has(m))];
+}

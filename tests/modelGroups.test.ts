@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { filterModels, groupModels } from "../src/ui/modelGroups";
+import { filterModels, groupModels, mergeModelOptions } from "../src/ui/modelGroups";
 
 /**
  * O catálogo de um provider chega como uma pilha só: geradores de imagem,
@@ -91,5 +91,27 @@ describe("filterModels", () => {
 
   it("sem resultado é lista vazia, não a lista inteira", () => {
     expect(filterModels(lista, "zzz", pretty)).toEqual([]);
+  });
+});
+
+describe("mergeModelOptions", () => {
+  it("põe o catálogo DEPOIS do que está marcado", () => {
+    // A ordem marcada é a que a pessoa montou em Settings: ela manda.
+    expect(
+      mergeModelOptions(["gpt-5", "gpt-4o"], ["gpt-4o", "gpt-5-mini"])
+    ).toEqual(["gpt-5", "gpt-4o", "gpt-5-mini"]);
+  });
+
+  it("o mesmo modelo não aparece duas vezes (ele está nos dois lados)", () => {
+    const r = mergeModelOptions(["a/b"], ["a/b", "c/d"]);
+    expect(r).toEqual(["a/b", "c/d"]);
+  });
+
+  it("sem busca de catálogo, a lista é exatamente a de antes", () => {
+    expect(mergeModelOptions(["gpt-4o", "o3"], [])).toEqual(["gpt-4o", "o3"]);
+  });
+
+  it("id vazio no catálogo não vira linha fantasma na folha", () => {
+    expect(mergeModelOptions([], ["", "gpt-4o"])).toEqual(["gpt-4o"]);
   });
 });

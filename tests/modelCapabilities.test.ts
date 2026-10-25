@@ -1,8 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import {
   getModelCapabilities,
   isGenerationModel,
 } from "../src/providers/modelCapabilities";
+import { hydrateModelInfoCache } from "../src/providers/modelInfoStore";
 
 describe("getModelCapabilities — ordem de prefixo (o que quebra calado)", () => {
   it("gpt-4o-mini casa antes de gpt-4o", () => {
@@ -110,6 +111,42 @@ describe("isGenerationModel", () => {
   it("false pra modelo de chat", () => {
     expect(isGenerationModel(getModelCapabilities("openai", "gpt-4o"))).toBe(
       false
+    );
+  });
+});
+
+describe("getModelCapabilities — overlay do catálogo vivo", () => {
+  afterEach(() => hydrateModelInfoCache({}));
+
+  it("um modelo fora das tabelas ganha visão pelo dado REAL", () => {
+    hydrateModelInfoCache({
+      "openrouter::lab/modelo-novo": {
+        modalities: ["text", "image"],
+        supportsTools: true,
+      },
+    });
+    expect(getModelCapabilities("openrouter", "lab/modelo-novo")).toMatchObject({
+      vision: true,
+      tools: true,
+    });
+  });
+
+  it("output de imagem vira imageGen (é o que põe o modelo na aba Image)", () => {
+    hydrateModelInfoCache({ "openrouter::lab/foto-1": { outputModalities: ["image"] } });
+    expect(getModelCapabilities("openrouter", "lab/foto-1").imageGen).toBe(true);
+  });
+
+  it("fora do OpenRouter o catálogo só LIGA — nunca desliga a tabela curada", () => {
+    hydrateModelInfoCache({
+      "nim::meta/llama-3.3-70b-instruct": {
+        supportsTools: false,
+        modalities: ["text"],
+      },
+    });
+    // O catálogo é do OUTRO provider (OpenRouter): serve pra ligar o que
+    // faltava, nunca pra tirar um tool calling que o API direto já tinha.
+    expect(getModelCapabilities("nim", "meta/llama-3.3-70b-instruct").tools).toBe(
+      true
     );
   });
 });

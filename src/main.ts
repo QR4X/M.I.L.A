@@ -26,8 +26,10 @@ import {
   hydrateModelInfoCache,
   getModelInfoCache,
   fetchAndCacheModelInfo,
+  enrichModelsFromCatalog,
   type EnrichedModelInfo,
 } from "./providers/modelInfoStore";
+import { enriquecerCapacidadesOllama } from "./providers/ollama";
 import {
   loadSkills,
   seedExampleSkills,
@@ -181,6 +183,13 @@ export interface AxxaSettings {
   /** Modelos de embedding descobertos via API, por provider (RAG). O "Fetch
    *  models" de cada provider grava aqui (ver plugin.scanEmbeddings). */
   discoveredEmbeddings: Record<string, string[]>;
+  /** Catálogo descoberto no `/models` de cada provider (o "Fetch models").
+   *
+   *  Ao contrário do catálogo das Settings (que vive só enquanto a aba está
+   *  aberta), este fica gravado: é o que deixa a folha de modelos do CHAT
+   *  procurar num modelo que existe mas não foi marcado como ativo — sem
+   *  passar por Settings › Providers › Fetch models a cada vez. */
+  discoveredModels: Record<string, string[]>;
   // ---- Sessão
   /**
    * Conversas que responderam SEM você ver — o ponto de "não lida".
@@ -318,6 +327,7 @@ const DEFAULT_SETTINGS: AxxaSettings = {
   elevenVoices: [],
   hapticsEnabled: true,
   discoveredEmbeddings: {},
+  discoveredModels: {},
   unreadChats: [],
   defaultMode: "chat",
   // Vazio: quem instala abre no painel (dashboard), como sempre. Quem quer cair
@@ -661,11 +671,79 @@ export default class AxxaPlugin extends Plugin {
     ) {
       await this.saveSettings();
     }
+    // O catálogo fica GRAVADO (não só no campo da aba das Settings): é o que
+    // a folha de modelos do chat consulta pra procurar um modelo que existe
+    // mas ainda não foi marcado como ativo. No Ollama o mesmo cuidado do
+    // endereço vale — uma resposta do servidor de antes não vira catálogo.
+    if (lista.length > 0 && (providerId !== "ollama" || this.settings.ollamaEndpoint === desde)) {
+      this.settings.discoveredModels = {
+        ...(this.settings.discoveredModels ?? {}),
+        [providerId]: [...lista],
+      };
+      await this.saveSettings();
+    }
     // Aproveita a volta pra saber quais são GRÁTIS. O preço vem no mesmo
     // `/models`, então isto não custa uma chamada a mais — e sem isto o app
     // continuaria adivinhando free pelo nome.
     await this.scanFreeModels(providerId);
+    // E o que cada um ACEITA (imagem? tools?) — é o que o composer lê pra
+    // habilitar o anexo de imagem. Antes isto só era escrito por um "Fetch
+    // info" por card, que saiu na migração pra src/ui: sem ele, todo modelo
+    // fora da tabela por prefixo aparecia como modelo sem visão.
+    if ((await this.enriquecerCapacidades(providerId, lista)) > 0) {
+      await this.saveModelInfoCache();
+    }
     return lista;
+  }
+
+  /**
+   * O que cada modelo ACEITA (imagem? tools?), com dado REAL por provider:
+   *   - **ollama**: o próprio servidor declara (`capabilities` no /api/show);
+   *   - **demais**: catálogo público do OpenRouter, casado por id/cauda — um
+   *     GET só, sem key, e memoizado por sessão.
+   *
+   * O overlay em getModelCapabilities é upgrade-only: isto LIGA o que faltava
+   * e nunca desliga o que a tabela curada já sabia. Nunca lança — sem rede,
+   * ficam as tabelas. Devolve quantos modelos foram gravados; quem chama
+   * persiste (saveModelInfoCache), pra uma rodada sobre vários providers
+   * gravar uma vez só.
+   */
+  async enriquecerCapacidades(
+    providerId: string,
+    models: readonly string[]
+  ): Promise<number> {
+    const lista = Array.from(new Set(models.filter((m) => Boolean(m))));
+    if (lista.length === 0) return 0;
+    try {
+      return providerId === "ollama"
+        ? await enriquecerCapacidadesOllama(this.settings.ollamaEndpoint, lista)
+        : await enrichModelsFromCatalog(providerId, lista);
+    } catch (err) {
+      console.error("[axxa] enriquecerCapacidades falhou:", err);
+      return 0;
+    }
+  }
+
+  /**
+   * O mesmo, pros modelos que a pessoa PODE escolher (ativos + favoritos) de
+   * cada provider configurado. É a lista pequena que o composer consulta, e o
+   * catálogo do OpenRouter é um GET compartilhado — por isso roda sozinho na
+   * abertura, sem esperar um "Fetch models" no meio da conversa. Com o cache
+   * já quente (o normal), não vai à rede nenhuma vez.
+   */
+  private async enriquecerCapacidadesAtivas(): Promise<void> {
+    const s = this.settings;
+    let gravados = 0;
+    for (const providerId of Object.keys(s.activeModels ?? {})) {
+      // Sem chave (ou sem endereço, no Ollama) não há o que perguntar.
+      if (!this.providerCredential(providerId)) continue;
+      const modelos = [
+        ...(s.activeModels?.[providerId] ?? []),
+        ...(s.favoriteModels?.[providerId] ?? []),
+      ];
+      gravados += await this.enriquecerCapacidades(providerId, modelos);
+    }
+    if (gravados > 0) await this.saveModelInfoCache();
   }
 
   /**
@@ -938,6 +1016,11 @@ export default class AxxaPlugin extends Plugin {
   private async carregarEmSegundoPlano(): Promise<void> {
     // Cache de specs dos modelos (Fetch info / OpenRouter) — hidrata o store.
     await this.loadModelInfoCache();
+
+    // O que os modelos ATIVOS aceitam (imagem? tools?) — fire-and-forget: é o
+    // que habilita o anexo de imagem no composer, e um provider fora do ar
+    // não pode segurar a abertura do Obsidian.
+    void this.enriquecerCapacidadesAtivas();
 
     // Embeddings descobertos (fetch anterior) → registro global do RAG.
     this.refreshDiscoveredEmbeddings();
@@ -1579,6 +1662,7 @@ export default class AxxaPlugin extends Plugin {
       ...(saved.activeModels ?? {}),
     };
     this.settings.discoveredEmbeddings = saved.discoveredEmbeddings ?? {};
+    this.settings.discoveredModels = saved.discoveredModels ?? {};
     // ★ por papel e provider preferido: da casca antiga, nada lê (ver
     // core/settingsLegado.ts). A revisão do Ollama acima já leu o `saved`.
     limparCamposMortos(this.settings);

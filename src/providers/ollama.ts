@@ -32,6 +32,7 @@ import {
   ReasoningHandler,
 } from "./base";
 import { resolveTemperature, resolveMaxTokens } from "./paramPolicy";
+import { recordModelInfo } from "./modelInfoStore";
 import {
   toOpenAIMessages,
   ensureOkRequest,
@@ -184,16 +185,30 @@ function toolCallsDoOllama(brutas: unknown): ProviderToolCall[] {
   return saida;
 }
 
-// ── o tamanho da janela (num_ctx) ────────────────────────────────────────
+// ── o que o /api/show conta de cada modelo local ─────────────────────────
+//
+// UMA leitura por modelo, cacheada: o mesmo POST responde o tamanho da janela
+// (num_ctx) e o que o modelo ACEITA. O `/api/show` do Ollama ≥0.4 traz
+// `capabilities: ["completion", "vision", "tools", "insert"]`, que é a verdade
+// LOCAL sobre este modelo — melhor que adivinhar pelo prefixo do nome:
+// `gemma3` lê imagem e não está em tabela nenhuma, e o mesmo vale pra
+// `qwen3-vl`, `granite3.2-vision` e pro que a pessoa baixar amanhã.
+//
+// Só resposta boa entra no cache: servidor fora, Ollama antigo ou resposta
+// vazia não guardam nada, e o próximo pedido (ou a próxima busca) tenta de
+// novo — quem não tem o dado, a tabela curada decide.
+interface MostraDoModelo {
+  model_info?: Record<string, unknown>;
+  capabilities?: unknown;
+}
+const mostraConhecida = new Map<string, MostraDoModelo>();
 
-/** O contexto máximo de cada modelo local, lido do /api/show uma vez. Sem
- *  resposta (servidor fora, Ollama antigo, modelo sem o campo) não guarda
- *  nada — tenta de novo no próximo pedido. */
-const contextoMaximo = new Map<string, number>();
-
-async function contextoDoModelo(endpoint: string, model: string): Promise<number | undefined> {
+async function mostraDoModelo(
+  endpoint: string,
+  model: string
+): Promise<MostraDoModelo | null> {
   const chave = `${endpoint}|${model}`;
-  const sabido = contextoMaximo.get(chave);
+  const sabido = mostraConhecida.get(chave);
   if (sabido) return sabido;
   try {
     const res = await requestUrl({
@@ -203,18 +218,59 @@ async function contextoDoModelo(endpoint: string, model: string): Promise<number
       body: JSON.stringify({ model }),
       throw: false,
     });
-    if (res.status < 200 || res.status >= 300) return undefined;
-    const info = (res.json as { model_info?: Record<string, unknown> } | undefined)?.model_info;
-    for (const [k, v] of Object.entries(info ?? {})) {
-      if (k.endsWith(".context_length") && typeof v === "number" && v > 0) {
-        contextoMaximo.set(chave, v);
-        return v;
-      }
-    }
+    if (res.status < 200 || res.status >= 300) return null;
+    const json = res.json as MostraDoModelo | undefined;
+    if (!json || typeof json !== "object") return null;
+    mostraConhecida.set(chave, json);
+    return json;
   } catch {
     // Sem o /api/show: segue sem o teto do modelo (ver contextoDoOllama).
+    return null;
+  }
+}
+
+async function contextoDoModelo(endpoint: string, model: string): Promise<number | undefined> {
+  const info = (await mostraDoModelo(endpoint, model))?.model_info;
+  for (const [k, v] of Object.entries(info ?? {})) {
+    if (k.endsWith(".context_length") && typeof v === "number" && v > 0) return v;
   }
   return undefined;
+}
+
+/** O que o servidor declara que o modelo aceita. null = ele não diz. */
+function capacidadesDe(mostra: MostraDoModelo | null): string[] | null {
+  const caps = mostra?.capabilities;
+  if (!Array.isArray(caps)) return null;
+  const lista = caps.filter((c): c is string => typeof c === "string");
+  return lista.length > 0 ? lista : null;
+}
+
+/**
+ * Grava o que o SERVIDOR declara pra uma lista de modelos, no mesmo cache de
+ * specs que o catálogo do OpenRouter alimenta (ver modelInfoStore). Nunca
+ * lança: sem servidor, não grava nada e a tabela curada decide.
+ */
+export async function enriquecerCapacidadesOllama(
+  endpoint: string,
+  models: readonly string[]
+): Promise<number> {
+  if (!endpoint) return 0;
+  let gravados = 0;
+  for (const model of models) {
+    if (!model) continue;
+    const caps = capacidadesDe(await mostraDoModelo(endpoint, model));
+    if (!caps) continue;
+    recordModelInfo("ollama", model, {
+      // "image" é o vocabulário do catálogo do OpenRouter (input_modalities);
+      // vazio = o servidor não listou visão (o overlay é upgrade-only).
+      modalities: caps.includes("vision") ? ["image"] : [],
+      supportsTools: caps.includes("tools"),
+      source: "ollama",
+      fetchedAt: new Date().toISOString(),
+    });
+    gravados++;
+  }
+  return gravados;
 }
 
 /** Tokens que um pedido ocupa, por alto: 3 caracteres por token (português e

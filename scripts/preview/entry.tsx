@@ -275,6 +275,25 @@ Conteúdo de mentira da nota, o bastante pra virar contexto.`,
         "deepseek/deepseek-chat:free",
       ],
     },
+    // O catálogo que a última busca de cada provider deixou gravado. É a
+    // segunda metade da lista da folha de modelos (ver mergeModelOptions): com
+    // ele aqui, dá pra ver que o nível "All models" alcança modelo que NÃO
+    // está marcado como ativo — sem passar por Settings.
+    discoveredModels: {
+      openai: [
+        "gpt-5", "gpt-4o", "gpt-4o-mini", "gpt-5-mini", "gpt-5-nano",
+        "gpt-4.1", "gpt-4.1-mini", "o3", "o3-mini", "o4-mini", "dall-e-3",
+        "tts-1", "tts-1-hd",
+        // Não marcados de propósito: só o catálogo os conhece.
+        "gpt-5.1", "gpt-5.1-mini", "gpt-image-1", "text-embedding-3-small",
+      ],
+      anthropic: ["claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5"],
+      openrouter: [
+        "anthropic/claude-3.5-sonnet",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "deepseek/deepseek-chat:free",
+      ],
+    },
     // ?favoritos=0 zera os favoritos: é o estado em que a folha de modelo já
     // lista TUDO no primeiro nível e a linha "Show list" some — e foi esse o
     // estado que fez parecer que ela tinha sumido do app.
