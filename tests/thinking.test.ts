@@ -1,40 +1,41 @@
 // tests/thinking.test.ts
-// A linha de espera: o relógio e o rodízio de verbos. São as duas coisas que
-// o usuário lê enquanto não tem resposta — e as duas que quebram calado (um
-// verbo repetido pra sempre, um relógio que mostra "-1s").
+// Status da operação e relógio enquanto ainda não há resposta.
 
 import { describe, it, expect } from "vitest";
-import {
-  THINKING_VERBS,
-  VERB_MS,
-  verbAt,
-  elapsedLabel,
-} from "../src/ui/Thinking";
+import { elapsedLabel, thinkingStatus } from "../src/ui/Thinking";
 
-describe("verbAt", () => {
-  it("começa no primeiro verbo", () => {
-    expect(verbAt(0)).toBe(THINKING_VERBS[0]);
-    expect(verbAt(VERB_MS - 1)).toBe(THINKING_VERBS[0]);
+describe("thinkingStatus", () => {
+  it("reports an honest model wait instead of a rotating placeholder", () => {
+    expect(thinkingStatus()).toBe("Waiting for model response");
+    expect(
+      thinkingStatus({
+        phase: "pending",
+        iconPending: "sparkles",
+        pendingText: "Thinking...",
+      })
+    ).toBe("Waiting for model response");
   });
 
-  it("troca de verbo a cada fatia", () => {
-    expect(verbAt(VERB_MS)).toBe(THINKING_VERBS[1]);
-    expect(verbAt(VERB_MS * 2)).toBe(THINKING_VERBS[2]);
+  it("shows a real pending tool call and its exact arguments", () => {
+    expect(
+      thinkingStatus({
+        phase: "pending",
+        iconPending: "file-pen-line",
+        pendingText: "Editing Notes/example.md",
+        toolName: "vault_edit",
+        toolArguments: { path: "Notes/example.md", oldStr: "old" },
+      })
+    ).toBe('vault_edit({"path":"Notes/example.md","oldStr":"old"})');
   });
 
-  it("dá a volta quando acaba a lista, sem quebrar", () => {
-    const n = THINKING_VERBS.length;
-    expect(verbAt(VERB_MS * n)).toBe(THINKING_VERBS[0]);
-    expect(verbAt(VERB_MS * (n + 3))).toBe(THINKING_VERBS[3]);
-  });
-
-  it("tempo negativo (relógio torto) não estoura", () => {
-    expect(verbAt(-5000)).toBe(THINKING_VERBS[0]);
-  });
-
-  it("são vários verbos DIFERENTES", () => {
-    expect(THINKING_VERBS.length).toBeGreaterThanOrEqual(6);
-    expect(new Set(THINKING_VERBS).size).toBe(THINKING_VERBS.length);
+  it("shows a real non-agent operation while it is active", () => {
+    expect(
+      thinkingStatus({
+        phase: "pending",
+        iconPending: "radar",
+        pendingText: "Searching the vault",
+      })
+    ).toBe("Searching the vault");
   });
 });
 

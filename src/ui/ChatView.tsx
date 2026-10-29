@@ -362,6 +362,12 @@ export function ChatView({
     }
     return bucket;
   }, [messages]);
+  const pendingActivity = [...liveTurn]
+    .reverse()
+    .find(
+      (action): action is Extract<TurnAction, { kind: "activity" }> =>
+        action.kind === "activity" && action.activity.phase === "pending"
+    )?.activity;
 
   // O indicador some quando o TEXTO começa a sair: a partir daí quem mostra
   // que tem coisa acontecendo é a própria resposta aparecendo.
@@ -1220,6 +1226,7 @@ ${tr("Open Settings › Providers to add it, then run the connection test.")}`,
           <ThinkingLine
             count={liveTurn.length}
             since={pensandoDesde}
+            activity={pendingActivity}
             onOpen={() => {
               if (liveTurn.length === 0) return;
               setTools(liveTurn);
@@ -2242,6 +2249,8 @@ function ToolDetail({
   onUndone: (id: string) => void;
 }) {
   const ok = !actionFailed(action);
+  const pending =
+    action.kind === "activity" && action.activity.phase === "pending";
   const [rodando, setRodando] = useState(false);
   const desfazivel =
     action.kind === "activity" ? idDesfazivel(action.activity) : null;
@@ -2250,8 +2259,11 @@ function ToolDetail({
     <div className="axxa-tool-detail">
       {action.kind !== "reasoning" && (
         <p className={ok ? "axxa-tool-state is-ok" : "axxa-tool-state"}>
-          <Icon name={ok ? "circle-check" : "circle-alert"} size={15} />
-          {ok ? tr("Completed") : tr("Failed")}
+          <Icon
+            name={pending ? "loader-circle" : ok ? "circle-check" : "circle-alert"}
+            size={15}
+          />
+          {pending ? tr("Running") : ok ? tr("Completed") : tr("Failed")}
         </p>
       )}
       {desfeita && (
@@ -2290,12 +2302,30 @@ function ToolDetail({
           </pre>
         </>
       ) : action.kind === "activity" ? (
-        <>
-          <p className="axxa-tool-label">{tr("What happened")}</p>
-          <pre className="axxa-tool-block">
-            {action.activity.detail || activityText(action.activity)}
-          </pre>
-        </>
+        action.activity.toolName ? (
+          <>
+            <p className="axxa-tool-label">{tr("Tool call")}</p>
+            <pre className="axxa-tool-block">
+              {action.activity.toolName}(
+                {JSON.stringify(action.activity.toolArguments ?? {}, null, 2)})
+            </pre>
+            <p className="axxa-tool-label">
+              {pending ? tr("Status") : tr("Result")}
+            </p>
+            <pre className="axxa-tool-block">
+              {pending
+                ? activityText(action.activity)
+                : action.activity.detail || activityText(action.activity)}
+            </pre>
+          </>
+        ) : (
+          <>
+            <p className="axxa-tool-label">{tr("What happened")}</p>
+            <pre className="axxa-tool-block">
+              {action.activity.detail || activityText(action.activity)}
+            </pre>
+          </>
+        )
       ) : (
         <pre className="axxa-tool-block is-prose">{action.text}</pre>
       )}

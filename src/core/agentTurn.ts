@@ -441,6 +441,8 @@ export async function runAgentTurn(
           content: "",
           activity: {
             phase: "pending",
+            toolName: call.name,
+            toolArguments: call.arguments,
             iconPending: spec.iconPending,
             iconDone: spec.iconDone,
             pendingText: spec.pendingText,

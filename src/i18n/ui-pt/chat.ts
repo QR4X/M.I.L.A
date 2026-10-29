@@ -125,17 +125,10 @@ export const PT_CHAT: Record<string, string> = {
   "No API key for {provider} yet — add one to start.":
     "Ainda sem chave de API pra {provider} — adicione uma pra começar.",
 
-  // ── ui/Thinking.tsx (os verbos da espera) ──────────────────────────────
-  "Thinking": "Pensando",
-  "Pondering": "Ponderando",
-  "Deliberating": "Deliberando",
-  "Mulling it over": "Matutando",
-  "Considering": "Considerando",
-  "Ruminating": "Ruminando",
-  "Turning it over": "Revirando a ideia",
-  "Weighing options": "Pesando as opções",
-  "Chewing on it": "Mastigando o assunto",
-  "Puzzling it out": "Decifrando",
+  "Waiting for model response": "Aguardando resposta do modelo",
+  "Tool call": "Chamada da ferramenta",
+  "Running": "Em execução",
+  "Status": "Status",
 
   // ── ui/agentUndo.ts ────────────────────────────────────────────────────
   "Could not undo: {error}": "Não deu pra desfazer: {error}",
