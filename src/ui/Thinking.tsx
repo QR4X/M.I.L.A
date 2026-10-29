@@ -5,38 +5,15 @@
 //   - um asterisco em ACENTO que respira: cresce, encolhe e volta com OUTRA
 //     forma (três desenhos que se revezam girando)
 //   - o tempo decorrido, que é o que responde "travou?" sem precisar perguntar
-//   - o verbo, que troca de tempos em tempos — a mesma espera com palavra nova
-//     parece uma espera menor
+//   - o status real: a chamada da ferramenta em execução ou a espera pela resposta
 //
 // O texto some no primeiro pedaço da resposta: a partir daí quem mostra que
 // tem coisa acontecendo é o próprio texto aparecendo.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "./Icon";
-import { marca, tr } from "../i18n/tr";
-
-/** Os verbos da espera. Ordem fixa (não sorteada) pra a sequência ser sempre
- *  a mesma — e pra o teste poder olhar pra ela. */
-export const THINKING_VERBS = [
-  marca("Thinking"),
-  marca("Pondering"),
-  marca("Deliberating"),
-  marca("Mulling it over"),
-  marca("Considering"),
-  marca("Ruminating"),
-  marca("Turning it over"),
-  marca("Weighing options"),
-  marca("Chewing on it"),
-  marca("Puzzling it out"),
-];
-
-/** De quanto em quanto tempo a palavra muda. */
-export const VERB_MS = 5000;
-
-export function verbAt(passadoMs: number): string {
-  const i = Math.floor(Math.max(0, passadoMs) / VERB_MS) % THINKING_VERBS.length;
-  return THINKING_VERBS[i];
-}
+import type { ActivityMeta } from "../store/chat";
+import { tr } from "../i18n/tr";
 
 /** "7s", "59s", "1m 12s" — curto o bastante pra caber antes do verbo. */
 export function elapsedLabel(ms: number): string {
@@ -45,6 +22,16 @@ export function elapsedLabel(ms: number): string {
   const m = Math.floor(s / 60);
   const resto = s % 60;
   return `${m}m ${String(resto).padStart(2, "0")}s`;
+}
+
+export function thinkingStatus(activity?: ActivityMeta): string {
+  if (activity?.phase === "pending" && activity.toolName) {
+    return `${activity.toolName}(${JSON.stringify(activity.toolArguments ?? {})})`;
+  }
+  if (activity?.phase === "pending" && activity.iconPending !== "sparkles") {
+    return activity.pendingText;
+  }
+  return "Waiting for model response";
 }
 
 /**
@@ -97,17 +84,17 @@ export function ThinkingLine({
   count,
   /** Quando a rodada começou (ms). */
   since,
+  /** A operação real que está em andamento, se houver. */
+  activity,
   onOpen,
 }: {
   count: number;
   since: number;
+  activity?: ActivityMeta;
   onOpen: () => void;
 }) {
   const [agora, setAgora] = useState(() => Date.now());
-  const sinceRef = useRef(since);
-  sinceRef.current = since;
 
-  // Um tique por segundo: o relógio é a informação, não a animação.
   useEffect(() => {
     setAgora(Date.now());
     const t = window.setInterval(() => setAgora(Date.now()), 1000);
@@ -115,10 +102,7 @@ export function ThinkingLine({
   }, [since]);
 
   const passado = Math.max(0, agora - since);
-  // O VERBO, não o nome da tool: o que rodou mora na folha, a um toque do
-  // chevron — é assim na referência, e é o que mantém a linha com uma
-  // informação só.
-  const texto = verbAt(passado);
+  const texto = tr(thinkingStatus(activity));
 
   return (
     <button
@@ -131,7 +115,7 @@ export function ThinkingLine({
       <span className="axxa-thinking-label">
         <span className="axxa-thinking-time">{elapsedLabel(passado)}</span>
         <span className="axxa-thinking-dot"> · </span>
-        {tr(texto)}…
+        {texto}
       </span>
       {count > 0 && <Icon name="chevron-right" size={15} />}
     </button>
@@ -143,8 +127,7 @@ export function ThinkingLine({
  *
  * O `Thinking` de cima é um BOTÃO: ele abre a folha dos passos do agente. Onde
  * não há passos pra abrir — a assistente escrevendo um skill — sobra o que
- * importa: o glifo, o relógio e o verbo. O relógio é o que responde "travou?"
- * sem ninguém precisar perguntar.
+ *  importa: o glifo, o relógio e um status honesto.
  */
 export function ThinkingInline({ since }: { since: number }) {
   const [agora, setAgora] = useState(() => Date.now());
@@ -160,7 +143,7 @@ export function ThinkingInline({ since }: { since: number }) {
       <span className="axxa-thinking-label">
         <span className="axxa-thinking-time">{elapsedLabel(passado)}</span>
         <span className="axxa-thinking-dot"> · </span>
-        {tr(verbAt(passado))}…
+        {tr("Waiting for model response")}
       </span>
     </span>
   );

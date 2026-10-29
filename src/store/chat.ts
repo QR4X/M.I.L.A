@@ -70,6 +70,9 @@ export interface AIResponseMessage extends BaseMessage {
  */
 export interface ActivityMeta {
   phase: "pending" | "done" | "failed";
+  /** Exact agent tool call, retained so the live status and detail sheet can show it. */
+  toolName?: string;
+  toolArguments?: Record<string, unknown>;
   /** Ícone Lucide enquanto pending (pulsando). Ex: "eye", "file-pen-line". */
   iconPending: string;
   /** Ícone Lucide quando done (estático). Default: "check". */
